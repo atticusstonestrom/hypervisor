@@ -11,7 +11,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 
-#define DEV_NAME "hvchar"
+#define DEVICE_NAME "hvchar"
 #define CLASS_NAME "hvc"
 
 MODULE_LICENSE("GPL");
