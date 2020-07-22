@@ -82,8 +82,9 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 		return -EFAULT; }}
 
 static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset) {
-	len=(len<sizeof(message)) ? len:(sizeof(message)-1);
-	sprintf(message, "%s (%zu letters)", buffer, len);
+	len=(len<sizeof(message)-20) ? \
+		len:(sizeof(message)-21);
+	sprintf(message, "%.*s (%zu letters)", (unsigned int)len, buffer, len);
 	size_of_message=strlen(message);
 	printk("[*] received %zu characters from the user", len);
 	return len; }
