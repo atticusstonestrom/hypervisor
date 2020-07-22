@@ -45,7 +45,7 @@ static int __init hvc_init(void) {
 	printk("[*] registered correctly with major number %d\n", major_num);
 	
 	hvc_class=class_create(THIS_MODULE, CLASS_NAME);
-	if(IS_ERR(hvf_class)) {
+	if(IS_ERR(hvc_class)) {
 		unregister_chrdev(major_num, DEVICE_NAME);
 		printk("[*] failed to register device class\n");
 		return PTR_ERR(hvc_class); }
