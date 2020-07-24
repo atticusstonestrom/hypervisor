@@ -57,9 +57,9 @@ union cpuid_t {
 		unsigned int ecx;
 		unsigned int edx; };
 	struct __attribute__((packed)) {	//leaf 0
-		unsigned int max_leaf;
-		char vendor_id[12]; };
-	} __attribute__((packed));
+		unsigned int max_basic_leaf;
+		char vendor_id[12]; }; }
+	__attribute__((packed));
 	
 #define CPUID(dst, leaf) 							\
 __asm__ __volatile__(								\
