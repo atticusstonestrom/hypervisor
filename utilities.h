@@ -18,14 +18,14 @@ __asm__ __volatile__(				\
 	"mov %%cr0, %%rax;"			\
 	"and $0xfffffffffffeffff, %%rax;"	\
 	"mov %%rax, %%cr0;"			\
-	:::"rax");				
+	:::"rax")			
 
 #define ENABLE_RW_PROTECTION \
 __asm__ __volatile__(				\
 	"mov %%cr0, %%rax;"			\
 	"or $0x10000, %%rax;"			\
 	"mov %%rax, %%cr0;"			\
-	:::"rax");
+	:::"rax")
 /////////////////////////////////////////////////////
 
 
@@ -42,8 +42,27 @@ union msr_t {
 	unsigned long val; }
 	__attribute__((packed));
 
-#define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id)); 
-#define WRITE_MSR(src, id) __asm__ __volatile__("wrmsr"::"a"((src).eax), "d"((src).edx), "c"(id)); 
+#define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id):"memory")
+#define WRITE_MSR(src, id) __asm__ __volatile__("wrmsr"::"a"((src).eax), "d"((src).edx), "c"(id):"memory")
+/////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////
+//should check ID flag (bit 21) of EFLAGS
+
+union cpuid_t {
+	struct __attribute__((packed)) {
+		unsigned int eax;
+		unsigned int ebx;
+		unsigned int ecx;
+		unsigned int edx; };
+	struct __attribute__((packed)) {	//leaf 0
+		unsigned int max_leaf;
+		char vendor_id[12]; };
+	__attribute__((packed));
+	
+#define CPUID(dst, leaf)
+__asm__ __volatile__("cpuid;":"=a"((dst).eax), "=b"((dst.ebx), "=c"((dst).ecx), "=d"((dst.edx):"a"(leaf):"memory");
 /////////////////////////////////////////////////////
 
 
@@ -72,7 +91,7 @@ __asm__ __volatile__(	\
 	"sidt %0;"	\
 	"sti;"		\
 	:: "m"(dst)	\
-	: "memory");
+	: "memory")
 
 #define WRITE_IDT(src)	\
 __asm__ __volatile__(	\
@@ -80,7 +99,7 @@ __asm__ __volatile__(	\
 	"lidt %0;"	\
 	"sti;"		\
 	:: "m"(src)	\
-	: "memory");
+	: "memory")
 /////////////////////////////////////////////////////
 
 
