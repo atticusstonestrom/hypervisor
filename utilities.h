@@ -59,12 +59,12 @@ union cpuid_t {
 	struct __attribute__((packed)) {	//leaf 0
 		unsigned int max_leaf;
 		char vendor_id[12]; };
-	__attribute__((packed));
+	} __attribute__((packed));
 	
-#define CPUID(dst, leaf)							\
+#define CPUID(dst, leaf) 							\
 __asm__ __volatile__(								\
 	"cpuid;"								\
-	:"=a"((dst).eax), "=b"((dst.ebx), "=c"((dst).ecx), "=d"((dst.edx)	\
+	:"=a"((dst).eax), "=b"((dst).ebx), "=c"((dst).ecx), "=d"((dst).edx)	\
 	:"a"(leaf):"memory")
 /////////////////////////////////////////////////////
 
