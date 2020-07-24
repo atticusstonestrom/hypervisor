@@ -39,7 +39,7 @@ static struct file_operations fops = {
 	.release=dev_release };
 
 static int __init hvc_init(void) {
-	struct cpuid_t cpuid;
+	union cpuid_t cpuid;
 	CPUID(cpuid, 0);
 	printk("eax:\t%d\nid:\t%s\n", cpuid.max_leaf, cpuid.vendor_id);
 	
