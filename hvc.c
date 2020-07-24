@@ -10,6 +10,7 @@
 #include <linux/kernel.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
+#include "utilities.h"
 
 #define DEVICE_NAME "hvchar"
 #define CLASS_NAME "hvc"
@@ -38,6 +39,10 @@ static struct file_operations fops = {
 	.release=dev_release };
 
 static int __init hvc_init(void) {
+	struct cpuid_t cpuid;
+	CPUID(cpuid, 0);
+	printk("eax:\t%d\nid:\t%s\n", cpuid.max_leaf, cpuid.vendor_id);
+	
 	printk("[*] initializing the hvchar lkm\n");
 	if( (major_num=register_chrdev(0, DEVICE_NAME, &fops))<0 ) {
 		printk("[*] failed to register a major number\n");
