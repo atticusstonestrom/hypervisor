@@ -61,8 +61,11 @@ union cpuid_t {
 		char vendor_id[12]; };
 	__attribute__((packed));
 	
-#define CPUID(dst, leaf)
-__asm__ __volatile__("cpuid;":"=a"((dst).eax), "=b"((dst.ebx), "=c"((dst).ecx), "=d"((dst.edx):"a"(leaf):"memory");
+#define CPUID(dst, leaf)							\
+__asm__ __volatile__(								\
+	"cpuid;"								\
+	:"=a"((dst).eax), "=b"((dst.ebx), "=c"((dst).ecx), "=d"((dst.edx)	\
+	:"a"(leaf):"memory")
 /////////////////////////////////////////////////////
 
 
