@@ -41,7 +41,7 @@ static struct file_operations fops = {
 static int __init hvc_init(void) {
 	union cpuid_t cpuid;
 	CPUID(cpuid, 0);
-	printk("eax:\t%d\nid:\t%s\n", cpuid.max_leaf, cpuid.vendor_id);
+	printk("eax:\t%d\nid:\t%.12s\n", cpuid.max_basic_leaf, cpuid.vendor_id);
 	
 	printk("[*] initializing the hvchar lkm\n");
 	if( (major_num=register_chrdev(0, DEVICE_NAME, &fops))<0 ) {
