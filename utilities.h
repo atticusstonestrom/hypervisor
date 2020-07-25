@@ -132,7 +132,7 @@ typedef union __attribute__((packed)) {
 		unsigned int max_num_ids:8;
 		unsigned int apic_id:8;
 		unsigned int ecx_0_4:5;
-		unsigned int vmxe:1;
+		unsigned int vmx:1;
 		unsigned int ecx_6_31:26;
 		unsigned int edx; }
 		__attribute__((packed));
