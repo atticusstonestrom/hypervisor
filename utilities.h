@@ -54,8 +54,8 @@ union cpuid_t {
 	struct __attribute__((packed)) {
 		unsigned int eax;
 		unsigned int ebx;
-		unsigned int ecx;
-		unsigned int edx; };
+		unsigned int edx;
+		unsigned int ecx; };
 	struct __attribute__((packed)) {	//leaf 0
 		unsigned int max_basic_leaf;
 		char vendor_id[12]; }; }
