@@ -35,12 +35,12 @@ __asm__ __volatile__(				\
 
 
 /////////////////////////////////////////////////////
-union msr_t {
+typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		unsigned int eax;
 		unsigned int edx; };
-	unsigned long val; }
-	__attribute__((packed));
+	unsigned long val;
+} msr_t;
 
 #define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id):"memory")
 #define WRITE_MSR(src, id) __asm__ __volatile__("wrmsr"::"a"((src).eax), "d"((src).edx), "c"(id):"memory")
@@ -50,7 +50,7 @@ union msr_t {
 /////////////////////////////////////////////////////
 //should check ID flag (bit 21) of EFLAGS
 
-union cpuid_t {
+typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		unsigned int eax;
 		unsigned int ebx;
@@ -58,8 +58,8 @@ union cpuid_t {
 		unsigned int ecx; };
 	struct __attribute__((packed)) {	//leaf 0
 		unsigned int max_basic_leaf;
-		char vendor_id[12]; }; }
-	__attribute__((packed));
+		char vendor_id[12]; };
+} cpuid_t;
 	
 #define CPUID(dst, leaf) 							\
 __asm__ __volatile__(								\
@@ -70,7 +70,7 @@ __asm__ __volatile__(								\
 
 
 /////////////////////////////////////////////////////
-struct idte_t {
+typedef struct __attribute__((packed)) {
 	unsigned short offset_0_15;
 	unsigned short segment_selector;
 	unsigned char ist;			//interrupt stack table
@@ -80,13 +80,13 @@ struct idte_t {
 	unsigned char p:1;			//present flag
 	unsigned short offset_16_31;
 	unsigned int offset_32_63;
-	unsigned int rsv; }
-	__attribute__((packed));
+	unsigned int rsv;
+} idte_t;
 
-struct idtr_t {
+typedef struct __attribute__((packed)) {
 	unsigned short lim_val;
-	struct idte_t *addr; }
-	__attribute__((packed));
+	struct idte_t *addr;
+} idtr_t;
 
 #define READ_IDT(dst)	\
 __asm__ __volatile__(	\
@@ -122,12 +122,12 @@ __asm__ __volatile__(	\
 		
 
 /////////////////////////////////////////////////////
-struct gdtr_t {
+typedef struct __attribute__((packed)) {
 	unsigned short lim_val;
-	void *addr; }
-	__attribute__((packed));
+	void *addr;
+} gdtr_t;
 
-struct tssd_t {
+typedef struct __attribute__((packed)) {
 	unsigned short seg_lim_0_15;
 	unsigned short base_addr_0_15;
 	unsigned char base_addr_16_23;		//interrupt stack table
@@ -141,10 +141,10 @@ struct tssd_t {
 	unsigned char granularity:1;
 	unsigned char base_addr_24_31;
 	unsigned int base_addr_32_63;
-	unsigned int rsv; }
-	__attribute__((packed));
+	unsigned int rsv;
+} tssd_t;
 
-struct tss_t {
+typedef struct __attribute__((packed)) {
 	unsigned int rsv_0_3;
 	unsigned long rsp0;
 	unsigned long rsp1;
@@ -159,17 +159,17 @@ struct tss_t {
 	unsigned long ist7;
 	unsigned long rsv_92_99;
 	unsigned short rsv_100_101;
-	unsigned short io_map_base_addr; }
-	__attribute__((packed));
+	unsigned short io_map_base_addr;
+} tss_t;
 
 __attribute__((__always_inline__))
-struct tss_t *get_tss(void) {
-	struct gdtr_t gdtr={0};
+tss_t *get_tss(void) {
+	gdtr_t gdtr={0};
 	unsigned short tr=0;
 	__asm__ __volatile__("sgdt %0"::"m"(gdtr):"memory");
 	__asm__ __volatile__("str %0"::"m"(tr):"memory");
-	struct tssd_t *tssd=(void *)((unsigned long)gdtr.addr+tr);
-	return (struct tss_t *)(0
+	tssd_t *tssd=(void *)((unsigned long)gdtr.addr+tr);
+	return (tss_t *)(0
 		| ((long)(tssd->base_addr_0_15))
 		| ((long)(tssd->base_addr_16_23)<<16)
 		| ((long)(tssd->base_addr_24_31)<<24)
@@ -177,7 +177,7 @@ struct tss_t *get_tss(void) {
 /////////////////////////////////////////////////////
 
 //pg 2910
-union pse_t {
+typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		unsigned long p:1;
 		unsigned long rw:1;
@@ -205,10 +205,10 @@ union pse_t {
 		unsigned long rsv_2mb_13_20:8;
 		unsigned long addr_2mb:31;	//bits 21 to 51
 		unsigned long rsv_2mb_52_63:12; };
-	unsigned long val; }
-	__attribute__((packed));
+	unsigned long val;
+} pse_t;
 
-union vaddr_t {
+typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		unsigned long offset_pse:12;
 		unsigned long pt_bits:9;	//bits 12 to 20
@@ -226,23 +226,24 @@ union vaddr_t {
 	struct __attribute__((packed)) {
 		unsigned long offset_4kb:12;
 		unsigned long rsv_12_63:52; };
-	unsigned long val; }
-	__attribute__((packed));
+	unsigned long val;
+} vaddr_t;
 
-struct vtp_t {
+typedef struct {
 	union pse_t *pml5e_p;
 	union pse_t *pml4e_p;
 	union pse_t *pdpte_p;
 	union pse_t *pde_p;
-	union pse_t *pte_p; };
+	union pse_t *pte_p;
+} vtp_t;
 
 unsigned int
-vtp(unsigned long addr, unsigned long *paddr_p, struct vtp_t *vtp_p) {
+vtp(unsigned long addr, unsigned long *paddr_p, vtp_t *vtp_p) {
 	//asm block checks to see if 4 or 5-level paging is enabled
 	//if so, moves the cr3 register into the cr3 variable
 	//and sets la57_flag to assert whether 4-level or 5-level
 	int la57_flag=0;
-	union pse_t cr3={0};
+	pse_t cr3={0};
 	__asm__ __volatile__ (
 		"mov %%cr0, %%rax;"		//check bit 31 of cr0 (PG flag)
 		"test $0x80000000, %%eax;"	//deny request if 0
@@ -269,10 +270,10 @@ vtp(unsigned long addr, unsigned long *paddr_p, struct vtp_t *vtp_p) {
 	if(!cr3.val) {
 		return -EOPNOTSUPP; }
 
-	union pse_t psentry={0};
-	union vaddr_t vaddr=(union vaddr_t)addr;
+	pse_t psentry={0};
+	vaddr_t vaddr=(vaddr_t)addr;
 	if(vtp_p!=NULL) {
-		*vtp_p=(struct vtp_t){ .pml5e_p=NULL, .pml4e_p=NULL, .pdpte_p=NULL, .pde_p=NULL, .pte_p=NULL }; }
+		*vtp_p=(vtp_t){ .pml5e_p=NULL, .pml4e_p=NULL, .pdpte_p=NULL, .pde_p=NULL, .pte_p=NULL }; }
 
 	//pml5e (if applicable)
 	if(la57_flag) {			//5-level paging
