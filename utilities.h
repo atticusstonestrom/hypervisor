@@ -42,12 +42,12 @@ typedef union __attribute__((packed)) {
 	unsigned long val;
 	
 	#define IA32_FEATURE_CONTROL 0x3a
-	struct ia32_feature_control {
+	struct __attribute__((packed)) {
 		unsigned long lock:1;
 		unsigned long smx_vmxe:1;
 		unsigned long non_smx_vmxe:1;
 		unsigned long rsv_3_63:61; }
-		__attribute__((packed));
+		ia32_feature_control;
 } msr_t;
 
 #define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id):"memory")
@@ -56,7 +56,7 @@ typedef union __attribute__((packed)) {
 
 /////////////////////////////////////////////////////
 typedef union __attribute__((packed)) {
-	typedef struct __attribute__((packed)) {
+	struct __attribute__((packed)) {
 		unsigned long pe:1;
 		unsigned long mp:1;
 		unsigned long em:1;
@@ -76,7 +76,7 @@ typedef union __attribute__((packed)) {
 } cr0_t;
 
 typedef union __attribute__((packed)) {
-	typedef struct __attribute__((packed)) {
+	struct __attribute__((packed)) {
 		unsigned long vme:1;
 		unsigned long pvi:1;
 		unsigned long tsd:1;
@@ -114,7 +114,7 @@ typedef union __attribute__((packed)) {
 		unsigned int ecx;
 		unsigned int edx; };
 	
-	union leaf_0 {
+	union __attribute__((packed)) {
 		struct __attribute__((packed)) {
 			unsigned int eax;
 			unsigned int ebx;
@@ -122,10 +122,10 @@ typedef union __attribute__((packed)) {
 			unsigned int ecx; };
 		struct __attribute__((packed)) {
 			unsigned int max_basic_leaf;
-			char vendor_id[12]; }}
-		__attribute__((packed));
+			char vendor_id[12]; }; }
+		leaf_0;
 	
-	struct leaf_1 {
+	struct __attribute__((packed)) {
 		unsigned int version_info;
 		unsigned int brand_index:8;
 		unsigned int clflush_line_size:8;
@@ -135,7 +135,7 @@ typedef union __attribute__((packed)) {
 		unsigned int vmx:1;
 		unsigned int ecx_6_31:26;
 		unsigned int edx; }
-		__attribute__((packed));
+		leaf_1;
 } cpuid_t;
 	
 #define CPUID(dst, leaf) 							\
