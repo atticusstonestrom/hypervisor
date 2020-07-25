@@ -40,25 +40,102 @@ typedef union __attribute__((packed)) {
 		unsigned int eax;
 		unsigned int edx; };
 	unsigned long val;
+	
+	#define IA32_FEATURE_CONTROL 0x3a
+	struct ia32_feature_control {
+		unsigned long lock:1;
+		unsigned long smx_vmxe:1;
+		unsigned long non_smx_vmxe:1;
+		unsigned long rsv_3_63:61; }
+		__attribute__((packed));
 } msr_t;
 
 #define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id):"memory")
 #define WRITE_MSR(src, id) __asm__ __volatile__("wrmsr"::"a"((src).eax), "d"((src).edx), "c"(id):"memory")
 /////////////////////////////////////////////////////
 
+/////////////////////////////////////////////////////
+typedef union __attribute__((packed)) {
+	typedef struct __attribute__((packed)) {
+		unsigned long pe:1;
+		unsigned long mp:1;
+		unsigned long em:1;
+		unsigned long ts:1;
+		unsigned long et:1;
+		unsigned long ne:1;
+		unsigned long rsv_6_15:10;
+		unsigned long wp:1;
+		unsigned long rsv_17:1;
+		unsigned long am:1;
+		unsigned long rsv_19_28:10;
+		unsigned long nw:1;
+		unsigned long cd:1;
+		unsigned long pg:1;
+		unsigned long rsv_32_63:32; };
+	unsigned long val;
+} cr0_t;
+
+typedef union __attribute__((packed)) {
+	typedef struct __attribute__((packed)) {
+		unsigned long vme:1;
+		unsigned long pvi:1;
+		unsigned long tsd:1;
+		unsigned long de:1;
+		unsigned long pse:1;
+		unsigned long pae:1;
+		unsigned long mce:1;
+		unsigned long pge:1;
+		unsigned long pce:1;
+		unsigned long osfxsr:1;
+		unsigned long osxmmexcpt:1;
+		unsigned long umip:1;
+		unsigned long la57:1;
+		unsigned long vmxe:1;
+		unsigned long smxe:1;
+		unsigned long rsv_15:1;
+		unsigned long fsgsbase:1;
+		unsigned long pcide:1;
+		unsigned long osxsave:1;
+		unsigned long rsv_19:1;
+		unsigned long smep:1;
+		unsigned long smap:1;
+		unsigned long pke:1;
+		unsigned long rsv_23_63:31; };
+	unsigned long val;
+} cr4_t;
+/////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////
 //should check ID flag (bit 21) of EFLAGS
-
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		unsigned int eax;
 		unsigned int ebx;
-		unsigned int edx;
-		unsigned int ecx; };
-	struct __attribute__((packed)) {	//leaf 0
-		unsigned int max_basic_leaf;
-		char vendor_id[12]; };
+		unsigned int ecx;
+		unsigned int edx; };
+	
+	union leaf_0 {
+		struct __attribute__((packed)) {
+			unsigned int eax;
+			unsigned int ebx;
+			unsigned int edx;
+			unsigned int ecx; };
+		struct __attribute__((packed)) {
+			unsigned int max_basic_leaf;
+			char vendor_id[12]; }}
+		__attribute__((packed));
+	
+	struct leaf_1 {
+		unsigned int version_info;
+		unsigned int brand_index:8;
+		unsigned int clflush_line_size:8;
+		unsigned int max_num_ids:8;
+		unsigned int apic_id:8;
+		unsigned int ecx_0_4:5;
+		unsigned int vmxe:1;
+		unsigned int ecx_6_31:26;
+		unsigned int edx; }
+		__attribute__((packed));
 } cpuid_t;
 	
 #define CPUID(dst, leaf) 							\
