@@ -57,6 +57,7 @@ cr4_t initial_cr4;
 /////////////////////////////////////////
 
 static int __init hvc_init(void) {
+	//all of this should run only on a single processor
 	
 	cpuid_t cpuid;
 	printk("[*]  verifying vt-x support\n");
