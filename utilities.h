@@ -44,7 +44,7 @@ typedef union __attribute__((packed)) {
 	#define IA32_PAT 0x277
 	struct __attribute__((packed)) {
 		unsigned char entries[8]; }
-		ia32_pat;
+		pat;
 	
 	#define IA32_FEATURE_CONTROL 0x3a
 	struct __attribute__((packed)) {
@@ -60,7 +60,7 @@ typedef union __attribute__((packed)) {
 		unsigned long rsv_19:1;
 		unsigned long lmce:1;
 		unsigned long rsv_21_63:43; }
-		ia32_feature_control;
+		feature_control;
 } msr_t;
 
 #define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id):"memory")
