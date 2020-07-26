@@ -46,7 +46,15 @@ typedef union __attribute__((packed)) {
 		unsigned long lock:1;
 		unsigned long smx_vmxe:1;
 		unsigned long non_smx_vmxe:1;
-		unsigned long rsv_3_63:61; }
+		unsigned long rsv_3_7:5;
+		unsigned long local_senter_enable:7;
+		unsigned long global_senter_enable:1;
+		unsigned long rsv_16:1;
+		unsigned long sgx_launch_enable:1;
+		unsigned long sgx_global_enable:1;
+		unsigned long rsv_19:1;
+		unsigned long lmce:1;
+		unsigned long rsv_21_63:43; }
 		ia32_feature_control;
 } msr_t;
 
