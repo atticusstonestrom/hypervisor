@@ -110,6 +110,8 @@ static int __init hvc_init(void) {
 	unsigned long my_page;
 	my_page=get_zeroed_page(GFP_KERNEL);
 	printk("[*] mypage:\t0x%lx\n", my_page);
+	if(!my_page) {
+		return -ENOMEM; }
 	vtp_t vtp_s=(vtp_t){0};
 	unsigned long paddr;
 	if(vtp(my_page, &paddr, &vtp_s)) {
