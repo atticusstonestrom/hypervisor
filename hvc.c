@@ -105,6 +105,9 @@ static int __init hvc_init(void) {
 	printk("[*]  parse complete\n\n");
 	
 	READ_MSR(msr, IA32_PAT);
+	int i=0;
+	for(i=0; i<8; i++) {
+		printk("[*] pat %d: 0x%02x\n", i, msr.ia32_pat.entries[i]); }
 	printk("[*] ia32_pat:\t0x%lx\n", msr.val);
 	
 	unsigned long my_page;
