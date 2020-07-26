@@ -41,6 +41,11 @@ typedef union __attribute__((packed)) {
 		unsigned int edx; };
 	unsigned long val;
 	
+	#define IA32_PAT 0x277
+	struct __attribute__((packed)) {
+		unsigned char entries[8]; }
+		ia32_pat;
+	
 	#define IA32_FEATURE_CONTROL 0x3a
 	struct __attribute__((packed)) {
 		unsigned long lock:1;
