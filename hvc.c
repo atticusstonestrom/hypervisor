@@ -45,8 +45,10 @@ static struct file_operations fops = {
 /////////////////////////////////////////
 //guest state variables
 typedef struct {
-	void *vmxon_region;
-	void *vmcs_region;
+	unsigned long vmxon_region;
+	unsigned long vmxon_paddr;
+	unsigned long vmcs_region;
+	unsigned long vmcs_paddr;
 } vmstate_t;
 vmstate_t vmstate;
 /////////////////////////////////////////
@@ -104,16 +106,23 @@ static int __init hvc_init(void) {
 		WRITE_MSR(msr, IA32_FEATURE_CONTROL); }
 	printk("[*]  parse complete\n\n");
 	
+	printk("[*]  parsing page attribute table\n");
 	READ_MSR(msr, IA32_PAT);
-	int pat_wb_index=0;
-	while(msr.pat.entries[pat_wb_index]!=PAT_WB && pat_wb_index<8) {
-		pat_wb_index++; }
-	if(pat_wb_index==8) {
-		printk("[*] writeback caching not available\n"); }
-		return -EOPNOTSUPP; }	//not necessary
-	for(i=0; i<8; i++) {
-		printk("[*] pat %d: 0x%02x\n", i, msr.pat.entries[i]); }
-	printk("[*] pat:\t0x%lx\n", msr.val);
+	int i=0;
+	printk("[**] pat entries: 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n",
+	       msr.pat.entries[0], msr.pat.entries[1], msr.pat.entries[2], msr.pat.entries[3], 
+	       msr.pat.entries[4], msr.pat.entries[5], msr.pat.entries[6], msr.pat.entries[7]);
+	if(msr.pat.entries[0]!=PAT_WB) {
+		printk("[*]  writeback caching not available\n");
+		return -EOPNOTSUPP; }
+	printk("[*]  writeback caching available\n\n");
+	
+	printk("[*]  initializing vmxon region\n");
+	vmstate.vmxon_region=get_zeroed_page(GFP_KERNEL);
+	if(vmstate.vmxon_region==NULL) {
+		printk("[*] no free page available\n");
+		return -ENOMEM; }
+	printk("[**] vmxon_region:\t0x%lx\n", vmstate.vmxon_region);
 
 	disable_rw_protection;
 	invlpg, etc;	//or the one that comes before it in the manual
@@ -182,6 +191,7 @@ static void __exit hvc_exit(void) {
 	printk("[**] new cr4:\t0x%lx\n", cr4.val);
 	printk("[*]  restored\n\n");
 	
+	free_page(vmstate.vmxon_region);
 	//free pages
 	//restore caching type
 	//invlpg
