@@ -104,6 +104,9 @@ static int __init hvc_init(void) {
 		WRITE_MSR(msr, IA32_FEATURE_CONTROL); }
 	printk("[*]  parse complete\n\n");
 	
+	READ_MSR(msr, IA32_PAT);
+	printk("[*] ia32_pat:\t0x%lx\n", msr.val);
+	
 	unsigned long my_page;
 	my_page=get_zeroed_page(GFP_KERNEL);
 	printk("[*] mypage:\t0x%lx\n", my_page);
