@@ -87,28 +87,38 @@ static int __init hvc_init(void) {
 	printk("[*]  parsing ia32_feature_control\n");
 	READ_MSR(msr, IA32_FEATURE_CONTROL);
 	printk("[**] current value:\t0x%lx\n", msr.val);
-	if(msr.ia32_feature_control.lock) {
+	if(msr.feature_control.lock) {
 		printk("[**] vmx locked in bios\n");
 		//should check if current processor state is smx
-		if(!msr.ia32_feature_control.non_smx_vmxe) {
+		if(!msr.feature_control.non_smx_vmxe) {
 			printk("[*] non-smx vmx disabled\n");
 			__asm__ __volatile__("mov %0, %%cr4"::"r"(initial_cr4.val));
 			return -EOPNOTSUPP; }
 		printk("[**] non-smx vmx enabled\n"); }
 	else {
 		printk("[**] enabling non-smx vmx\n");
-		msr.ia32_feature_control.non_smx_vmxe=1;
+		msr.feature_control.non_smx_vmxe=1;
 		printk("[**] locking feature control\n");
-		msr.ia32_feature_control.lock=1;
+		msr.feature_control.lock=1;
 		printk("[**] writing value:\t0x%lx\n", msr.val);
 		WRITE_MSR(msr, IA32_FEATURE_CONTROL); }
 	printk("[*]  parse complete\n\n");
 	
 	READ_MSR(msr, IA32_PAT);
-	int i=0;
+	int pat_wb_index=0;
+	while(msr.pat.entries[pat_wb_index]!=PAT_WB && pat_wb_index<8) {
+		pat_wb_index++; }
+	if(pat_wb_index==8) {
+		printk("[*] writeback caching not available\n"); }
+		return -EOPNOTSUPP; }	//not necessary
 	for(i=0; i<8; i++) {
-		printk("[*] pat %d: 0x%02x\n", i, msr.ia32_pat.entries[i]); }
-	printk("[*] ia32_pat:\t0x%lx\n", msr.val);
+		printk("[*] pat %d: 0x%02x\n", i, msr.pat.entries[i]); }
+	printk("[*] pat:\t0x%lx\n", msr.val);
+
+	disable_rw_protection;
+	invlpg, etc;	//or the one that comes before it in the manual
+
+	//first 32 bits of VMCS to give processor type, msr
 	
 	unsigned long my_page;
 	my_page=get_zeroed_page(GFP_KERNEL);
@@ -171,6 +181,10 @@ static void __exit hvc_exit(void) {
 	__asm__ __volatile__("mov %0, %%cr4"::"r"(cr4.val));
 	printk("[**] new cr4:\t0x%lx\n", cr4.val);
 	printk("[*]  restored\n\n");
+	
+	//free pages
+	//restore caching type
+	//invlpg
 	
 	device_destroy(hvc_class, MKDEV(major_num, 0));
 	class_unregister(hvc_class);
