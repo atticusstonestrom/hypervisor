@@ -4,6 +4,15 @@
 //                                                  //
 //////////////////////////////////////////////////////
 
+
+
+//////////////////////////////////////////////////////
+//urgent todo:
+//everything must run on one processor
+//mutex, as in the intro to char devices
+//init() should be open()
+//////////////////////////////////////////////////////
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/device.h>
