@@ -265,6 +265,11 @@ tss_t *get_tss(void) {
 		| ((long)(tssd->base_addr_24_31)<<24)
 		| ((long)(tssd->base_addr_32_63)<<32)); }
 /////////////////////////////////////////////////////
+//pg 3244
+#define PAT_WB  0x06
+#define PAT_WT  0x04
+#define PAT_UC_ 0x07
+#define PAT_UC  0x00
 
 //pg 2910
 typedef union __attribute__((packed)) {
@@ -283,6 +288,12 @@ typedef union __attribute__((packed)) {
 		unsigned long rsv_52_58:7;
 		unsigned long prot_key:4;
 		unsigned long nx:1; };
+	struct __attribute__((packed)) {
+		unsigned long rsv_4kb_0_6:7;
+		unsigned long pat_4kb:1;
+		unsigned long rsv_4kb_8_11:4;
+		unsigned long addr_4kb:40;	//bits 12 to 51
+		unsigned long rsv_4kb_52_63:12; };
 	struct __attribute__((packed)) {
 		unsigned long rsv_1gb_0_11:12;
 		unsigned long pat_1gb:1;
@@ -412,7 +423,7 @@ vtp(unsigned long addr, unsigned long *paddr_p, vtp_t *vtp_p) {
 	if(vtp_p!=NULL) {
 		vtp_p->pte_p=(void *)phys_to_virt(((unsigned long)psentry.addr<<12)|((unsigned long)vaddr.pt_bits<<3)); }
 	psentry.val=*(unsigned long *)\
-		phys_to_virt(((unsigned long)psentry.addr<<12)|((unsigned long)vaddr.pt_bits<<3));
-	*paddr_p=((unsigned long)psentry.addr<<12)|vaddr.offset_4kb;
+		phys_to_virt(((unsigned long)psentry.addr_4kb<<12)|((unsigned long)vaddr.pt_bits<<3));
+	*paddr_p=((unsigned long)psentry.addr_4kb<<12)|vaddr.offset_4kb;
 	return 0; }
 /////////////////////////////////////////////////////
