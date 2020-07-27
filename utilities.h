@@ -41,6 +41,21 @@ typedef union __attribute__((packed)) {
 		unsigned int edx; };
 	unsigned long val;
 	
+	#define IA32_VMX_BASIC 0x480
+	struct __attribute__((packed)) {
+		unsigned long revision_id:31;
+		unsigned long rsv_31:1;
+		unsigned long vm_region_size:13;
+		unsigned long rsv_45_47:3;
+		unsigned long address_width:1;		//if set, 32 bits. else physical address width
+		unsigned long dual_monitor:1;
+		unsigned long vm_caching_type:4;	//will be PAT_WB at present
+		unsigned long vm_exit_info_io:1;
+		unsigned long vmx_controls_clear:1;
+		unsigned long vm_entry_exception:1;
+		unsigned long rsv_57_63:7; }
+		vmx_basic;
+	
 	#define IA32_PAT 0x277
 	struct __attribute__((packed)) {
 		unsigned char entries[8]; }
