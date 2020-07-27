@@ -131,6 +131,34 @@ typedef union __attribute__((packed)) {
 		unsigned long rsv_23_63:31; };
 	unsigned long val;
 } cr4_t;
+
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned long cf:1;
+		unsigned long rsv_1:1;
+		unsigned long pf:1;
+		unsigned long rsv_3:1;
+		unsigned long af:1;
+		unsigned long rsv_5:1;
+		unsigned long zd:1;
+		unsigned long sf:1;
+		unsigned long tf:1;
+		unsigned long if:1;
+		unsigned long df:1;
+		unsigned long of:1;
+		unsigned long iopl:2;
+		unsigned long nt:1;
+		unsigned long rsv_15:1;
+		unsigned long rf:1;
+		unsigned long vm:1;
+		unsigned long ac:1;
+		unsigned long vif:1;
+		unsigned long vip:1;
+		unsigned long id:1;
+		unsigned long rsv_22_31:10;
+		unsigned long rsv_32_63:32; };
+	unsigned long val;
+} rflags_t;
 /////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////
@@ -231,6 +259,10 @@ __asm__ __volatile__(	\
 
 /////////////////////////////////////////////////////
 #define VMXON(paddr) __asm__ __volatile__("vmxon %0"::"m"(paddr));
+
+#define VMsucceed(rflags)	(!(rflags).cf && !(rflags).pf && !(rflags).af && !(rflags).zf && !(rflags).sf && !(rflags).of)
+#define VMfailInvalid(rflags)	((rflags).cf && !(rflags).pf && !(rflags).af && !(rflags).zf && !(rflags).sf && !(rflags).of)
+#define VMfailValid(rflags)	(!(rflags).cf && !(rflags).pf && !(rflags).af && (rflags).zf && !(rflags).sf && !(rflags).of)
 /////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////
