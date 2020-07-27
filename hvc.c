@@ -231,6 +231,7 @@ static int __init hvc_init(void) {
 	READ_MSR(msr, IA32_VMX_BASIC);
 	printk("[*]  msr.vmx_basic.vm_caching_type: 0x%02x\n", msr.vmx_basic.vm_caching_type);
 	printk("[*]  vm region size: %d\n", msr.vmx_basic.vm_region_size);
+	printk("[*]  revision identifier: 0x%x\n", msr.vmx_basic.revision_id);
 	
 
 	/*disable_rw_protection;
