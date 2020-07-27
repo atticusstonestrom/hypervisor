@@ -334,11 +334,11 @@ typedef union __attribute__((packed)) {
 } vaddr_t;
 
 typedef struct {
-	union pse_t *pml5e_p;
-	union pse_t *pml4e_p;
-	union pse_t *pdpte_p;
-	union pse_t *pde_p;
-	union pse_t *pte_p;
+	pse_t *pml5e_p;
+	pse_t *pml4e_p;
+	pse_t *pdpte_p;
+	pse_t *pde_p;
+	pse_t *pte_p;
 } vtp_t;
 
 unsigned int
