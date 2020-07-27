@@ -232,7 +232,20 @@ static int __init hvc_init(void) {
 	READ_MSR(msr, IA32_VMX_BASIC);
 	printk("[**] revision identifier: 0x%x\n", msr.vmx_basic.revision_id);
 	*(unsigned int *)(vmstate.vmxon_region)=msr.vmx_basic.revision_id;
-	VMXON;
+	VMXON(vmstate.vmxon_region);
+	rflags_t rflags;
+	__asm__ __volatile__(
+		"pushf;"
+		"pop %0;"
+		:"=r"(rflags.val)::"memory");
+	printk("[**] rflags: 0x%lx\n", rflags.val);
+	if(VMsucceed(rflags)) {
+		printk("[**] vmxon succeeded\n"); }
+	if(VMfailInvalid(rflags)) {
+		printk("[**] vmxon failed with invalid vmcs\n"); }
+	if(VMfailValid(rflags)) {
+		printk("[**] vmxon failed with valid vmcs\n"); }
+	__asm__ __volatile__("vmxoff");
 	
 	
 
