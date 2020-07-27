@@ -358,10 +358,12 @@ static void __exit hvc_exit(void) {
 	printk("[**] new cr4:\t0x%lx\n", cr4.val);
 	printk("[*]  restored\n\n");
 	
+	printk("[*]  freeing vm regions\n");
 	free_page(vmstate.vmxon_region);
-	printk("[*]  freed vmxon_region: 0x%lx\n", vmstate.vmxon_region);
+	printk("[**] vmxon:\t0x%lx\n", vmstate.vmxon_region);
 	free_page(vmstate.vmcs_region);
-	printk("[*]  freed vmcs_region:  0x%lx\n", vmstate.vmcs_region);
+	printk("[**] vmcs:\t0x%lx\n", vmstate.vmcs_region);
+	printk("[*]  all pages freed\n\n");
 	
 	device_destroy(hvc_class, MKDEV(major_num, 0));
 	class_unregister(hvc_class);
