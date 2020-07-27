@@ -143,7 +143,7 @@ typedef union __attribute__((packed)) {
 		unsigned long zd:1;
 		unsigned long sf:1;
 		unsigned long tf:1;
-		unsigned long if:1;
+		unsigned long _if:1;
 		unsigned long df:1;
 		unsigned long of:1;
 		unsigned long iopl:2;
