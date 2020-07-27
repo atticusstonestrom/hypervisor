@@ -402,23 +402,23 @@ vtp(unsigned long addr, unsigned long *paddr_p, vtp_t *vtp_p) {
 	__asm__ __volatile__ (
 		"mov %%cr0, %%rax;"		//check bit 31 of cr0 (PG flag)
 		"test $0x80000000, %%eax;"	//deny request if 0
-		"jz fail;"			//(ie if paging is not enabled)
+		"jz vtp_fail;"			//(ie if paging is not enabled)
 
 		"mov $0xc0000080, %%ecx;"	//check bit 8 of ia32_efer (LME flag)
 		"rdmsr;"			//deny request if 0
 		"test $0x100, %%eax;"		//(module currently can't handle pae paging)
-		"jz fail;"
+		"jz vtp_fail;"
 		
-	"success:\n"
+	"vtp_success:\n"
 		"mov %%cr3, %0;"
 		"mov %%cr4, %%rax;"
 		"shr $12, %%rax;"
 		"and $1, %%rax;"
 		"mov %%eax, %1;"
-		"jmp break;"
-	"fail:\n"
+		"jmp vtp_finish;"
+	"vtp_fail:\n"
 		"mov $0, %0;"
-	"break:\n"
+	"vtp_finish:\n"
 	
 		: "=r"(cr3.val), "=r"(la57_flag)
 		::"rax", "ecx", "edx", "memory");
