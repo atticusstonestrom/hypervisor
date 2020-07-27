@@ -227,6 +227,11 @@ static int __init hvc_init(void) {
 		free_page(vmstate.vmxon_region);
 		return ret; }
 	
+	
+	READ_MSR(msr, IA32_VMX_BASIC);
+	printk("[*]  msr.vmx_basic.vm_caching_type: 0x%02x\n", msr.vmx_basic.vm_caching_type);
+	printk("[*]  vm region size: %d\n", msr.vmx_basic.vm_region_size);
+	
 
 	/*disable_rw_protection;
 	invlpg, etc;	//or the one that comes before it in the manual
