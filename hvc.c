@@ -16,6 +16,7 @@
 //mutex, as in the intro to char devices
 //	http://derekmolloy.ie/writing-a-linux-kernel-module-part-2-a-character-device/
 //init() should be open()
+//save caching type
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -122,55 +123,177 @@ static int __init hvc_init(void) {
 	
 	printk("[*]  parsing page attribute table\n");
 	READ_MSR(msr, IA32_PAT);
-	int i=0;
 	printk("[**] pat entries: 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n",
 	       msr.pat.entries[0], msr.pat.entries[1], msr.pat.entries[2], msr.pat.entries[3], 
 	       msr.pat.entries[4], msr.pat.entries[5], msr.pat.entries[6], msr.pat.entries[7]);
-	if(msr.pat.entries[0]!=PAT_WB) {
+	if(msr.pat.entries[0]!=PAT_WB && msr.pat.entries[4]!=PAT_WB) {
 		printk("[*]  writeback caching not available\n");
 		return -EOPNOTSUPP; }
 	printk("[*]  writeback caching available\n\n");
 	
-	printk("[*]  initializing vmxon region\n");
+	vtp_t vtp_s=(vtp_t){0};
+	int ret=0;
+	printk("[*]  allocating vmxon region\n");
 	vmstate.vmxon_region=get_zeroed_page(GFP_KERNEL);
-	if(vmstate.vmxon_region==NULL) {
-		printk("[*] no free page available\n");
+	if(!vmstate.vmxon_region) {
+		printk("[*]  no free page available\n");
 		return -ENOMEM; }
-	printk("[**] vmxon_region:\t0x%lx\n", vmstate.vmxon_region);
+	printk("[**] page:\t0x%lx\n", vmstate.vmxon_region);
+	if( (ret=vtp(vmstate.vmxon_region, &(vmstate.vmxon_paddr), &vtp_s)) ) {
+		printk("[*]  vtp failed\n");
+		return ret; }
+	if(vtp_s.pml5e_p) {
+		printk("[**] &pml5e:\t0x%px\n", vtp_s.pml5e_p);
+		printk("[**] pml5e:\t0x%lx\n", *(unsigned long *)(vtp_s.pml5e_p)); }
+	if(vtp_s.pml4e_p) {
+		printk("[**] &pml4e:\t0x%px\n", vtp_s.pml4e_p);
+		printk("[**] pml4e:\t0x%lx\n", *(unsigned long *)(vtp_s.pml4e_p)); }
+	if(vtp_s.pdpte_p) {
+		printk("[**] &pdpte:\t0x%px\n", vtp_s.pdpte_p);
+		printk("[**] pdpte:\t0x%lx\n", *(unsigned long *)(vtp_s.pdpte_p)); }
+	if(vtp_s.pde_p) {
+		printk("[**] &pde:\t0x%px\n", vtp_s.pde_p);
+		printk("[**] pde:\t0x%lx\n", *(unsigned long *)(vtp_s.pde_p)); }
+	if(vtp_s.pte_p) {
+		printk("[**] &pte:\t0x%px\n", vtp_s.pte_p);
+		printk("[**] pte:\t0x%lx\n", *(unsigned long *)(vtp_s.pte_p)); }
+	printk("[**] paddr:\t0x%lx\n", vmstate.vmxon_paddr);
+	printk("[*]  allocated successfully\n\n");
+	
+	printk("[*]  checking caching type\n");
+	if(vtp_s.pte_p) {
+		printk("[**] 4kb page\n");
+		printk("[**] pat:\t%d\n", vtp_s.pte_p->pat_4kb);
+		printk("[**] pcd:\t%d\n", vtp_s.pte_p->pcd);
+		printk("[**] pwt:\t%d\n", vtp_s.pte_p->pwt);
+		printk("[**] pat type:\t0x%02x\n",
+		       msr.pat.entries[4*vtp_s.pte_p->pat_4kb+2*vtp_s.pte_p->pcd+vtp_s.pte_p->pwt]);
+		if(vtp_s.pte_p->pcd || vtp_s.pte_p->pwt) {
+			DISABLE_RW_PROTECTION;
+			vtp_s.pte_p->pcd=0;
+			vtp_s.pte_p->pwt=0;
+			ENABLE_RW_PROTECTION;
+			printk("[**] new pte:\t0x%lx\n", *(unsigned long *)vtp_s.pte_p);
+			printk("[**] invalidating tlb\n");
+			INVLPG(vmstate.vmxon_region); }}
+	else if(vtp_s.pde_p) {
+		printk("[**] 2mb page\n");
+		printk("[**] pat: %d\n", vtp_s.pde_p->pat_2mb);
+		printk("[**] pcd: %d\n", vtp_s.pde_p->pcd);
+		printk("[**] pwt: %d\n", vtp_s.pde_p->pwt);
+		printk("[**] current cache type: 0x%x\n",
+		       msr.pat.entries[4*vtp_s.pde_p->pat_2mb+2*vtp_s.pde_p->pcd+vtp_s.pde_p->pwt]);
+		if(vtp_s.pde_p->pcd || vtp_s.pde_p->pwt) {
+			DISABLE_RW_PROTECTION;
+			vtp_s.pde_p->pcd=0;
+			vtp_s.pde_p->pwt=0;
+			ENABLE_RW_PROTECTION;
+			printk("[**] new pte:\t0x%lx\n", *(unsigned long *)vtp_s.pde_p);
+			printk("[**] invalidating tlb\n");
+			INVLPG(vmstate.vmxon_region); }}
+	else if(vtp_s.pdpte_p) {
+		printk("[**] 1gb page\n");
+		printk("[**] pat: %d\n", vtp_s.pdpte_p->pat_1gb);
+		printk("[**] pcd: %d\n", vtp_s.pdpte_p->pcd);
+		printk("[**] pwt: %d\n", vtp_s.pdpte_p->pwt);
+		printk("[**] current cache type: 0x%x\n",
+		       msr.pat.entries[4*vtp_s.pdpte_p->pat_1gb+2*vtp_s.pdpte_p->pcd+vtp_s.pdpte_p->pwt]);
+		if(vtp_s.pdpte_p->pcd || vtp_s.pdpte_p->pwt) {
+			DISABLE_RW_PROTECTION;
+			vtp_s.pdpte_p->pcd=0;
+			vtp_s.pdpte_p->pwt=0;
+			ENABLE_RW_PROTECTION;
+			printk("[**] new pte:\t0x%lx\n", *(unsigned long *)vtp_s.pdpte_p);
+			printk("[**] invalidating tlb\n");
+			INVLPG(vmstate.vmxon_region); }}
+	//else {	//vtp must have failed
+	printk("[*]  caching type set to writeback\n\n");
+	
+	vtp_s=(vtp_t){0};
+	ret=0;
+	printk("[*]  allocating vmcs region\n");
+	vmstate.vmcs_region=get_zeroed_page(GFP_KERNEL);
+	if(!vmstate.vmcs_region) {
+		printk("[*]  no free page available\n");
+		free_page(vmstate.vmxon_region);
+		return -ENOMEM; }
+	printk("[**] page:\t0x%lx\n", vmstate.vmcs_region);
+	if( (ret=vtp(vmstate.vmcs_region, &(vmstate.vmcs_paddr), &vtp_s)) ) {
+		printk("[*]  vtp failed\n");
+		free_page(vmstate.vmxon_region);
+		return ret; }
+	if(vtp_s.pml5e_p) {
+		printk("[**] &pml5e:\t0x%px\n", vtp_s.pml5e_p);
+		printk("[**] pml5e:\t0x%lx\n", *(unsigned long *)(vtp_s.pml5e_p)); }
+	if(vtp_s.pml4e_p) {
+		printk("[**] &pml4e:\t0x%px\n", vtp_s.pml4e_p);
+		printk("[**] pml4e:\t0x%lx\n", *(unsigned long *)(vtp_s.pml4e_p)); }
+	if(vtp_s.pdpte_p) {
+		printk("[**] &pdpte:\t0x%px\n", vtp_s.pdpte_p);
+		printk("[**] pdpte:\t0x%lx\n", *(unsigned long *)(vtp_s.pdpte_p)); }
+	if(vtp_s.pde_p) {
+		printk("[**] &pde:\t0x%px\n", vtp_s.pde_p);
+		printk("[**] pde:\t0x%lx\n", *(unsigned long *)(vtp_s.pde_p)); }
+	if(vtp_s.pte_p) {
+		printk("[**] &pte:\t0x%px\n", vtp_s.pte_p);
+		printk("[**] pte:\t0x%lx\n", *(unsigned long *)(vtp_s.pte_p)); }
+	printk("[**] paddr:\t0x%lx\n", vmstate.vmcs_paddr);
+	printk("[*]  allocated successfully\n\n");
+	
+	printk("[*]  checking caching type\n");
+	if(vtp_s.pte_p) {
+		printk("[**] 4kb page\n");
+		printk("[**] pat:\t%d\n", vtp_s.pte_p->pat_4kb);
+		printk("[**] pcd:\t%d\n", vtp_s.pte_p->pcd);
+		printk("[**] pwt:\t%d\n", vtp_s.pte_p->pwt);
+		printk("[**] pat type:\t0x%02x\n",
+		       msr.pat.entries[4*vtp_s.pte_p->pat_4kb+2*vtp_s.pte_p->pcd+vtp_s.pte_p->pwt]);
+		if(vtp_s.pte_p->pcd || vtp_s.pte_p->pwt) {
+			DISABLE_RW_PROTECTION;
+			vtp_s.pte_p->pcd=0;
+			vtp_s.pte_p->pwt=0;
+			ENABLE_RW_PROTECTION;
+			printk("[**] new pte:\t0x%lx\n", *(unsigned long *)vtp_s.pte_p);
+			printk("[**] invalidating tlb\n");
+			INVLPG(vmstate.vmcs_region); }}
+	else if(vtp_s.pde_p) {
+		printk("[**] 2mb page\n");
+		printk("[**] pat: %d\n", vtp_s.pde_p->pat_2mb);
+		printk("[**] pcd: %d\n", vtp_s.pde_p->pcd);
+		printk("[**] pwt: %d\n", vtp_s.pde_p->pwt);
+		printk("[**] current cache type: 0x%x\n",
+		       msr.pat.entries[4*vtp_s.pde_p->pat_2mb+2*vtp_s.pde_p->pcd+vtp_s.pde_p->pwt]);
+		if(vtp_s.pde_p->pcd || vtp_s.pde_p->pwt) {
+			DISABLE_RW_PROTECTION;
+			vtp_s.pde_p->pcd=0;
+			vtp_s.pde_p->pwt=0;
+			ENABLE_RW_PROTECTION;
+			printk("[**] new pte:\t0x%lx\n", *(unsigned long *)vtp_s.pde_p);
+			printk("[**] invalidating tlb\n");
+			INVLPG(vmstate.vmcs_region); }}
+	else if(vtp_s.pdpte_p) {
+		printk("[**] 1gb page\n");
+		printk("[**] pat: %d\n", vtp_s.pdpte_p->pat_1gb);
+		printk("[**] pcd: %d\n", vtp_s.pdpte_p->pcd);
+		printk("[**] pwt: %d\n", vtp_s.pdpte_p->pwt);
+		printk("[**] current cache type: 0x%x\n",
+		       msr.pat.entries[4*vtp_s.pdpte_p->pat_1gb+2*vtp_s.pdpte_p->pcd+vtp_s.pdpte_p->pwt]);
+		if(vtp_s.pdpte_p->pcd || vtp_s.pdpte_p->pwt) {
+			DISABLE_RW_PROTECTION;
+			vtp_s.pdpte_p->pcd=0;
+			vtp_s.pdpte_p->pwt=0;
+			ENABLE_RW_PROTECTION;
+			printk("[**] new pte:\t0x%lx\n", *(unsigned long *)vtp_s.pdpte_p);
+			printk("[**] invalidating tlb\n");
+			INVLPG(vmstate.vmcs_region); }}
+	//else {	//vtp must have failed
+	printk("[*]  caching type set to writeback\n\n");
 
-	disable_rw_protection;
+	/*disable_rw_protection;
 	invlpg, etc;	//or the one that comes before it in the manual
 
-	//first 32 bits of VMCS to give processor type, msr
+	//first 32 bits of VMCS to give processor type, msr*/
 	
-	unsigned long my_page;
-	my_page=get_zeroed_page(GFP_KERNEL);
-	printk("[*] mypage:\t0x%lx\n", my_page);
-	if(!my_page) {
-		return -ENOMEM; }
-	vtp_t vtp_s=(vtp_t){0};
-	unsigned long paddr;
-	if(vtp(my_page, &paddr, &vtp_s)) {
-		return 1; }
-	if(vtp_s.pml5e_p) {
-		printk("[debug]: &pml5e:\t0x%px\n", vtp_s.pml5e_p);
-		printk("[debug]: pml5e:\t0x%lx\n", *(unsigned long *)(vtp_s.pml5e_p)); }
-	if(vtp_s.pml4e_p) {
-		printk("[debug]: &pml4e:\t0x%px\n", vtp_s.pml4e_p);
-		printk("[debug]: pml4e:\t0x%lx\n", *(unsigned long *)(vtp_s.pml4e_p)); }
-	if(vtp_s.pdpte_p) {
-		printk("[debug]: &pdpte:\t0x%px\n", vtp_s.pdpte_p);
-		printk("[debug]: pdpte:\t0x%lx\n", *(unsigned long *)(vtp_s.pdpte_p)); }
-	if(vtp_s.pde_p) {
-		printk("[debug]: &pde:\t0x%px\n", vtp_s.pde_p);
-		printk("[debug]: pde:\t0x%lx\n", *(unsigned long *)(vtp_s.pde_p)); }
-	if(vtp_s.pte_p) {
-		printk("[debug]: &pte:\t0x%px\n", vtp_s.pte_p);
-		printk("[debug]: pte:\t0x%lx\n", *(unsigned long *)(vtp_s.pte_p)); }
-	printk("[*] paddr:\t0x%lx\n", paddr);
-	printk("[*] vtp:\t0x%lx\n", (unsigned long)virt_to_phys((void *)my_page));
-	printk("[*] some long:\t0x%lx\n", *(unsigned long *)(my_page+80));
-	free_page(my_page);
 	
 	//printk("[*] initializing the hvchar lkm\n");
 	if( (major_num=register_chrdev(0, DEVICE_NAME, &fops))<0 ) {
@@ -206,6 +329,9 @@ static void __exit hvc_exit(void) {
 	printk("[*]  restored\n\n");
 	
 	free_page(vmstate.vmxon_region);
+	printk("[*]  freed vmxon_region: 0x%lx\n", vmstate.vmxon_region);
+	free_page(vmstate.vmcs_region);
+	printk("[*]  freed vmcs_region:  0x%lx\n", vmstate.vmcs_region);
 	//free pages
 	//restore caching type
 	//invlpg
@@ -214,7 +340,7 @@ static void __exit hvc_exit(void) {
 	class_unregister(hvc_class);
 	class_destroy(hvc_class);
 	unregister_chrdev(major_num, DEVICE_NAME);
-	printk("[*] lkm unloaded\n"); }
+	printk("[*]  lkm unloaded\n"); }
 
 static int dev_open(struct inode *inodep, struct file *filep) {
 	printk("[*] device has been opened %d time(s)\n", ++counter);
