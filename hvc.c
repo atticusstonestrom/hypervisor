@@ -346,6 +346,7 @@ static int __init hvc_init(void) {
 	return 0; }
 
 static void __exit hvc_exit(void) {
+	printk("[*]  exiting vmx mode\n\n");
 	__asm__ __volatile__("vmxoff");
 	
 	cr4_t cr4;
