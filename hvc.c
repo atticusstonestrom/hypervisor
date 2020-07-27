@@ -230,22 +230,38 @@ static int __init hvc_init(void) {
 	
 	printk("[*]  executing vmxon\n");
 	READ_MSR(msr, IA32_VMX_BASIC);
-	printk("[**] revision identifier: 0x%x\n", msr.vmx_basic.revision_id);
+	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
 	*(unsigned int *)(vmstate.vmxon_region)=msr.vmx_basic.revision_id;
-	VMXON(vmstate.vmxon_region);
 	rflags_t rflags;
 	__asm__ __volatile__(
+		"vmxon %1;"
+		"jbe vmxon_fail;"
+	
+	"vmxon_success:;"
+		"jmp vmxon_finish;"
+	"vmxon_fail:;"
+		"jmp vmxon_finish;"
+		
+	"vmxon_finish:;"
 		"pushf;"
-		"pop %0;"
-		:"=r"(rflags.val)::"memory");
-	printk("[**] rflags: 0x%lx\n", rflags.val);
+		"popq %0;"
+		
+		:"=r"(rflags.val)
+		:"m"(vmstate.vmxon_paddr)
+		:"memory");
+	printk("[**] rflags:\t0x%lx\n", rflags.val);
 	if(VMsucceed(rflags)) {
-		printk("[**] vmxon succeeded\n"); }
-	if(VMfailInvalid(rflags)) {
-		printk("[**] vmxon failed with invalid vmcs\n"); }
-	if(VMfailValid(rflags)) {
-		printk("[**] vmxon failed with valid vmcs\n"); }
-	__asm__ __volatile__("vmxoff");
+		printk("[**] vmxon succeeded\n"); 
+		__asm__ __volatile__("vmxoff"); }
+	else {
+		if(VMfailInvalid(rflags)) {
+			printk("[*]  vmxon failed with invalid vmcs\n"); }
+		if(VMfailValid(rflags)) {
+			printk("[*]  vmxon failed with valid vmcs\n"); }
+		__asm__ __volatile__("mov %0, %%cr4"::"r"(initial_cr4.val));
+		free_page(vmstate.vmxon_region);
+		free_page(vmstate.vmcs_region);
+		return -EINVAL; }
 	
 	
 
