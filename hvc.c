@@ -211,6 +211,7 @@ static int __init hvc_init(void) {
 	       msr.pat.entries[4], msr.pat.entries[5], msr.pat.entries[6], msr.pat.entries[7]);
 	if(msr.pat.entries[0]!=PAT_WB && msr.pat.entries[4]!=PAT_WB) {
 		printk("[*]  writeback caching not available\n");
+		__asm__ __volatile__("mov %0, %%cr4"::"r"(initial_cr4.val));
 		return -EOPNOTSUPP; }
 	printk("[*]  writeback caching available\n\n");
 	
