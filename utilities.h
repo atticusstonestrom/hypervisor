@@ -140,7 +140,7 @@ typedef union __attribute__((packed)) {
 		unsigned long rsv_3:1;
 		unsigned long af:1;
 		unsigned long rsv_5:1;
-		unsigned long zd:1;
+		unsigned long zf:1;
 		unsigned long sf:1;
 		unsigned long tf:1;
 		unsigned long _if:1;
