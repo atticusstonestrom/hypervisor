@@ -16,7 +16,9 @@
 //mutex, as in the intro to char devices
 //	http://derekmolloy.ie/writing-a-linux-kernel-module-part-2-a-character-device/
 //init() should be open()
-//save caching type
+//save/restore caching type
+//check physical address width?
+//# of cores (and corresponding # of vmcs regions) as argument to open
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -228,47 +230,96 @@ static int __init hvc_init(void) {
 		return ret; }
 	
 	
-	printk("[*]  executing vmxon\n");
+	printk("[*]  entering vmx operation\n");
 	READ_MSR(msr, IA32_VMX_BASIC);
 	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
 	*(unsigned int *)(vmstate.vmxon_region)=msr.vmx_basic.revision_id;
 	rflags_t rflags;
+		//__asm__ __volatile__(
+		//	"vmxon %1;"
+		//	"jbe vmxon_fail;"
+		//
+		//"vmxon_success:;"
+		//	"jmp vmxon_finish;"
+		//"vmxon_fail:;"
+		//	"jmp vmxon_finish;"
+		//
+		//"vmxon_finish:;"
+		//	"pushf;"
+		//	"popq %0;"
+		//
+		//	:"=r"(rflags.val)
+		//	:"m"(vmstate.vmxon_paddr)
+		//	:"memory");
 	__asm__ __volatile__(
 		"vmxon %1;"
-		"jbe vmxon_fail;"
-	
-	"vmxon_success:;"
-		"jmp vmxon_finish;"
-	"vmxon_fail:;"
-		"jmp vmxon_finish;"
-		
-	"vmxon_finish:;"
 		"pushf;"
 		"popq %0;"
-		
 		:"=r"(rflags.val)
 		:"m"(vmstate.vmxon_paddr)
 		:"memory");
 	printk("[**] rflags:\t0x%lx\n", rflags.val);
-	if(VMsucceed(rflags)) {
-		printk("[**] vmxon succeeded\n"); 
-		__asm__ __volatile__("vmxoff"); }
-	else {
-		if(VMfailInvalid(rflags)) {
-			printk("[*]  vmxon failed with invalid vmcs\n"); }
+	if(!VMsucceed(rflags)) {
 		if(VMfailValid(rflags)) {
-			printk("[*]  vmxon failed with valid vmcs\n"); }
+			//should get error field from current vmcs
+			printk("[*]  vmxon failed with valid region\n"); }
+		else if(VMfailInvalid(rflags)) {
+			printk("[*]  vmxon failed with invalid region\n"); }
 		__asm__ __volatile__("mov %0, %%cr4"::"r"(initial_cr4.val));
 		free_page(vmstate.vmxon_region);
 		free_page(vmstate.vmcs_region);
 		return -EINVAL; }
-	
+	printk("[*]  vmx operation entered\n\n"); 
 	
 
-	/*disable_rw_protection;
-	invlpg, etc;	//or the one that comes before it in the manual
-
-	//first 32 bits of VMCS to give processor type, msr*/
+	printk("[*]  activating vmcs region\n");
+	READ_MSR(msr, IA32_VMX_BASIC);
+	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
+	*(unsigned int *)(vmstate.vmcs_region)=msr.vmx_basic.revision_id;
+	printk("[**] clearing vmcs @ 0x%lx\n", vmstate.vmcs_paddr);
+	__asm__ __volatile__(
+		"vmclear %1;"
+		"pushf;"
+		"popq %0;"
+		:"=r"(rflags.val)
+		:"m"(vmstate.vmcs_paddr)
+		:"memory");
+	printk("[**] rflags:\t0x%lx\n", rflags.val);
+	if(!VMsucceed(rflags)) {
+		if(VMfailValid(rflags)) {
+			//should get error field from current vmcs
+			printk("[*]  vmclear failed with valid region\n"); }
+		else if(VMfailInvalid(rflags)) {
+			printk("[*]  vmclear failed with invalid region\n"); }
+		__asm__ __volatile__("vmxoff");
+		__asm__ __volatile__("mov %0, %%cr4"::"r"(initial_cr4.val));
+		free_page(vmstate.vmxon_region);
+		free_page(vmstate.vmcs_region);
+		return -EINVAL; }
+	printk("[**] vmclear successful\n"); 
+	printk("[**] calling vmptrld\n");
+	__asm__ __volatile__(
+		"vmptrld %1;"
+		"pushf;"
+		"popq %0;"
+		:"=r"(rflags.val)
+		:"m"(vmstate.vmcs_paddr)
+		:"memory");
+	printk("[**] rflags:\t0x%lx\n", rflags.val);
+	if(!VMsucceed(rflags)) {
+		if(VMfailValid(rflags)) {
+			//should get error field from current vmcs
+			printk("[*]  vmptrld failed with valid region\n"); }
+		else if(VMfailInvalid(rflags)) {
+			printk("[*]  vmptrld failed with invalid region\n"); }
+		__asm__ __volatile__("vmxoff");
+		__asm__ __volatile__("mov %0, %%cr4"::"r"(initial_cr4.val));
+		free_page(vmstate.vmxon_region);
+		free_page(vmstate.vmcs_region);
+		return -EINVAL; }
+	printk("[*]  vmcs region activated\n\n"); 
+	
+	__asm__ __volatile__("vmclear %0;"::"m"(vmstate.vmcs_paddr):"memory");
 	
 	
 	//printk("[*] initializing the hvchar lkm\n");
@@ -295,6 +346,8 @@ static int __init hvc_init(void) {
 	return 0; }
 
 static void __exit hvc_exit(void) {
+	__asm__ __volatile__("vmxoff");
+	
 	cr4_t cr4;
 	printk("[*]  restoring initial cr4\n");
 	__asm__ __volatile__("mov %%cr4, %0":"=r"(cr4.val));
@@ -308,9 +361,6 @@ static void __exit hvc_exit(void) {
 	printk("[*]  freed vmxon_region: 0x%lx\n", vmstate.vmxon_region);
 	free_page(vmstate.vmcs_region);
 	printk("[*]  freed vmcs_region:  0x%lx\n", vmstate.vmcs_region);
-	//free pages
-	//restore caching type
-	//invlpg
 	
 	device_destroy(hvc_class, MKDEV(major_num, 0));
 	class_unregister(hvc_class);
