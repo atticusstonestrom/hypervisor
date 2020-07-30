@@ -3,6 +3,9 @@
 #include <linux/kernel.h>
 #include <asm/io.h>
 
+#ifndef UTILITIES
+#define UTILITIES
+
 /////////////////////////////////////////////////////
 // to-do: paging entry structure 
 // push %fs? push %gs?
@@ -522,3 +525,5 @@ vtp(unsigned long addr, unsigned long *paddr_p, vtp_t *vtp_p) {
 	*paddr_p=((unsigned long)psentry.addr_4kb<<12)|vaddr.offset_4kb;
 	return 0; }
 /////////////////////////////////////////////////////
+
+#endif
