@@ -192,11 +192,11 @@ static int initialize_ept(eptp_t *eptp_p, const int num_guest_pages) {
 	ept_pml4[0].r=1;
 	ept_pml4[0].w=1;
 	
-	*ept_p=(ept_t) {0};
-	ept_p->accessed_dirty_control=1;
-	ept_p->caching_type=PAT_WB;
-	ept_p->page_walk_length=3;
-	ept_p->pml4_addr=virt_to_phys(ept_pml4)>>12;
+	*eptp_p=(eptp_t) {0};
+	eptp_p->accessed_dirty_control=1;
+	eptp_p->caching_type=PAT_WB;
+	eptp_p->page_walk_length=3;
+	eptp_p->pml4_addr=virt_to_phys(ept_pml4)>>12;
 	
 	printk("[*]  initialization complete\n");
 	
