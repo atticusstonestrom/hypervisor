@@ -75,7 +75,7 @@ vmstate_t vmstate;
 cr4_t initial_cr4;
 /////////////////////////////////////////
 
-int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr) {
+static int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr) {
 	msr_t msr;
 	READ_MSR(msr, IA32_PAT);
 	
@@ -157,6 +157,93 @@ int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr) {
 	//else {	//vtp must have failed
 	printk("[*]  caching type set to writeback\n\n");
 	return ret; }
+
+//maybe do a struct like vtp?
+#define MAX_NUM_GUEST_PAGES 10
+static int initialize_eptp_list(eptp_t *eptp_list, const int num_guest_pages) {
+	if(num_pages>MAX_NUM_GUEST_PAGES || num_pages<=0) {
+		return EINVAL; }	//determine # of different structures based on this
+	*eptp_list=(void *)get_zeroed_page(GFP_KERNEL);
+	if(eptp_list==NULL) {
+		return ENOMEM; }
+	epse_t *ept_pml4, ept_pdpt, ept_pd, ept_pt
+	ept_pml4=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pml4==NULL) {
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
+	ept_pdpt=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pdpt==NULL) {
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
+	ept_pd=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pd==NULL) {
+		free_page((unsigned long)ept_pdpt);
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
+	ept_pt=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pt=NULL) {
+		free_page((unsigned long)ept_pd);
+		free_page((unsigned long)ept_pdpt);
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
+	
+	unsigned long guest_memory=__get_free_pages(__GFP_ZERO, num_guest_pages);
+	if(!guest_memory) {
+		free_page((unsigned long)ept_pt);
+		free_page((unsigned long)ept_pd);
+		free_page((unsigned long)ept_pdpt);
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
+	int i=0;
+	for(i=0; i<num_guest_pages; i++) {
+		//={0}
+		ept_pt[i]->accessed=0;
+		ept_pt[i]->dirty=0;
+		ept_pt[i]->caching_type=PAT_WB;
+		ept_pt[i]->x=1;
+		ept_pt[i]->ux=0;
+		ept_pt[i]->ignore_pat=0;
+		ept_pt[i]->addr=virt_to_phys(guest_memory)>>12;
+		ept_pt[i]->r=1;
+		ept_pt[i]->suppress_ve=0;
+		ept_pt[i]->w=1; }
+	
+	//={0}
+	ept_pd[i]->accessed=0;
+	ept_pd[i]->x=1;
+	ept_pd[i]->ux=0;
+	ept_pd[i]->addr=virt_to_phys(ept_pt)>>12;
+	ept_pd[i]->r=1;
+	ept_pd[i]->w=1;
+	
+	//={0}
+	ept_pdpt[i]->accessed=0;
+	ept_pdpt[i]->x=1;
+	ept_pdpt[i]->ux=0;
+	ept_pdpt[i]->addr=virt_to_phys(ept_pd)>>12;
+	ept_pdpt[i]->r=1;
+	ept_pdpt[i]->w=1;
+
+	//={0}
+	ept_pml4[i]->accessed=0;
+	ept_pml4[i]->x=1;
+	ept_pml4[i]->ux=0;
+	ept_pml4[i]->addr=virt_to_phys(ept_pd)>>12;
+	ept_pml4[i]->r=1;
+	ept_pml4[i]->w=1;
+	
+	//={0}
+	eptp_list[0]->accessed_dirty_control=1;
+	eptp_list[0]->caching_type=PAT_WB;
+	eptp_list[0]->page_walk_length=3;
+	eptp_list[0]->pml4_addr=virt_to_phys(ept_pml4)>>12;
+	
+	return 0; }
+	
 
 static int __init hvc_init(void) {
 	//all of this should run only on a single processor
@@ -251,7 +338,7 @@ static int __init hvc_init(void) {
 		//	:"=r"(rflags.val)
 		//	:"m"(vmstate.vmxon_paddr)
 		//	:"memory");
-	__asm__ __volatile__(
+	__asm__ __volatile__(		//define this as macro
 		"vmxon %1;"
 		"pushf;"
 		"popq %0;"
@@ -320,6 +407,15 @@ static int __init hvc_init(void) {
 	printk("[*]  vmcs region activated\n\n"); 
 	
 	__asm__ __volatile__("vmclear %0;"::"m"(vmstate.vmcs_paddr):"memory");
+	
+	
+	
+	
+	printk("[*] initializing eptp list\n");
+	eptp_t *eptp_list=get_zeroed_page(GFP_KERNEL);
+	if(eptp_list==NULL) {
+		
+		
 	
 	
 	//printk("[*] initializing the hvchar lkm\n");
