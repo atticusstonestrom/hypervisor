@@ -104,7 +104,7 @@ static int initialize_eptp_list(eptp_t *eptp_list, const int num_guest_pages) {
 	if(!guest_memory) {
 		printk("[*]  no free pages available\n");
 		return ENOMEM; }
-	printk("[**] guest memory pool:\t0x%px (%d pages)\n", num_guest_pages);
+	printk("[**] guest memory pool:\t0x%lx (%d pages)\n", guest_memory, num_guest_pages);
 	
 	eptp_list=(void *)get_zeroed_page(GFP_KERNEL);
 	if(eptp_list==NULL) {
