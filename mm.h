@@ -3,527 +3,178 @@
 #include <linux/kernel.h>
 #include <asm/io.h>
 
-#ifndef UTILITIES
-#define UTILITIES
+#ifndef MEM_MANAGE
+#define MEM_MANAGE
 
-/////////////////////////////////////////////////////
-// to-do: paging entry structure 
-// push %fs? push %gs?
-// struct gdte_t?
-// syscall prologue
-// irq stack
-// constrain eax and edx in READ_MSR?
-/////////////////////////////////////////////////////
+#include "utilities.h"
 
-/////////////////////////////////////////////////////
-#define DISABLE_RW_PROTECTION			\
-__asm__ __volatile__(				\
-	"mov %%cr0, %%rax;"			\
-	"and $0xfffffffffffeffff, %%rax;"	\
-	"mov %%rax, %%cr0;"			\
-	:::"rax")			
-
-#define ENABLE_RW_PROTECTION \
-__asm__ __volatile__(				\
-	"mov %%cr0, %%rax;"			\
-	"or $0x10000, %%rax;"			\
-	"mov %%rax, %%cr0;"			\
-	:::"rax")
-/////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////
-#define SC_NUM "335"
-/////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned int eax;
-		unsigned int edx; };
-	unsigned long val;
+static int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr) {
+	msr_t msr;
+	READ_MSR(msr, IA32_PAT);
 	
-	#define IA32_VMX_BASIC 0x480
-	struct __attribute__((packed)) {
-		unsigned long revision_id:31;
-		unsigned long rsv_31:1;
-		unsigned long vm_region_size:13;
-		unsigned long rsv_45_47:3;
-		unsigned long address_width:1;		//if set, 32 bits. else physical address width
-		unsigned long dual_monitor:1;
-		unsigned long vm_caching_type:4;	//will be PAT_WB at present
-		unsigned long vm_exit_info_io:1;
-		unsigned long vmx_controls_clear:1;
-		unsigned long vm_entry_exception:1;
-		unsigned long rsv_57_63:7; }
-		vmx_basic;
+	vtp_t vtp_s=(vtp_t){0};
+	int ret=0;
+	printk("[*]  allocating %s\n", name);
+	*vaddr=get_zeroed_page(GFP_KERNEL);
+	if(!(*vaddr)) {
+		printk("[*]  no free page available\n");
+		return -ENOMEM; }
+	printk("[**] page:\t0x%lx\n", *vaddr);
+	if( (ret=vtp(*vaddr, paddr, &vtp_s)) ) {
+		printk("[*]  vtp failed\n");
+		return ret; }
+	if(vtp_s.pml5e_p) {
+		printk("[**] &pml5e:\t0x%px\n", vtp_s.pml5e_p);
+		printk("[**] pml5e:\t0x%lx\n", *(unsigned long *)(vtp_s.pml5e_p)); }
+	if(vtp_s.pml4e_p) {
+		printk("[**] &pml4e:\t0x%px\n", vtp_s.pml4e_p);
+		printk("[**] pml4e:\t0x%lx\n", *(unsigned long *)(vtp_s.pml4e_p)); }
+	if(vtp_s.pdpte_p) {
+		printk("[**] &pdpte:\t0x%px\n", vtp_s.pdpte_p);
+		printk("[**] pdpte:\t0x%lx\n", *(unsigned long *)(vtp_s.pdpte_p)); }
+	if(vtp_s.pde_p) {
+		printk("[**] &pde:\t0x%px\n", vtp_s.pde_p);
+		printk("[**] pde:\t0x%lx\n", *(unsigned long *)(vtp_s.pde_p)); }
+	if(vtp_s.pte_p) {
+		printk("[**] &pte:\t0x%px\n", vtp_s.pte_p);
+		printk("[**] pte:\t0x%lx\n", *(unsigned long *)(vtp_s.pte_p)); }
+	printk("[**] paddr:\t0x%lx\n", *paddr);
+	printk("[*]  allocated successfully\n\n");
 	
-	#define IA32_PAT 0x277
-	struct __attribute__((packed)) {
-		unsigned char entries[8]; }
-		pat;
+	printk("[*]  checking caching type\n");
+	if(vtp_s.pte_p) {
+		printk("[**] 4kb page\n");
+		printk("[**] pat:\t%d\n", vtp_s.pte_p->pat_4kb);
+		printk("[**] pcd:\t%d\n", vtp_s.pte_p->pcd);
+		printk("[**] pwt:\t%d\n", vtp_s.pte_p->pwt);
+		printk("[**] pat type:\t0x%02x\n",
+		       msr.pat.entries[4*vtp_s.pte_p->pat_4kb+2*vtp_s.pte_p->pcd+vtp_s.pte_p->pwt]);
+		if(vtp_s.pte_p->pcd || vtp_s.pte_p->pwt) {
+			DISABLE_RW_PROTECTION;
+			vtp_s.pte_p->pcd=0;
+			vtp_s.pte_p->pwt=0;
+			ENABLE_RW_PROTECTION;
+			printk("[**] new pte:\t0x%lx\n", *(unsigned long *)vtp_s.pte_p);
+			printk("[**] invalidating tlb\n");
+			INVLPG(*vaddr); }}
+	else if(vtp_s.pde_p) {
+		printk("[**] 2mb page\n");
+		printk("[**] pat: %d\n", vtp_s.pde_p->pat_2mb);
+		printk("[**] pcd: %d\n", vtp_s.pde_p->pcd);
+		printk("[**] pwt: %d\n", vtp_s.pde_p->pwt);
+		printk("[**] current cache type: 0x%x\n",
+		       msr.pat.entries[4*vtp_s.pde_p->pat_2mb+2*vtp_s.pde_p->pcd+vtp_s.pde_p->pwt]);
+		if(vtp_s.pde_p->pcd || vtp_s.pde_p->pwt) {
+			DISABLE_RW_PROTECTION;
+			vtp_s.pde_p->pcd=0;
+			vtp_s.pde_p->pwt=0;
+			ENABLE_RW_PROTECTION;
+			printk("[**] new pte:\t0x%lx\n", *(unsigned long *)vtp_s.pde_p);
+			printk("[**] invalidating tlb\n");
+			INVLPG(*vaddr); }}
+	else if(vtp_s.pdpte_p) {
+		printk("[**] 1gb page\n");
+		printk("[**] pat: %d\n", vtp_s.pdpte_p->pat_1gb);
+		printk("[**] pcd: %d\n", vtp_s.pdpte_p->pcd);
+		printk("[**] pwt: %d\n", vtp_s.pdpte_p->pwt);
+		printk("[**] current cache type: 0x%x\n",
+		       msr.pat.entries[4*vtp_s.pdpte_p->pat_1gb+2*vtp_s.pdpte_p->pcd+vtp_s.pdpte_p->pwt]);
+		if(vtp_s.pdpte_p->pcd || vtp_s.pdpte_p->pwt) {
+			DISABLE_RW_PROTECTION;
+			vtp_s.pdpte_p->pcd=0;
+			vtp_s.pdpte_p->pwt=0;
+			ENABLE_RW_PROTECTION;
+			printk("[**] new pte:\t0x%lx\n", *(unsigned long *)vtp_s.pdpte_p);
+			printk("[**] invalidating tlb\n");
+			INVLPG(*vaddr); }}
+	//else {	//vtp must have failed
+	printk("[*]  caching type set to writeback\n\n");
+	return ret; }
+
+//maybe do a struct like vtp?
+#define MAX_NUM_GUEST_PAGES 10
+static int initialize_eptp_list(eptp_t *eptp_list, const int num_guest_pages) {
+	if(num_guest_pages>MAX_NUM_GUEST_PAGES || num_guest_pages<=0) {
+		return EINVAL; }	//determine # of different structures based on this
+	eptp_list=(void *)get_zeroed_page(GFP_KERNEL);
+	if(eptp_list==NULL) {
+		return ENOMEM; }
+	epse_t *ept_pml4, *ept_pdpt, *ept_pd, *ept_pt;
+	ept_pml4=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pml4==NULL) {
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
+	ept_pdpt=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pdpt==NULL) {
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
+	ept_pd=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pd==NULL) {
+		free_page((unsigned long)ept_pdpt);
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
+	ept_pt=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pt==NULL) {
+		free_page((unsigned long)ept_pd);
+		free_page((unsigned long)ept_pdpt);
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
 	
-	#define IA32_FEATURE_CONTROL 0x3a
-	struct __attribute__((packed)) {
-		unsigned long lock:1;
-		unsigned long smx_vmxe:1;
-		unsigned long non_smx_vmxe:1;
-		unsigned long rsv_3_7:5;
-		unsigned long local_senter_enable:7;
-		unsigned long global_senter_enable:1;
-		unsigned long rsv_16:1;
-		unsigned long sgx_launch_enable:1;
-		unsigned long sgx_global_enable:1;
-		unsigned long rsv_19:1;
-		unsigned long lmce:1;
-		unsigned long rsv_21_63:43; }
-		feature_control;
-} msr_t;
-
-#define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id):"memory")
-#define WRITE_MSR(src, id) __asm__ __volatile__("wrmsr"::"a"((src).eax), "d"((src).edx), "c"(id):"memory")
-/////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned long pe:1;
-		unsigned long mp:1;
-		unsigned long em:1;
-		unsigned long ts:1;
-		unsigned long et:1;
-		unsigned long ne:1;
-		unsigned long rsv_6_15:10;
-		unsigned long wp:1;
-		unsigned long rsv_17:1;
-		unsigned long am:1;
-		unsigned long rsv_19_28:10;
-		unsigned long nw:1;
-		unsigned long cd:1;
-		unsigned long pg:1;
-		unsigned long rsv_32_63:32; };
-	unsigned long val;
-} cr0_t;
-
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned long vme:1;
-		unsigned long pvi:1;
-		unsigned long tsd:1;
-		unsigned long de:1;
-		unsigned long pse:1;
-		unsigned long pae:1;
-		unsigned long mce:1;
-		unsigned long pge:1;
-		unsigned long pce:1;
-		unsigned long osfxsr:1;
-		unsigned long osxmmexcpt:1;
-		unsigned long umip:1;
-		unsigned long la57:1;
-		unsigned long vmxe:1;
-		unsigned long smxe:1;
-		unsigned long rsv_15:1;
-		unsigned long fsgsbase:1;
-		unsigned long pcide:1;
-		unsigned long osxsave:1;
-		unsigned long rsv_19:1;
-		unsigned long smep:1;
-		unsigned long smap:1;
-		unsigned long pke:1;
-		unsigned long rsv_23_63:31; };
-	unsigned long val;
-} cr4_t;
-
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned long cf:1;
-		unsigned long rsv_1:1;
-		unsigned long pf:1;
-		unsigned long rsv_3:1;
-		unsigned long af:1;
-		unsigned long rsv_5:1;
-		unsigned long zf:1;
-		unsigned long sf:1;
-		unsigned long tf:1;
-		unsigned long _if:1;
-		unsigned long df:1;
-		unsigned long of:1;
-		unsigned long iopl:2;
-		unsigned long nt:1;
-		unsigned long rsv_15:1;
-		unsigned long rf:1;
-		unsigned long vm:1;
-		unsigned long ac:1;
-		unsigned long vif:1;
-		unsigned long vip:1;
-		unsigned long id:1;
-		unsigned long rsv_22_31:10;
-		unsigned long rsv_32_63:32; };
-	unsigned long val;
-} rflags_t;
-/////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////
-//should check ID flag (bit 21) of EFLAGS
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned int eax;
-		unsigned int ebx;
-		unsigned int ecx;
-		unsigned int edx; };
+	unsigned long guest_memory=__get_free_pages(__GFP_ZERO, num_guest_pages);
+	if(!guest_memory) {
+		free_page((unsigned long)ept_pt);
+		free_page((unsigned long)ept_pd);
+		free_page((unsigned long)ept_pdpt);
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		return ENOMEM; }
+	int i=0;
+	for(i=0; i<num_guest_pages; i++) {
+		//={0}
+		ept_pt[i].accessed=0;
+		ept_pt[i].dirty=0;
+		ept_pt[i].caching_type=PAT_WB;
+		ept_pt[i].x=1;
+		ept_pt[i].ux=0;
+		ept_pt[i].ignore_pat=0;
+		ept_pt[i].addr=virt_to_phys((void *)guest_memory)>>12;
+		ept_pt[i].r=1;
+		ept_pt[i].suppress_ve=0;
+		ept_pt[i].w=1; }
 	
-	union __attribute__((packed)) {
-		struct __attribute__((packed)) {
-			unsigned int eax;
-			unsigned int ebx;
-			unsigned int edx;
-			unsigned int ecx; };
-		struct __attribute__((packed)) {
-			unsigned int max_basic_leaf;
-			char vendor_id[12]; }; }
-		leaf_0;
+	//={0}
+	ept_pd[0].accessed=0;
+	ept_pd[0].x=1;
+	ept_pd[0].ux=0;
+	ept_pd[0].addr=virt_to_phys(ept_pt)>>12;
+	ept_pd[0].r=1;
+	ept_pd[0].w=1;
+
+	//={0}
+	ept_pdpt[0].accessed=0;
+	ept_pdpt[0].x=1;
+	ept_pdpt[0].ux=0;
+	ept_pdpt[0].addr=virt_to_phys(ept_pd)>>12;
+	ept_pdpt[0].r=1;
+	ept_pdpt[0].w=1;
+
+	//={0}
+	ept_pml4[0].accessed=0;
+	ept_pml4[0].x=1;
+	ept_pml4[0].ux=0;
+	ept_pml4[0].addr=virt_to_phys(ept_pd)>>12;
+	ept_pml4[0].r=1;
+	ept_pml4[0].w=1;
 	
-	struct __attribute__((packed)) {
-		unsigned int version_info;
-		unsigned int brand_index:8;
-		unsigned int clflush_line_size:8;
-		unsigned int max_num_ids:8;
-		unsigned int apic_id:8;
-		unsigned int ecx_0_4:5;
-		unsigned int vmx:1;
-		unsigned int ecx_6_31:26;
-		unsigned int edx; }
-		leaf_1;
-} cpuid_t;
+	//={0}
+	eptp_list[0].accessed_dirty_control=1;
+	eptp_list[0].caching_type=PAT_WB;
+	eptp_list[0].page_walk_length=3;
+	eptp_list[0].pml4_addr=virt_to_phys(ept_pml4)>>12;
 	
-#define CPUID(dst, leaf) 							\
-__asm__ __volatile__(								\
-	"cpuid;"								\
-	:"=a"((dst).eax), "=b"((dst).ebx), "=c"((dst).ecx), "=d"((dst).edx)	\
-	:"a"(leaf):"memory")
-/////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////
-typedef struct __attribute__((packed)) {
-	unsigned short offset_0_15;
-	unsigned short segment_selector;
-	unsigned char ist;			//interrupt stack table
-	unsigned char type:4;
-	unsigned char zero_12:1;
-	unsigned char dpl:2;			//descriptor privilege level
-	unsigned char p:1;			//present flag
-	unsigned short offset_16_31;
-	unsigned int offset_32_63;
-	unsigned int rsv;
-} idte_t;
-
-typedef struct __attribute__((packed)) {
-	unsigned short lim_val;
-	struct idte_t *addr;
-} idtr_t;
-
-#define READ_IDT(dst)	\
-__asm__ __volatile__(	\
-	"cli;"		\
-	"sidt %0;"	\
-	"sti;"		\
-	:: "m"(dst)	\
-	: "memory")
-
-#define WRITE_IDT(src)	\
-__asm__ __volatile__(	\
-	"cli;"		\
-	"lidt %0;"	\
-	"sti;"		\
-	:: "m"(src)	\
-	: "memory")
-/////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////
-#define PUSHA \
-	"push %rax;""push %rbx;""push %rcx;""push %rdx;"\
-	"push %rbp;""push %rdi;""push %rsi;""push %r8;"\
-	"push %r9;""push %r10;""push %r11;""push %r12;"\
-	"push %r13;""push %r14;""push %r15;""pushf;"
-
-#define POPA \
-	"popf;""pop %r15;""pop %r14;""pop %r13;"\
-	"pop %r12;""pop %r11;""pop %r10;""pop %r9;"\
-	"pop %r8;""pop %rsi;""pop %rdi;""pop %rbp;"\
-	"pop %rdx;""pop %rcx;""pop %rbx;""pop %rax;"
-/////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////
-#define INVLPG(addr) __asm__ __volatile__("invlpg (%0)"::"r"(addr):"memory")
-/////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////
-//#define VMXON(paddr) __asm__ __volatile__("vmxon %0"::"m"(paddr));
-
-#define VMsucceed(rflags)	(!(rflags).cf && !(rflags).pf && !(rflags).af && !(rflags).zf && !(rflags).sf && !(rflags).of)
-#define VMfailInvalid(rflags)	((rflags).cf && !(rflags).pf && !(rflags).af && !(rflags).zf && !(rflags).sf && !(rflags).of)
-#define VMfailValid(rflags)	(!(rflags).cf && !(rflags).pf && !(rflags).af && (rflags).zf && !(rflags).sf && !(rflags).of)
-
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned long caching_type:3;
-		unsigned long page_walk_length:3;	//minus 1
-		unsigned long accessed_dirty_control:1;
-		unsigned long rsv_7_11:5;
-		unsigned long pml4_addr:40;	//bits 12 to 51
-		unsigned long rsv_52_63:12; };
-	unsigned long val;
-} eptp_t;
-
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned long r:1;
-		unsigned long w:1;
-		unsigned long x:1;
-		unsigned long caching_type:3;
-		unsigned long ignore_pat:1;
-		unsigned long page_size:1;
-		unsigned long accessed:1;
-		unsigned long dirty:1;
-		unsigned long ux:1;	//user-mode x access
-		unsigned long rsv_11:1;
-		unsigned long addr:40;
-		unsigned long rsv_52_62:11; 
-		unsigned long suppress_ve:1; };
-	struct __attribute__((packed)) {
-		unsigned long rsv_4kb_0_11:12;
-		unsigned long addr_4kb:40;	//bits 12 to 51
-		unsigned long rsv_4kb_52_63:12; };
-	struct __attribute__((packed)) {
-		unsigned long rsv_1gb_0_29:30;
-		unsigned long addr_1gb:22;	//bits 30 to 51
-		unsigned long rsv_1gb_52_63:12; };
-	struct __attribute__((packed)) {
-		unsigned long rsv_2mb_0_20:21;
-		unsigned long addr_2mb:31;	//bits 21 to 51
-		unsigned long rsv_2mb_52_63:12; };
-	unsigned long val;
-} epse_t;
-/////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////
-typedef struct __attribute__((packed)) {
-	unsigned short lim_val;
-	void *addr;
-} gdtr_t;
-
-typedef struct __attribute__((packed)) {
-	unsigned short seg_lim_0_15;
-	unsigned short base_addr_0_15;
-	unsigned char base_addr_16_23;		//interrupt stack table
-	unsigned char type:4;
-	unsigned char zero_12:1;
-	unsigned char dpl:2;			//descriptor privilege level
-	unsigned char p:1;			//present flag
-	unsigned char seg_lim_16_19:4;
-	unsigned char avl:1;			//available for use
-	unsigned char zero_20_21:2;
-	unsigned char granularity:1;
-	unsigned char base_addr_24_31;
-	unsigned int base_addr_32_63;
-	unsigned int rsv;
-} tssd_t;
-
-typedef struct __attribute__((packed)) {
-	unsigned int rsv_0_3;
-	unsigned long rsp0;
-	unsigned long rsp1;
-	unsigned long rsp2;
-	unsigned long rsv_28_35;
-	unsigned long ist1;
-	unsigned long ist2;
-	unsigned long ist3;
-	unsigned long ist4;
-	unsigned long ist5;
-	unsigned long ist6;
-	unsigned long ist7;
-	unsigned long rsv_92_99;
-	unsigned short rsv_100_101;
-	unsigned short io_map_base_addr;
-} tss_t;
-
-__attribute__((__always_inline__))
-tss_t *get_tss(void) {
-	gdtr_t gdtr={0};
-	unsigned short tr=0;
-	__asm__ __volatile__("sgdt %0"::"m"(gdtr):"memory");
-	__asm__ __volatile__("str %0"::"m"(tr):"memory");
-	tssd_t *tssd=(void *)((unsigned long)gdtr.addr+tr);
-	return (tss_t *)(0
-		| ((long)(tssd->base_addr_0_15))
-		| ((long)(tssd->base_addr_16_23)<<16)
-		| ((long)(tssd->base_addr_24_31)<<24)
-		| ((long)(tssd->base_addr_32_63)<<32)); }
-/////////////////////////////////////////////////////
-//pg 3244
-#define PAT_WB  0x06
-#define PAT_WT  0x04
-#define PAT_UC_ 0x07
-#define PAT_UC  0x00
-
-//pg 2910
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned long p:1;
-		unsigned long rw:1;
-		unsigned long us:1;
-		unsigned long pwt:1;
-		unsigned long pcd:1;
-		unsigned long accessed:1;
-		unsigned long dirty:1;
-		unsigned long page_size:1;	//can be PAT here for 4kb page :/
-		unsigned long global:1;
-		unsigned long rsv_9_11:3;
-		unsigned long addr:40;		//bits 12 to 51
-		unsigned long rsv_52_58:7;
-		unsigned long prot_key:4;
-		unsigned long nx:1; };
-	struct __attribute__((packed)) {
-		unsigned long rsv_4kb_0_6:7;
-		unsigned long pat_4kb:1;
-		unsigned long rsv_4kb_8_11:4;
-		unsigned long addr_4kb:40;	//bits 12 to 51
-		unsigned long rsv_4kb_52_63:12; };
-	struct __attribute__((packed)) {
-		unsigned long rsv_1gb_0_11:12;
-		unsigned long pat_1gb:1;
-		unsigned long rsv_1gb_13_29:17;
-		unsigned long addr_1gb:22;	//bits 30 to 51
-		unsigned long rsv_1gb_52_63:12; };
-	struct __attribute__((packed)) {
-		unsigned long rsv_2mb_0_11:12;
-		unsigned long pat_2mb:1;
-		unsigned long rsv_2mb_13_20:8;
-		unsigned long addr_2mb:31;	//bits 21 to 51
-		unsigned long rsv_2mb_52_63:12; };
-	unsigned long val;
-} pse_t;
-
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned long offset_pse:12;
-		unsigned long pt_bits:9;	//bits 12 to 20
-		unsigned long pd_bits:9;	//bits 21 to 29
-		unsigned long pdpt_bits:9;	//bits 30 to 38
-		unsigned long pml4_bits:9;	//bits 39 to 47
-		unsigned long pml5_bits:9;	//bits 48 to 56
-		unsigned long rsv_57_63:7; };
-	struct __attribute__((packed)) {
-		unsigned long offset_1gb:30;
-		unsigned long rsv_30_63:34; };
-	struct __attribute__((packed)) {
-		unsigned long offset_2mb:21;
-		unsigned long rsv_21_63:43; };
-	struct __attribute__((packed)) {
-		unsigned long offset_4kb:12;
-		unsigned long rsv_12_63:52; };
-	unsigned long val;
-} vaddr_t;
-
-typedef struct {
-	pse_t *pml5e_p;
-	pse_t *pml4e_p;
-	pse_t *pdpte_p;
-	pse_t *pde_p;
-	pse_t *pte_p;
-} vtp_t;
-
-unsigned int
-vtp(unsigned long addr, unsigned long *paddr_p, vtp_t *vtp_p) {
-	//asm block checks to see if 4 or 5-level paging is enabled
-	//if so, moves the cr3 register into the cr3 variable
-	//and sets la57_flag to assert whether 4-level or 5-level
-	int la57_flag=0;
-	pse_t cr3={0};
-	__asm__ __volatile__ (
-		"mov %%cr0, %%rax;"		//check bit 31 of cr0 (PG flag)
-		"test $0x80000000, %%eax;"	//deny request if 0
-		"jz vtp_fail;"			//(ie if paging is not enabled)
-
-		"mov $0xc0000080, %%ecx;"	//check bit 8 of ia32_efer (LME flag)
-		"rdmsr;"			//deny request if 0
-		"test $0x100, %%eax;"		//(module currently can't handle pae paging)
-		"jz vtp_fail;"
-		
-	"vtp_success:\n"
-		"mov %%cr3, %0;"
-		"mov %%cr4, %%rax;"
-		"shr $12, %%rax;"
-		"and $1, %%rax;"
-		"mov %%eax, %1;"
-		"jmp vtp_finish;"
-	"vtp_fail:\n"
-		"mov $0, %0;"
-	"vtp_finish:\n"
-	
-		: "=r"(cr3.val), "=r"(la57_flag)
-		::"rax", "ecx", "edx", "memory");
-	if(!cr3.val) {
-		return -EOPNOTSUPP; }
-
-	pse_t psentry={0};
-	vaddr_t vaddr=(vaddr_t)addr;
-	if(vtp_p!=NULL) {
-		*vtp_p=(vtp_t){ .pml5e_p=NULL, .pml4e_p=NULL, .pdpte_p=NULL, .pde_p=NULL, .pte_p=NULL }; }
-
-	//pml5e (if applicable)
-	if(la57_flag) {			//5-level paging
-		if(vtp_p!=NULL) {
-			vtp_p->pml5e_p=(void *)phys_to_virt(((unsigned long)cr3.addr<<12)|((unsigned long)vaddr.pml5_bits<<3)); }
-		psentry.val=*(unsigned long *)\
-			phys_to_virt(((unsigned long)cr3.addr<<12)|((unsigned long)vaddr.pml5_bits<<3));
-		if(!psentry.p) {
-			return -EFAULT; }}
-	else {
-		psentry.val=cr3.val; }
-
-	//pml4e
-	if(vtp_p!=NULL) {
-		vtp_p->pml4e_p=(void *)phys_to_virt(((unsigned long)psentry.addr<<12)|((unsigned long)vaddr.pml4_bits<<3)); }
-	psentry.val=*(unsigned long *)\
-		phys_to_virt(((unsigned long)psentry.addr<<12)|((unsigned long)vaddr.pml4_bits<<3));
-	if(!psentry.p) {
-		return -EFAULT; }
-
-	//pdpte
-	if(vtp_p!=NULL) {
-		vtp_p->pdpte_p=(void *)phys_to_virt(((unsigned long)psentry.addr<<12)|((unsigned long)vaddr.pdpt_bits<<3)); }
-	psentry.val=*(unsigned long *)\
-		phys_to_virt(((unsigned long)psentry.addr<<12)|((unsigned long)vaddr.pdpt_bits<<3));
-	if(psentry.page_size) {	//1GB page
-		//bits (51 to 30) | bits (29 to 0)
-		*paddr_p=((unsigned long)psentry.addr_1gb<<30)|vaddr.offset_1gb;
-		return 0; }
-	if(!psentry.p) {
-		return -EFAULT; }
-
-	//pde
-	if(vtp_p!=NULL) {
-		vtp_p->pde_p=(void *)phys_to_virt(((unsigned long)psentry.addr<<12)|((unsigned long)vaddr.pd_bits<<3)); }
-	psentry.val=*(unsigned long *)\
-		phys_to_virt(((unsigned long)psentry.addr<<12)|((unsigned long)vaddr.pd_bits<<3));
-	if(psentry.page_size) {	//2MB page
-		//bits (51 to 21) | bits (20 to 0)
-		*paddr_p=((unsigned long)psentry.addr_2mb<<21)|vaddr.offset_2mb;
-		return 0; }
-	if(!psentry.p) {
-		return -EFAULT; }
-
-	//pte
-	if(vtp_p!=NULL) {
-		vtp_p->pte_p=(void *)phys_to_virt(((unsigned long)psentry.addr<<12)|((unsigned long)vaddr.pt_bits<<3)); }
-	psentry.val=*(unsigned long *)\
-		phys_to_virt(((unsigned long)psentry.addr_4kb<<12)|((unsigned long)vaddr.pt_bits<<3));
-	*paddr_p=((unsigned long)psentry.addr_4kb<<12)|vaddr.offset_4kb;
 	return 0; }
-/////////////////////////////////////////////////////
 
 #endif
