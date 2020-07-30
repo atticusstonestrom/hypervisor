@@ -92,6 +92,7 @@ static int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr)
 	return ret; }
 
 //maybe do a struct like vtp?
+//~1gb for each page directory
 #define MAX_NUM_GUEST_PAGES 10
 static int initialize_eptp_list(eptp_t *eptp_list, const int num_guest_pages) {
 	printk("[*]  initializing eptp list\n");
