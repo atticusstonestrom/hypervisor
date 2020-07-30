@@ -303,7 +303,7 @@ typedef union __attribute__((packed)) {
 		unsigned long addr_2mb:31;	//bits 21 to 51
 		unsigned long rsv_2mb_52_63:12; };
 	unsigned long val;
-} epse_entry;
+} epse_t;
 /////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////
