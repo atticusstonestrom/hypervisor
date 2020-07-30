@@ -94,43 +94,65 @@ static int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr)
 //maybe do a struct like vtp?
 #define MAX_NUM_GUEST_PAGES 10
 static int initialize_eptp_list(eptp_t *eptp_list, const int num_guest_pages) {
+	printk("[*]  initializing eptp list\n");
+	printk("[**] %d bytes of ram requested\n", num_guest_pages*4096);
 	if(num_guest_pages>MAX_NUM_GUEST_PAGES || num_guest_pages<=0) {
+		printk("[*]  too much ram requested\n");
 		return EINVAL; }	//determine # of different structures based on this
-	eptp_list=(void *)get_zeroed_page(GFP_KERNEL);
-	if(eptp_list==NULL) {
-		return ENOMEM; }
-	epse_t *ept_pml4, *ept_pdpt, *ept_pd, *ept_pt;
-	ept_pml4=(void *)get_zeroed_page(GFP_KERNEL);
-	if(ept_pml4==NULL) {
-		free_page((unsigned long)eptp_list);
-		return ENOMEM; }
-	ept_pdpt=(void *)get_zeroed_page(GFP_KERNEL);
-	if(ept_pdpt==NULL) {
-		free_page((unsigned long)ept_pml4);
-		free_page((unsigned long)eptp_list);
-		return ENOMEM; }
-	ept_pd=(void *)get_zeroed_page(GFP_KERNEL);
-	if(ept_pd==NULL) {
-		free_page((unsigned long)ept_pdpt);
-		free_page((unsigned long)ept_pml4);
-		free_page((unsigned long)eptp_list);
-		return ENOMEM; }
-	ept_pt=(void *)get_zeroed_page(GFP_KERNEL);
-	if(ept_pt==NULL) {
-		free_page((unsigned long)ept_pd);
-		free_page((unsigned long)ept_pdpt);
-		free_page((unsigned long)ept_pml4);
-		free_page((unsigned long)eptp_list);
-		return ENOMEM; }
-	
+
 	unsigned long guest_memory=__get_free_pages(__GFP_ZERO, num_guest_pages);
 	if(!guest_memory) {
-		free_page((unsigned long)ept_pt);
+		printk("[*]  no free pages available\n");
+		return ENOMEM; }
+	printk("[**] guest memory pool:\t0x%px (%d pages)\n", num_guest_pages);
+	
+	eptp_list=(void *)get_zeroed_page(GFP_KERNEL);
+	if(eptp_list==NULL) {
+		printk("[*]  no free page available\n");
+		free_pages(guest_memory, num_guest_pages);
+		return ENOMEM; }
+	printk("[**] eptp_list:\t0x%px\n", eptp_list);
+	
+	epse_t *ept_pml4, *ept_pdpt, *ept_pd, *ept_pt;
+	
+	ept_pml4=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pml4==NULL) {
+		printk("[*]  no free page available\n");
+		free_page((unsigned long)eptp_list);
+		free_pages(guest_memory, num_guest_pages);
+		return ENOMEM; }
+	printk("[**] ept_pml4:\t0x%px\n", ept_pml4);
+	
+	ept_pdpt=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pdpt==NULL) {
+		printk("[*]  no free page available\n");
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		free_pages(guest_memory, num_guest_pages);
+		return ENOMEM; }
+	printk("[**] ept_pdpt:\t0x%px\n", ept_pdpt);
+	
+	ept_pd=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pd==NULL) {
+		printk("[*]  no free page available\n");
+		free_page((unsigned long)ept_pdpt);
+		free_page((unsigned long)ept_pml4);
+		free_page((unsigned long)eptp_list);
+		free_pages(guest_memory, num_guest_pages);
+		return ENOMEM; }
+	printk("[**] ept_pd:\t0x%px\n", ept_pd);
+	
+	ept_pt=(void *)get_zeroed_page(GFP_KERNEL);
+	if(ept_pt==NULL) {
+		printk("[*]  no free page available\n");
 		free_page((unsigned long)ept_pd);
 		free_page((unsigned long)ept_pdpt);
 		free_page((unsigned long)ept_pml4);
 		free_page((unsigned long)eptp_list);
+		free_pages(guest_memory, num_guest_pages);
 		return ENOMEM; }
+	printk("[**] ept_pt:\t0x%px\n", ept_pt);
+
 	int i=0;
 	for(i=0; i<num_guest_pages; i++) {
 		//={0}
@@ -174,6 +196,8 @@ static int initialize_eptp_list(eptp_t *eptp_list, const int num_guest_pages) {
 	eptp_list[0].caching_type=PAT_WB;
 	eptp_list[0].page_walk_length=3;
 	eptp_list[0].pml4_addr=virt_to_phys(ept_pml4)>>12;
+	
+	printk("[*]  initialization complete\n");
 	
 	return 0; }
 
