@@ -93,7 +93,7 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 	rflags_t rflags;
 	if(vm_state->active_flag && vm_state->vmcs_paddr) {
 		printk("[*]  clearing vmcs\n");
-		printk("[**] vmcs region:\t0x%lx\n", vm_state->vmcs_paddr);
+		printk("[**] vmcs addr:\t0x%lx\n", vm_state->vmcs_paddr);
 		__asm__ __volatile__(
 			"vmclear %1;"
 			"pushf;"
@@ -204,18 +204,16 @@ static int __init hvc_init(void) {
 		return -EOPNOTSUPP; }
 	printk("[*]  writeback caching available\n\n");
 	
-	
 	int ret=0;
 	if(( ret=alloc_wb_page("vmxon region", &(guest_state.vmxon_region), &(guest_state.vmxon_paddr)) )) {
 		cleanup(&guest_state, &host_state);
 		return ret; }
 
-
 	if(( ret=alloc_wb_page("vmcs region", &(guest_state.vmcs_region), &(guest_state.vmcs_paddr)) )) {
 		cleanup(&guest_state, &host_state);
 		return ret; }
 	
-	if( (ret=initialize_ept(&guest_state.ept_data, MAX_ORD_GUEST_PAGES)) ) {
+	if(( ret=initialize_ept(&guest_state.ept_data, MAX_ORD_GUEST_PAGES) )) {
 		cleanup(&guest_state, &host_state);
 		return ret; }
 	//free_ept(&guest_state.ept_data);
@@ -304,8 +302,8 @@ static int __init hvc_init(void) {
 	guest_state.active_flag=1;
 	printk("[*]  vmcs region activated\n\n"); 
 	
-	__asm__ __volatile__("vmclear %0;"::"m"(guest_state.vmcs_paddr):"memory");
-	guest_state.active_flag=0;
+	/*__asm__ __volatile__("vmclear %0;"::"m"(guest_state.vmcs_paddr):"memory");
+	guest_state.active_flag=0;*/
 		
 	
 	
