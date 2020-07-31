@@ -69,7 +69,7 @@ typedef struct {
 	unsigned long vmcs_region;
 	unsigned long vmcs_paddr;
 	
-	eptp_t eptp;
+	ept_data_t ept_data;
 	unsigned long vmm_stack;
 	
 	unsigned long msr_bitmap;
@@ -250,13 +250,15 @@ static int __init hvc_init(void) {
 	
 	
 
-	if( (ret=initialize_ept(&vmstate.eptp, MAX_NUM_GUEST_PAGES)) ) {
+	if( (ret=initialize_ept(&vmstate.ept_data, MAX_ORD_GUEST_PAGES)) ) {
 		__asm__ __volatile__("vmclear %0;"::"m"(vmstate.vmcs_paddr):"memory");
 		__asm__ __volatile__("vmxoff");
 		__asm__ __volatile__("mov %0, %%cr4"::"r"(initial_cr4.val));
 		free_page(vmstate.vmxon_region);
 		free_page(vmstate.vmcs_region);
 		return ret; }
+	__asm__ __volatile__("vmclear %0;"::"m"(vmstate.vmcs_paddr):"memory");
+	free_ept(&vmstate.ept_data);
 	//if(eptp_list==NULL) {
 		
 	
