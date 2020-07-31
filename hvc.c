@@ -245,7 +245,7 @@ static int __init hvc_init(void) {
 		return -EINVAL; }
 	printk("[*]  vmcs region activated\n\n"); 
 	
-	//__asm__ __volatile__("vmclear %0;"::"m"(vmstate.vmcs_paddr):"memory");
+	__asm__ __volatile__("vmclear %0;"::"m"(vmstate.vmcs_paddr):"memory");
 	
 	
 	
@@ -257,7 +257,6 @@ static int __init hvc_init(void) {
 		free_page(vmstate.vmxon_region);
 		free_page(vmstate.vmcs_region);
 		return ret; }
-	__asm__ __volatile__("vmclear %0;"::"m"(vmstate.vmcs_paddr):"memory");
 	free_ept(&vmstate.ept_data);
 	//if(eptp_list==NULL) {
 		
