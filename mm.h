@@ -91,12 +91,17 @@ static int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr)
 	printk("[*]  caching type set to writeback\n\n");
 	return ret; }
 
+typedef struct __attribute__((packed)) {
+	ept_node *next;
+	unsigned long addr;
+} ept_node;
+
 //maybe do a struct like vtp?
 //~1gb for each page directory
 #define MAX_NUM_GUEST_PAGES 10
 static int initialize_ept(eptp_t *eptp_p, const int num_guest_pages) {
 	printk("[*]  initializing extended page tables\n");
-	printk("[**] %d bytes of ram requested\n", num_guest_pages*4096);
+	printk("[**] %d bytes of ram requested\n", num_guest_pages<<12);
 	if(num_guest_pages>MAX_NUM_GUEST_PAGES || num_guest_pages<=0) {
 		printk("[*]  too much ram requested\n");
 		return EINVAL; }	//determine # of different structures based on this
@@ -163,7 +168,7 @@ static int initialize_ept(eptp_t *eptp_p, const int num_guest_pages) {
 		ept_pt[i].x=1;
 		ept_pt[i].ux=0;
 		ept_pt[i].ignore_pat=0;
-		ept_pt[i].addr=virt_to_phys((void *)guest_memory)>>12;
+		ept_pt[i].addr=(virt_to_phys((void *)guest_memory)>>12)+i;
 		ept_pt[i].r=1;
 		ept_pt[i].suppress_ve=0;
 		ept_pt[i].w=1; }
