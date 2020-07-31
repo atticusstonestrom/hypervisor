@@ -35,8 +35,22 @@ __asm__ __volatile__(		\
 	:"m"(paddr)		\
 	:"memory")
 
-#define VMLAUNCH __asm__ __volatile__("vmlaunch")
-#define VMRESUME __asm__ __volatile__("vmresume")
+#define VMLAUNCH(rflags)	\
+__asm__ __volatile__(		\
+	"vmlaunch;"		\
+	"pushf;"		\
+	"popq %0;"		\
+	:"=r"(rflags.val)	\
+	::"memory")
+
+#define VMRESUME(rflags)	\
+__asm__ __volatile__(		\
+	"vmresume;"		\
+	"pushf;"		\
+	"popq %0;"		\
+	:"=r"(rflags.val)	\
+	::"memory")
+
 #define VMXOFF   __asm__ __volatile__("vmxoff")
 	
 
