@@ -95,13 +95,7 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 	if(vm_state->active_flag && vm_state->vmcs_paddr) {
 		printk("[*]  clearing vmcs\n");
 		printk("[**] vmcs addr:\t0x%lx\n", vm_state->vmcs_paddr);
-		__asm__ __volatile__(
-			"vmclear %1;"
-			"pushf;"
-			"popq %0;"
-			:"=r"(rflags.val)
-			:"m"(vm_state->vmcs_paddr)
-			:"memory");
+		VMCLEAR(vm_state->vmcs_paddr, rflags);
 		printk("[**] rflags:\t0x%lx\n", rflags.val);
 		if(!VMsucceed(rflags)) {
 			if(VMfailValid(rflags)) {
@@ -115,7 +109,7 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 		
 	if(vmm_state->vmxon_flag) {
 		printk("[*]  exiting vmx mode\n\n");
-		__asm__ __volatile__("vmxoff"); 
+		VMXOFF;
 		vmm_state->vmxon_flag=0; }
 	
 	cr4_t cr4;
@@ -241,13 +235,7 @@ static int __init hvc_init(void) {
 		//	:"=r"(rflags.val)
 		//	:"m"(guest_state.vmxon_paddr)
 		//	:"memory");
-	__asm__ __volatile__(		//define this as macro
-		"vmxon %1;"
-		"pushf;"
-		"popq %0;"
-		:"=r"(rflags.val)
-		:"m"(guest_state.vmxon_paddr)
-		:"memory");
+	VMXON(guest_state.vmxon_paddr, rflags);
 	printk("[**] rflags:\t0x%lx\n", rflags.val);
 	if(!VMsucceed(rflags)) {
 		if(VMfailValid(rflags)) {
@@ -266,13 +254,7 @@ static int __init hvc_init(void) {
 	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
 	*(unsigned int *)(guest_state.vmcs_region)=msr.vmx_basic.revision_id;
 	printk("[**] clearing vmcs @ 0x%lx\n", guest_state.vmcs_paddr);
-	__asm__ __volatile__(
-		"vmclear %1;"
-		"pushf;"
-		"popq %0;"
-		:"=r"(rflags.val)
-		:"m"(guest_state.vmcs_paddr)
-		:"memory");
+	VMCLEAR(paddr, rflags);
 	printk("[**] rflags:\t0x%lx\n", rflags.val);
 	if(!VMsucceed(rflags)) {
 		if(VMfailValid(rflags)) {
@@ -284,13 +266,7 @@ static int __init hvc_init(void) {
 		return -EINVAL; }
 	printk("[**] vmclear successful\n"); 
 	printk("[**] calling vmptrld\n");
-	__asm__ __volatile__(
-		"vmptrld %1;"
-		"pushf;"
-		"popq %0;"
-		:"=r"(rflags.val)
-		:"m"(guest_state.vmcs_paddr)
-		:"memory");
+	VMPTRLD(guest_state.vmcs_paddr, rflags);
 	printk("[**] rflags:\t0x%lx\n", rflags.val);
 	if(!VMsucceed(rflags)) {
 		if(VMfailValid(rflags)) {
