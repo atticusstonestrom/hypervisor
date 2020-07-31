@@ -254,7 +254,7 @@ static int __init hvc_init(void) {
 	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
 	*(unsigned int *)(guest_state.vmcs_region)=msr.vmx_basic.revision_id;
 	printk("[**] clearing vmcs @ 0x%lx\n", guest_state.vmcs_paddr);
-	VMCLEAR(paddr, rflags);
+	VMCLEAR(guest_state.vmcs_paddr, rflags);
 	printk("[**] rflags:\t0x%lx\n", rflags.val);
 	if(!VMsucceed(rflags)) {
 		if(VMfailValid(rflags)) {
