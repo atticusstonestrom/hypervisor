@@ -2,7 +2,7 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <asm/io.h>
-#include "x64-utilities.h
+#include "x64-utilities.h"
 
 #ifndef VT_X_UTILITIES
 #define VT_X_UTILITIES
