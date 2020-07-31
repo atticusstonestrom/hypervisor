@@ -111,14 +111,19 @@ typedef struct {
 
 void free_ept(ept_data_t *ept) {
 	if(ept->guest_memory.base) {
+		printk("[**]  guest memory pool:\t0x%lx (%d pages)\n", ept->guest_memory.base, 1<<ept->guest_memory.order);
 		free_pages(ept->guest_memory.base, ept->guest_memory.order); }
 	if(ept->pts.base) {
+		printk("[**] pd memory pool:\t0x%px (%d pages)\n", ept->pts.base, 1<<ept->pts.order);
 		free_pages(ept->pts.base, ept->pts.order); }
 	if(ept->pds.base) {
+		printk("[**] pd memory pool:\t0x%px (%d pages)\n", ept->pds.base, 1<<ept->pds.order);
 		free_pages(ept->pds.base, ept->pds.order); }
 	if(ept->pdpt) {
+		printk("[**] pdpt:\t\t0x%px\n", ept->pdpt);
 		free_page(ept->pdpt); }
 	if(ept->pml4) {
+		printk("[**] pml4:\t\t0x%px\n", ept->pml4);
 		free_page(ept->pml4); }
 	ept->eptp.pml4_addr=0;
 	return; }
