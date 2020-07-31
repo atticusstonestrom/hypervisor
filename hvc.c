@@ -19,6 +19,7 @@
 //save/restore caching type
 //check physical address width?
 //# of cores (and corresponding # of vmcs regions) as argument to open
+//mutexes on all resources?
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
