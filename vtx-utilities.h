@@ -8,7 +8,37 @@
 #define VT_X_UTILITIES
 
 
-//#define VMXON(paddr) __asm__ __volatile__("vmxon %0"::"m"(paddr));
+#define VMXON(paddr, rflags)	\
+__asm__ __volatile__(		\
+	"vmxon %1;"		\
+	"pushf;"		\
+	"popq %0;"		\
+	:"=r"(rflags.val)	\
+	:"m"(paddr)		\
+	:"memory")
+
+#define VMCLEAR(paddr, rflags)	\
+__asm__ __volatile__(		\
+	"vmclear %1;"		\
+	"pushf;"		\
+	"popq %0;"		\
+	:"=r"(rflags.val)	\
+	:"m"(paddr)		\
+	:"memory")
+
+#define VMPTRLD(paddr, rflags)	\
+__asm__ __volatile__(		\
+	"vmptrld %1;"		\
+	"pushf;"		\
+	"popq %0;"		\
+	:"=r"(rflags.val)	\
+	:"m"(paddr)		\
+	:"memory")
+
+#define VMLAUNCH __asm__ __volatile__("vmlaunch")
+#define VMRESUME __asm__ __volatile__("vmresume")
+#define VMXOFF   __asm__ __volatile__("vmxoff")
+	
 
 #define VMsucceed(rflags)	(!(rflags).cf && !(rflags).pf && !(rflags).af && !(rflags).zf && !(rflags).sf && !(rflags).of)
 #define VMfailInvalid(rflags)	((rflags).cf && !(rflags).pf && !(rflags).af && !(rflags).zf && !(rflags).sf && !(rflags).of)
