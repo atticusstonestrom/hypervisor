@@ -107,9 +107,9 @@ typedef struct {
 		unsigned long base;
 		unsigned int order; }
 		guest_memory;
-} ept_data;
+} ept_data_t;
 
-void free_ept(ept_data *ept) {
+void free_ept(ept_data_t *ept) {
 	if(ept->guest_memory.base) {
 		free_pages(ept->guest_memory.base, ept->guest_memory.order); }
 	if(ept->pts.base) {
@@ -126,7 +126,7 @@ void free_ept(ept_data *ept) {
 //maybe do a struct like vtp?
 //~1gb for each page directory
 #define MAX_ORD_GUEST_PAGES 5
-static int initialize_ept(ept_data *data, const int ord_guest_pages) {
+static int initialize_ept(ept_data_t *data, const int ord_guest_pages) {
 	printk("[*]  initializing extended page tables\n");
 	printk("[**] %d bytes of ram requested\n", (1<<ord_guest_pages)<<12);
 	if(ord_guest_pages>MAX_NUM_GUEST_PAGES || max_ord_guest_pages<0) {
