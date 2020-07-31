@@ -29,7 +29,8 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/string.h>
-#include "utilities.h"
+#include "x64-utilities.h"
+#include "vtx-utilities.h"
 #include "mm.h"
 
 #define DEVICE_NAME "hvchar"
