@@ -2,11 +2,11 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <asm/io.h>
+#include "x64-utilities.h"
+#include "vtx-utilities.h"
 
 #ifndef MEM_MANAGE
 #define MEM_MANAGE
-
-#include "utilities.h"
 
 static int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr) {
 	msr_t msr;
