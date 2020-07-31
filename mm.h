@@ -211,7 +211,7 @@ static int initialize_ept(ept_data_t *data, const int ord_guest_pages) {
 	data->eptp.page_walk_length=3;
 	data->eptp.pml4_addr=virt_to_phys(pml4)>>12;
 	
-	printk("[*]  initialization complete\n");
+	printk("[*]  initialization complete\n\n");
 	
 	return 0; }
 
