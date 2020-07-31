@@ -91,117 +91,125 @@ static int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr)
 	printk("[*]  caching type set to writeback\n\n");
 	return ret; }
 
-typedef struct __attribute__((packed)) {
-	ept_node *next;
-	unsigned long addr;
-} ept_node;
+typedef struct {
+	eptp_t eptp;
+	unsigned long pml4;
+	unsigned long pdpt;
+	struct {
+		unsigned long base;
+		unsigned int order; }
+		pds;
+	struct {
+		unsigned long base;
+		unsigned int order; }
+		pts;
+	struct {
+		unsigned long base;
+		unsigned int order; }
+		guest_memory;
+} ept_data;
+
+void free_ept(ept_data *ept) {
+	if(ept->guest_memory.base) {
+		free_pages(ept->guest_memory.base, ept->guest_memory.order); }
+	if(ept->pts.base) {
+		free_pages(ept->pts.base, ept->pts.order); }
+	if(ept->pds.base) {
+		free_pages(ept->pds.base, ept->pds.order); }
+	if(ept->pdpt.base) {
+		free_page(ept->pdpt.base); }
+	if(ept->pml4.base) {
+		free_page(ept->pml4.base); }
+	ept->eptp.pml4_addr=0;
+	return; }
 
 //maybe do a struct like vtp?
 //~1gb for each page directory
-#define MAX_NUM_GUEST_PAGES 10
-static int initialize_ept(eptp_t *eptp_p, const int num_guest_pages) {
+#define MAX_ORD_GUEST_PAGES 5
+static int initialize_ept(ept_data *data, const int ord_guest_pages) {
 	printk("[*]  initializing extended page tables\n");
-	printk("[**] %d bytes of ram requested\n", num_guest_pages<<12);
-	if(num_guest_pages>MAX_NUM_GUEST_PAGES || num_guest_pages<=0) {
+	printk("[**] %d bytes of ram requested\n", (1<<ord_guest_pages)<<12);
+	if(ord_guest_pages>MAX_NUM_GUEST_PAGES || max_ord_guest_pages<0) {
 		printk("[*]  too much ram requested\n");
-		return EINVAL; }	//determine # of different structures based on this
-
-	unsigned long guest_memory=__get_free_pages(__GFP_ZERO, num_guest_pages);
-	if(!guest_memory) {
-		printk("[*]  no free pages available\n");
-		return ENOMEM; }
-	printk("[**] guest memory pool:\t0x%lx (%d pages)\n", guest_memory, num_guest_pages);
+		return -EINVAL; }	//determine # of different structures based on this
 	
-	/**eptp_p=(void *)get_zeroed_page(GFP_KERNEL);
-	if(*eptp_p==NULL) {
-		printk("[*]  no free page available\n");
-		free_pages(guest_memory, num_guest_pages);
-		return ENOMEM; }
-	printk("[**] eptp_list:\t0x%px\n", eptp_list);*/
+	*data=(ept_data) {0};
 	
-	epse_t *ept_pml4, *ept_pdpt, *ept_pd, *ept_pt;
+	unsigned long guest_memory;
+	epse_t *pml4, *pdpt, *pd, *pt;
 	
-	ept_pml4=(void *)get_zeroed_page(GFP_KERNEL);
-	if(ept_pml4==NULL) {
-		printk("[*]  no free page available\n");
-		//free_page((unsigned long)eptp_list);
-		free_pages(guest_memory, num_guest_pages);
-		return ENOMEM; }
-	printk("[**] ept_pml4:\t0x%px\n", ept_pml4);
+	guest_memory=__get_free_pages(__GFP_ZERO, ord_guest_pages);
+	data->guest_memory.base=guest_memory;
+	data->guest_memory.order=order_guest_pages;
 	
-	ept_pdpt=(void *)get_zeroed_page(GFP_KERNEL);
-	if(ept_pdpt==NULL) {
-		printk("[*]  no free page available\n");
-		free_page((unsigned long)ept_pml4);
-		//free_page((unsigned long)eptp_list);
-		free_pages(guest_memory, num_guest_pages);
-		return ENOMEM; }
-	printk("[**] ept_pdpt:\t0x%px\n", ept_pdpt);
+	pml4=(void *)get_zeroed_page(GFP_KERNEL);
+	data->pml4.base=(unsigned long)pml4;
 	
-	ept_pd=(void *)get_zeroed_page(GFP_KERNEL);
-	if(ept_pd==NULL) {
-		printk("[*]  no free page available\n");
-		free_page((unsigned long)ept_pdpt);
-		free_page((unsigned long)ept_pml4);
-		//free_page((unsigned long)eptp_list);
-		free_pages(guest_memory, num_guest_pages);
-		return ENOMEM; }
-	printk("[**] ept_pd:\t0x%px\n", ept_pd);
+	pdpt=(void *)get_zeroed_page(GFP_KERNEL);
+	data->pdpt.base=(unsigned long)pdpt;
 	
-	ept_pt=(void *)get_zeroed_page(GFP_KERNEL);
-	if(ept_pt==NULL) {
-		printk("[*]  no free page available\n");
-		free_page((unsigned long)ept_pd);
-		free_page((unsigned long)ept_pdpt);
-		free_page((unsigned long)ept_pml4);
-		//free_page((unsigned long)eptp_list);
-		free_pages(guest_memory, num_guest_pages);
-		return ENOMEM; }
-	printk("[**] ept_pt:\t0x%px\n", ept_pt);
+	pd=(void *)get_zeroed_page(GFP_KERNEL);
+	data->pd.base=(unsigned long)pd;
+	data->pd.order=0;
+	
+	pt=(void *)get_zeroed_page(GFP_KERNEL);
+	data->pt.base=(unsigned long)pt;
+	data->pt.order=0;
+	
+	if(!guest_memory || !pml4 || !pdpt || !pd || !pt) {
+		printk("[*] no free pages available\n");
+		free_ept(data);
+		return -ENOMEM; }
+	
+	printk("[**] guest memory pool:\t0x%lx (%d pages)\n", guest_memory, 1<<ord_guest_pages);
+	printk("[**] pml4:\t\t0x%px\n", pml4);
+	printk("[**] pdpt:\t\t0x%px\n", pdpt);
+	printk("[**] pd memory pool:\t0x%px (%d pages)\n", pd, 1<<0);
+	printk("[**] pt memory pool:\t0x%px (%d pages)\n", pt, 1<<0);
 
 	int i=0;
-	for(i=0; i<num_guest_pages; i++) {
+	for(i=0; i<(1<<ord_guest_pages); i++) {
 		//={0}
-		ept_pt[i].accessed=0;
-		ept_pt[i].dirty=0;
-		ept_pt[i].caching_type=PAT_WB;
-		ept_pt[i].x=1;
-		ept_pt[i].ux=0;
-		ept_pt[i].ignore_pat=0;
-		ept_pt[i].addr=(virt_to_phys((void *)guest_memory)>>12)+i;
-		ept_pt[i].r=1;
-		ept_pt[i].suppress_ve=0;
-		ept_pt[i].w=1; }
+		pt[i].accessed=0;
+		pt[i].dirty=0;
+		pt[i].caching_type=PAT_WB;
+		pt[i].x=1;
+		pt[i].ux=0;
+		pt[i].ignore_pat=0;
+		pt[i].addr=(virt_to_phys((void *)guest_memory)>>12)+i;
+		pt[i].r=1;
+		pt[i].suppress_ve=0;
+		pt[i].w=1; }
 	
 	//={0}
-	ept_pd[0].accessed=0;
-	ept_pd[0].x=1;
-	ept_pd[0].ux=0;
-	ept_pd[0].addr=virt_to_phys(ept_pt)>>12;
-	ept_pd[0].r=1;
-	ept_pd[0].w=1;
+	pd[0].accessed=0;
+	pd[0].x=1;
+	pd[0].ux=0;
+	pd[0].addr=virt_to_phys(pt)>>12;
+	pd[0].r=1;
+	pd[0].w=1;
 
 	//={0}
-	ept_pdpt[0].accessed=0;
-	ept_pdpt[0].x=1;
-	ept_pdpt[0].ux=0;
-	ept_pdpt[0].addr=virt_to_phys(ept_pd)>>12;
-	ept_pdpt[0].r=1;
-	ept_pdpt[0].w=1;
+	pdpt[0].accessed=0;
+	pdpt[0].x=1;
+	pdpt[0].ux=0;
+	pdpt[0].addr=virt_to_phys(pd)>>12;
+	pdpt[0].r=1;
+	pdpt[0].w=1;
 
 	//={0}
-	ept_pml4[0].accessed=0;
-	ept_pml4[0].x=1;
-	ept_pml4[0].ux=0;
-	ept_pml4[0].addr=virt_to_phys(ept_pd)>>12;
-	ept_pml4[0].r=1;
-	ept_pml4[0].w=1;
+	pml4[0].accessed=0;
+	pml4[0].x=1;
+	pml4[0].ux=0;
+	pml4[0].addr=virt_to_phys(pd)>>12;
+	pml4[0].r=1;
+	pml4[0].w=1;
 	
-	*eptp_p=(eptp_t) {0};
-	eptp_p->accessed_dirty_control=1;
-	eptp_p->caching_type=PAT_WB;
-	eptp_p->page_walk_length=3;
-	eptp_p->pml4_addr=virt_to_phys(ept_pml4)>>12;
+	data->eptp=(eptp_t) {0};
+	data->eptp.accessed_dirty_control=1;
+	data->eptp.caching_type=PAT_WB;
+	data->eptp.page_walk_length=3;
+	data->eptp.pml4_addr=virt_to_phys(pml4)>>12;
 	
 	printk("[*]  initialization complete\n");
 	
