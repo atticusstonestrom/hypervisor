@@ -116,10 +116,10 @@ void free_ept(ept_data_t *ept) {
 		free_pages(ept->pts.base, ept->pts.order); }
 	if(ept->pds.base) {
 		free_pages(ept->pds.base, ept->pds.order); }
-	if(ept->pdpt.base) {
-		free_page(ept->pdpt.base); }
-	if(ept->pml4.base) {
-		free_page(ept->pml4.base); }
+	if(ept->pdpt) {
+		free_page(ept->pdpt); }
+	if(ept->pml4) {
+		free_page(ept->pml4); }
 	ept->eptp.pml4_addr=0;
 	return; }
 
@@ -129,32 +129,32 @@ void free_ept(ept_data_t *ept) {
 static int initialize_ept(ept_data_t *data, const int ord_guest_pages) {
 	printk("[*]  initializing extended page tables\n");
 	printk("[**] %d bytes of ram requested\n", (1<<ord_guest_pages)<<12);
-	if(ord_guest_pages>MAX_NUM_GUEST_PAGES || max_ord_guest_pages<0) {
+	if(ord_guest_pages>MAX_ORD_GUEST_PAGES || ord_guest_pages<0) {
 		printk("[*]  too much ram requested\n");
 		return -EINVAL; }	//determine # of different structures based on this
 	
-	*data=(ept_data) {0};
+	*data=(ept_data_t) {0};
 	
 	unsigned long guest_memory;
 	epse_t *pml4, *pdpt, *pd, *pt;
 	
 	guest_memory=__get_free_pages(__GFP_ZERO, ord_guest_pages);
 	data->guest_memory.base=guest_memory;
-	data->guest_memory.order=order_guest_pages;
+	data->guest_memory.order=ord_guest_pages;
 	
 	pml4=(void *)get_zeroed_page(GFP_KERNEL);
-	data->pml4.base=(unsigned long)pml4;
+	data->pml4=(unsigned long)pml4;
 	
 	pdpt=(void *)get_zeroed_page(GFP_KERNEL);
-	data->pdpt.base=(unsigned long)pdpt;
+	data->pdpt=(unsigned long)pdpt;
 	
 	pd=(void *)get_zeroed_page(GFP_KERNEL);
-	data->pd.base=(unsigned long)pd;
-	data->pd.order=0;
+	data->pds.base=(unsigned long)pd;
+	data->pds.order=0;
 	
 	pt=(void *)get_zeroed_page(GFP_KERNEL);
-	data->pt.base=(unsigned long)pt;
-	data->pt.order=0;
+	data->pts.base=(unsigned long)pt;
+	data->pts.order=0;
 	
 	if(!guest_memory || !pml4 || !pdpt || !pd || !pt) {
 		printk("[*] no free pages available\n");
