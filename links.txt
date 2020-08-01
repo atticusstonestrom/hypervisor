@@ -7,6 +7,8 @@ qemu multiple cores
 eflags.vm
 https://www.linux-kvm.org/page/Memory
 
+seabios
+
 
 https://github.com/wbenny/hvpp
 https://revers.engineering/7-days-to-virtualization-a-series-on-hypervisor-development/
