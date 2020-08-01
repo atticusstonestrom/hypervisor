@@ -162,7 +162,7 @@ static int __init hvc_init(void) {
 	if(!(cpuid.leaf_1.vmx)) {
 		printk("[*] vt-x not supported, aborting\n");
 		return -EOPNOTSUPP; }
-	printk("[*]  vt-x supported confirmed\n\n");
+	printk("[*]  vt-x support confirmed\n\n");
 	
 	cr4_t cr4;
 	printk("[*]  setting cr4.vmxe[bit 13]\n");
