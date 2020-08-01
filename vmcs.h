@@ -4,8 +4,8 @@
 #include <asm/io.h>
 #include "vtx-utilities.h"
 
-#ifndef VT_X_UTILITIES
-#define VT_X_UTILITIES
+#ifndef __VMCS
+#define __VMCS
 
 
 #define VMXON(paddr, lhf)	\
