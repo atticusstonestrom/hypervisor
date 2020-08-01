@@ -12,44 +12,49 @@
 __asm__ __volatile__(		\
 	"vmxon %1;"		\
 	"lahf;"			\
-	"mov %%ah, %0;"		\
+	"shr $8, %%rax;"	\
+	"movb %%al, %0;"	\
 	:"=r"(lhf.val)		\
 	:"m"(paddr)		\
-	:"ah", "memory")
+	:"rax", "memory")
 
 #define VMCLEAR(paddr, lhf)	\
 __asm__ __volatile__(		\
 	"vmclear %1;"		\
 	"lahf;"			\
-	"mov %%ah, %0;"		\
+	"shr $8, %%rax;"	\
+	"movb %%al, %0;"	\
 	:"=r"(lhf.val)		\
 	:"m"(paddr)		\
-	:"ah", "memory")
+	:"rax", "memory")
 
 #define VMPTRLD(paddr, lhf)	\
 __asm__ __volatile__(		\
 	"vmptrld %1;"		\
 	"lahf;"			\
-	"mov %%ah, %0;"		\
+	"shr $8, %%rax;"	\
+	"movb %%al, %0;"	\
 	:"=r"(lhf.val)		\
 	:"m"(paddr)		\
-	:"ah", "memory")
+	:"rax", "memory")
 
 #define VMLAUNCH(lhf)		\
 __asm__ __volatile__(		\
 	"vmlaunch;"		\
 	"lahf;"			\
-	"mov %%ah, %0;"		\
+	"shr $8, %%rax;"	\
+	"movb %%al, %0;"	\
 	:"=r"(lhf.val)		\
-	::"ah", "memory")
+	::"rax", "memory")
 
 #define VMRESUME(lhf)		\
 __asm__ __volatile__(		\
 	"vmresume;"		\
 	"lahf;"			\
-	"mov %%ah, %0;"		\
+	"shr $8, %%rax;"	\
+	"movb %%al, %0;"	\
 	:"=r"(lhf.val)		\
-	::"ah", "memory")
+	::"rax", "memory")
 
 #define VMXOFF   __asm__ __volatile__("vmxoff")
 
