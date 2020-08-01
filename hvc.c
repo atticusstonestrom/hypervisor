@@ -90,17 +90,17 @@ host_state_t host_state;
 void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	
-	rflags_t rflags;
+	lhf_t lhf;
 	if(vm_state->active_flag && vm_state->vmcs_paddr) {
 		printk("[*]  clearing vmcs\n");
 		printk("[**] vmcs addr:\t0x%lx\n", vm_state->vmcs_paddr);
-		VMCLEAR(vm_state->vmcs_paddr, rflags);
-		printk("[**] rflags:\t0x%lx\n", rflags.val);
-		if(!VMsucceed(rflags)) {
-			if(VMfailValid(rflags)) {
+		VMCLEAR(vm_state->vmcs_paddr, lhf);
+		printk("[**] lhf:\t0x%02x\n", lhf.val);
+		if(!VMsucceed(lhf)) {
+			if(VMfailValid(lhf)) {
 				//should get error field from current vmcs
 				printk("[*]  vmclear failed with valid region\n"); }
-			else if(VMfailInvalid(rflags)) {
+			else if(VMfailInvalid(lhf)) {
 				printk("[*]  vmclear failed with invalid region\n"); }}
 		else {
 			vm_state->active_flag=0;
@@ -231,7 +231,7 @@ static int __init hvc_init(void) {
 	READ_MSR(msr, IA32_VMX_BASIC);
 	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
 	*(unsigned int *)(guest_state.vmxon_region)=msr.vmx_basic.revision_id;
-	rflags_t rflags;
+	lhf_t lhf;
 		//__asm__ __volatile__(
 		//	"vmxon %1;"
 		//	"jbe vmxon_fail;"
@@ -248,13 +248,13 @@ static int __init hvc_init(void) {
 		//	:"=r"(rflags.val)
 		//	:"m"(guest_state.vmxon_paddr)
 		//	:"memory");
-	VMXON(guest_state.vmxon_paddr, rflags);
-	printk("[**] rflags:\t0x%lx\n", rflags.val);
-	if(!VMsucceed(rflags)) {
-		if(VMfailValid(rflags)) {
+	VMXON(guest_state.vmxon_paddr, lhf);
+	printk("[**] lhf:\t0x%02x\n", lhf.val);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
 			//should get error field from current vmcs
 			printk("[*]  vmxon failed with valid region\n"); }
-		else if(VMfailInvalid(rflags)) {
+		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmxon failed with invalid region\n"); }
 		cleanup(&guest_state, &host_state);
 		return -EINVAL; }
@@ -267,25 +267,25 @@ static int __init hvc_init(void) {
 	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
 	*(unsigned int *)(guest_state.vmcs_region)=msr.vmx_basic.revision_id;
 	printk("[**] clearing vmcs @ 0x%lx\n", guest_state.vmcs_paddr);
-	VMCLEAR(guest_state.vmcs_paddr, rflags);
-	printk("[**] rflags:\t0x%lx\n", rflags.val);
-	if(!VMsucceed(rflags)) {
-		if(VMfailValid(rflags)) {
+	VMCLEAR(guest_state.vmcs_paddr, lhf);
+	printk("[**] lhf:\t0x%02x\n", lhf.val);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
 			//should get error field from current vmcs
 			printk("[*]  vmclear failed with valid region\n"); }
-		else if(VMfailInvalid(rflags)) {
+		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmclear failed with invalid region\n"); }
 		cleanup(&guest_state, &host_state);
 		return -EINVAL; }
 	printk("[**] vmclear successful\n"); 
 	printk("[**] calling vmptrld\n");
-	VMPTRLD(guest_state.vmcs_paddr, rflags);
-	printk("[**] rflags:\t0x%lx\n", rflags.val);
-	if(!VMsucceed(rflags)) {
-		if(VMfailValid(rflags)) {
+	VMPTRLD(guest_state.vmcs_paddr, lhf);
+	printk("[**] lhf:\t0x%02x\n", lhf.val);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
 			//should get error field from current vmcs
 			printk("[*]  vmptrld failed with valid region\n"); }
-		else if(VMfailInvalid(rflags)) {
+		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmptrld failed with invalid region\n"); }
 		cleanup(&guest_state, &host_state);
 		return -EINVAL; }
