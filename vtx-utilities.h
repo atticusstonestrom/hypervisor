@@ -8,55 +8,71 @@
 #define VT_X_UTILITIES
 
 
-#define VMXON(paddr, rflags)	\
+#define VMXON(paddr, lhf)	\
 __asm__ __volatile__(		\
 	"vmxon %1;"		\
-	"pushf;"		\
-	"popq %0;"		\
-	:"=r"(rflags.val)	\
+	"lahf;"			\
+	"mov %%ah, %0;"		\
+	:"=r"(lhf.val)		\
 	:"m"(paddr)		\
-	:"memory")
+	:"ah", "memory")
 
-#define VMCLEAR(paddr, rflags)	\
+#define VMCLEAR(paddr, lhf)	\
 __asm__ __volatile__(		\
 	"vmclear %1;"		\
-	"pushf;"		\
-	"popq %0;"		\
-	:"=r"(rflags.val)	\
+	"lahf;"			\
+	"mov %%ah, %0;"		\
+	:"=r"(lhf.val)		\
 	:"m"(paddr)		\
-	:"memory")
+	:"ah", "memory")
 
-#define VMPTRLD(paddr, rflags)	\
+#define VMPTRLD(paddr, lhf)	\
 __asm__ __volatile__(		\
 	"vmptrld %1;"		\
-	"pushf;"		\
-	"popq %0;"		\
-	:"=r"(rflags.val)	\
+	"lahf;"			\
+	"mov %%ah, %0;"		\
+	:"=r"(lhf.val)		\
 	:"m"(paddr)		\
-	:"memory")
+	:"ah", "memory")
 
-#define VMLAUNCH(rflags)	\
+#define VMLAUNCH(lhf)		\
 __asm__ __volatile__(		\
 	"vmlaunch;"		\
-	"pushf;"		\
-	"popq %0;"		\
-	:"=r"(rflags.val)	\
-	::"memory")
+	"lahf;"			\
+	"mov %%ah, %0;"		\
+	:"=r"(lhf.val)		\
+	::"ah", "memory")
 
-#define VMRESUME(rflags)	\
+#define VMRESUME(lhf)		\
 __asm__ __volatile__(		\
 	"vmresume;"		\
-	"pushf;"		\
-	"popq %0;"		\
-	:"=r"(rflags.val)	\
-	::"memory")
+	"lahf;"			\
+	"mov %%ah, %0;"		\
+	:"=r"(lhf.val)		\
+	::"ah", "memory")
 
 #define VMXOFF   __asm__ __volatile__("vmxoff")
-	
 
-#define VMsucceed(rflags)	(!(rflags).cf && !(rflags).pf && !(rflags).af && !(rflags).zf && !(rflags).sf && !(rflags).of)
-#define VMfailInvalid(rflags)	((rflags).cf && !(rflags).pf && !(rflags).af && !(rflags).zf && !(rflags).sf && !(rflags).of)
-#define VMfailValid(rflags)	(!(rflags).cf && !(rflags).pf && !(rflags).af && (rflags).zf && !(rflags).sf && !(rflags).of)
+
+//lower half flags
+//much better performance
+//than pushf/popf
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned char cf:1;
+		unsigned char rsv_1:1;
+		unsigned char pf:1;
+		unsigned char rsv_3:1;
+		unsigned char af:1;
+		unsigned char rsv_5:1;
+		unsigned char zf:1;
+		unsigned char sf:1; };
+	unsigned char val;
+} lhf_t;
+
+#define VMsucceed(lhf)		(!(lhf).cf && !(lhf).zf)
+#define VMfailInvalid(lhf)	((lhf).cf && !(lhf).zf)
+#define VMfailValid(lhf)	(!(lhf).cf && (lhf).zf)
 
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
