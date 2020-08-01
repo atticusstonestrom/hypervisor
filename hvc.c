@@ -31,6 +31,7 @@
 #include <linux/string.h>
 #include "x64-utilities.h"
 #include "vtx-utilities.h"
+#include "vmcs.h"
 #include "mm.h"
 
 #define DEVICE_NAME "hvchar"
