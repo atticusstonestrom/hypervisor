@@ -267,6 +267,7 @@ static int __init hvc_init(void) {
 	READ_MSR(msr, IA32_VMX_BASIC);
 	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
 	*(unsigned int *)(guest_state.vmcs_region)=msr.vmx_basic.revision_id;
+	*(unsigned int *)(guest_state.vmcs_region)&=0x7fffffff;	//not a shadow vmcs
 	printk("[**] clearing vmcs @ 0x%lx\n", guest_state.vmcs_paddr);
 	VMCLEAR(guest_state.vmcs_paddr, lhf);
 	printk("[**] lhf:\t0x%02x\n", lhf.val);
