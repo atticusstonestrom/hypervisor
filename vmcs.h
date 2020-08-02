@@ -18,6 +18,128 @@
 
 
 ////////////////////////////////////////////////////////
+enum VMCS_ENCODINGS {
+	VPID=				0x00000000,
+	PINV=				0x00000002,	//posted-interrupt notification vector
+	EPTP_INDEX=			0x00000004,
+
+	GUEST_ES_SS=			0x00000800,
+	GUEST_CS_SS=			0x00000802,
+	GUEST_SS_SS=			0x00000804,
+	GUEST_DS_SS=			0x00000806,
+	GUEST_FS_SS=			0x00000808,
+	GUEST_GS_SS=			0x0000080a,
+	GUEST_LDTR_SS=			0x0000080c,
+	GUEST_TR_SS=			0x0000080e,
+
+	GUEST_INTERRUPT_STATUS=		0x00000810,
+	PML_INDEX=			0x00000812,
+
+	HOST_ES_SS=			0x00000c00,
+	HOST_CS_SS=			0x00000c02,
+	HOST_SS_SS=			0x00000c04,
+	HOST_DS_SS=			0x00000c06,
+	HOST_FS_SS=			0x00000c08,
+	HOST_GS_SS=			0x00000c0a,
+	HOST_TR_SS=			0x00000c0c,
+
+	IO_BMP_A_F=			0x00002000,
+	IO_BMP_A_H=			0x00002001,
+	IO_BMP_B_F=			0x00002002,
+	IO_BMP_B_H=			0x00002003,
+
+	MSR_BMP_ADDR_F=			0x00002004,
+	MSR_BMP_ADDR_H=			0x00002005,
+
+	EXIT_MSR_STR_ADDR_F=		0x00002006,
+	EXIT_MSR_STR_ADDR_H=		0x00002007,
+	EXIT_MSR_LD_ADDR_F= 		0x00002008,
+	EXIT_MSR_LD_ADDR_H= 		0x00002009,
+	ENTRY_MSR_LD_ADDR_F=		0x0000200a,
+	ENTRY_MSR_LD_ADDR_H=		0x0000200b,
+
+	EXECUTIVE_VMCS_PTR_F=		0x0000200c,
+	EXECUTIVE_VMCS_PTR_H=		0x0000200d,
+
+	PML_ADDR_F=			0x0000200e,
+	PML_ADDR_H=			0x0000200f,
+
+	TSC_OFFSET_F=			0x00002010,
+	TSC_OFFSET_H=			0x00002011,
+
+	VAPIC_ADDR_F=			0x00002012,	//virtual apic
+	VAPIC_ADDR_H=			0x00002013,	//virtual apic
+	APICA_ADDR_F=			0x00002014,	//apic access
+	APICA_ADDR_H=			0x00002015,	//apic access
+
+	PIDA_F=				0x00002016,	//posted-interrupt descriptor address
+	PIDA_H=				0x00002017,	//posted-interrupt descriptor address
+
+	VMFUNC_CTRLS_F=			0x00002018,
+	VMFUNC_CTRLS_H=			0x00002019,
+
+	EPTP_F=				0x0000201a,
+	EPTP_H=				0x0000201b,
+
+	EOI_EXIT0_F=			0x0000201c,
+	EOI_EXIT0_H=			0x0000201d,
+	EOI_EXIT1_F=			0x0000201e,
+	EOI_EXIT1_H=			0x0000201f,
+	EOI_EXIT2_F=			0x00002020,
+	EOI_EXIT2_H=			0x00002021,
+	EOI_EXIT3_F=			0x00002022,
+	EOI_EXIT3_H=			0x00002023,
+
+	EPTP_LIST_ADDR_F=		0x00002024,
+	EPTP_LIST_ADDR_H=		0x00002025,
+
+	VMREAD_BMP_ADDR_F=		0x00002026,
+	VMREAD_BMP_ADDR_H=		0x00002027,
+	VMWRITE_BMP_ADDR_F=		0x00002028,
+	VMWRITE_BMP_ADDR_H=		0x00002029,
+
+	VE_INFO_ADDR_F=			0x0000202a,	//virtualization exception
+	VE_INFO_ADDR_F=			0x0000202b,	//virtualization exception
+
+	XSS_EXITING_BMP_F=		0x0000202c,
+	XSS_EXITING_BMP_F=		0x0000202d,
+
+	ENCLS_EXITING_BMP_F=		0x0000202e,
+	ENCLS_EXITING_BMP_H=		0x0000202f,
+
+	SPPT_PTR_F=			0x00002030,	//sub-page-permission-table pointer
+	SPPT_PTR_H=			0x00002031,	//sub-page-permission-table pointer
+
+	TSC_MULTIPLIER_F=		0x00002032,
+	TSC_MULTIPLIER_H=		0x00002033,
+
+	ENCLS_EXITING_BMP_F=		0x00002036,
+	ENCLS_EXITING_BMP_H=		0x00002037,
+
+	GUEST_PADDR_F=			0x00002400,
+	GUEST_PADDR_H=			0x00002401,
+
+	VMCS_LINK_PTR_F=		0x00002800,
+	VMCS_LINK_PTR_H=		0x00002801,
+
+	GUEST_IA32_DEBUGCTL_F=		0x00002802,
+	GUEST_IA32_DEBUGCTL_H=		0x00002803,
+	GUEST_IA32_PAT_F=		0x00002804,
+	GUEST_IA32_PAT_H=		0x00002805,
+	GUEST_IA32_EFER_F=		0x00002806,
+	GUEST_IA32_EFER_H=		0x00002807,
+
+	GUEST_IA32_PERF_GLOBAL_CTRL_F=	0x00002808,
+	GUEST_IA32_PERF_GLOBAL_CTRL_H=	0x00002809,
+
+	GUEST_PDPTE0_F=			0x000280a,
+	GUEST_PDPTE0_H=			0x000280b,
+	GUEST_PDPTE1_F=			0x000280c,
+	GUEST_PDPTE1_H=			0x000280d,
+	GUEST_PDPTE2_F=			0x000280e,
+	GUEST_PDPTE2_H=			0x000280f,
+	GUEST_PDPTE3_F=			0x0002810,
+	GUEST_PDPTE3_H=			0x0002811,
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		unsigned int access_type:1;	//0=full, 1=high
@@ -36,6 +158,12 @@ typedef union __attribute__((packed)) {
 		unsigned int rsv_15_31:17; };	//must be 0
 	unsigned int val;
 } vmcs_component_encoding;
+////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////
+void initialize_vpcs(unsigned long vmcs) {
+	*(unsigned int *)vmcs &= 0x7fffffff;	//not a shadow vmcs
+	
 ////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////
