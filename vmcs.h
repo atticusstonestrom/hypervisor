@@ -438,7 +438,7 @@ typedef struct {
 //////////////////////////////
 //write ia32_vmx_basic.revision_identifier
 //disable shadow vmcs (bit 31)
-//
+//check ia32_vmx_ept_vpid_cap for accessed/dirty
 //
 //
 //////////////////////////////
