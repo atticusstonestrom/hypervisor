@@ -181,7 +181,7 @@ typedef struct {
 	//for reserved bits, consult
 	//ia32_vmx_pinbased_ctls
 	//ia32_vmx_true_pinbased_ctls
-	typedef struct __attribute__((packed)) {
+	struct __attribute__((packed)) {
 		unsigned int external_interrupt_exiting:1;
 		unsigned int rsv_1_2:2;
 		unsigned int nmi_exiting:1;
@@ -195,7 +195,7 @@ typedef struct {
 	//for reserved bits, consult
 	//ia32_vmx_procbased_ctls
 	//ia32_vmx_true_procbased_ctls
-	typedef struct __attribute__((packed)) {
+	struct __attribute__((packed)) {
 		unsigned int rsv_0_1:2;
 		unsigned int interrupt_window_exiting:1;
 		unsigned int use_tsc_offsetting:1;
@@ -227,7 +227,7 @@ typedef struct {
 
 	//for reserved bits, consult
 	//ia32_vmx_procbased_ctls2
-	typedef struct __attribute__((packed)) {
+	struct __attribute__((packed)) {
 		unsigned int virtualize_apic_accesses:1;
 		unsigned int enable_ept:1;
 		unsigned int descriptor_table_exiting:1;
@@ -256,7 +256,7 @@ typedef struct {
 		unsigned int rsv_26_31:6; }
 		secondary_cpu_based_execution_controls;
 
-	typedef struct __attribute__((packed)) {
+	struct __attribute__((packed)) {
 		unsigned int zd:1;
 		unsigned int single_step:1;
 		unsigned int nmi:1;
@@ -282,19 +282,19 @@ typedef struct {
 		unsigned int rsv_22_31:10; }
 		exception_bitmap;
 
-	typedef struct {
+	struct {
 		unsigned long io_bitmap_a;	//ports 0000 to 7fff
 		unsigned long bitmap_a_paddr;
 		unsigned long io_bitmap_b;	//ports 8000 to ffff
 		unsigned long bitmap_b_paddr; }
 		io_bitmap_addrs;
 
-	typedef struct {
+	struct {
 		unsigned long tsc_offset;
 		unsigned long tsc_multiplier; }
 		tsc_fields;
 
-	typedef struct {
+	struct {
 		unsigned long cr0_mask;
 		unsigned long cr0_shadow;
 		unsigned long cr4_mask;
@@ -302,7 +302,7 @@ typedef struct {
 		cr_masks_and_shadows;
 
 	//read ia32_vmx_misc for supported count
-	typedef struct {
+	struct {
 		unsigned int cr3_target_count;
 		unsigned long cr3_target_0;
 		unsigned long cr3_target_1;
@@ -310,7 +310,7 @@ typedef struct {
 		unsigned long cr3_target_3; }
 		cr3_target_controls;
 
-	typedef struct {
+	struct {
 		unsigned long apic_access_page;
 		unsigned long apic_access_paddr;
 
@@ -328,7 +328,7 @@ typedef struct {
 		unsigned long posted_interrupt_descriptor_addr; }
 		apic_virtualization_controls;
 
-	typedef struct {
+	struct {
 		//read bitmap for low msrs	00000000 to 00001fff
 		//read bitmap for high msrs	c0000000 to c0001fff
 		//write bitmap for low msrs
@@ -343,7 +343,7 @@ typedef struct {
 
 	unsigned short virtual_processor_identifier;
 
-	typedef struct {
+	struct {
 		unsigned int ple_gap;
 		unsigned int ple_window; }
 	pause_loop_exiting_controls;
@@ -352,7 +352,7 @@ typedef struct {
 	//ia32_vmx_vmfunc
 	unsigned long eptp_switching:1;
 
-	typedef struct {
+	struct {
 		unsigned long vmread_bitmap_addr;
 		unsigned long vmread_bitmap_paddr;
 		unsigned long vmwrite_bitmap_addr;
@@ -363,7 +363,7 @@ typedef struct {
 	
 	unsigned long page_modification_log;			//paddr?
 	
-	typedef struct {
+	struct {
 		unsigned long virtualization_exception_info_area;
 		unsigned long virtualization_exception_info_paddr;
 		unsigned short eptp_index; }
@@ -373,8 +373,8 @@ typedef struct {
 } vm_execution_controls;
 
 typedef struct {
-	typedef struct {
-		typedef struct {
+	struct {
+		struct {
 			unsigned int basic_exit_reason:16;	//appendix C
 			unsigned int rsv_16_26:11;	//must be 0
 			unsigned int enclave_incident:1;
@@ -389,8 +389,8 @@ typedef struct {
 		unsigned long guest_paddr;
 	} basic_vm_exit_info;
 	
-	typedef struct {
-		typedef struct {
+	struct {
+		struct {
 			unsigned int vector:8;
 			unsigned int type:3;
 				//external interrupt:	0
@@ -406,8 +406,8 @@ typedef struct {
 		unsigned int interruption_error_code;
 	} vector_vm_exit_info;
 	
-	typedef struct {
-		typedef struct {
+	struct {
+		struct {
 			unsigned int vector:8;
 			unsigned int type:3;
 				//external interrupt:	0
@@ -420,7 +420,7 @@ typedef struct {
 			idt_vectoring_info;
 	} event_delivery_vm_exit_info;
 	
-	typedef struct {
+	struct {
 		unsigned int instruction_length;
 		unsigned int instruction_info;	//27.2.4
 		
