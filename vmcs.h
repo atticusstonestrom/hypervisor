@@ -16,6 +16,28 @@
 //
 //////////////////////////////
 
+
+////////////////////////////////////////////////////////
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int access_type:1;	//0=full, 1=high
+		unsigned int index:9;
+		unsigned int type:2;
+			#define VMCS_TYPE_CONTROL	0
+			#define VMCS_TYPE_EXIT_INFO	1
+			#define VMCS_TYPE_GUEST_STATE	2
+			#define VMCS_TYPE_HOST_STATE	3
+		unsigned int rsv_12:1;		//must be 0
+		unsigned int width:2;
+			#define VMCS_WIDTH_16		0
+			#define VMCS_WIDTH_32		1
+			#define VMCS_WIDTH_64		2
+			#define VMCS_WIDTH_NATURAL	3
+		unsigned int rsv_15_31:17; };	//must be 0
+	unsigned int val;
+} vmcs_component_encoding;
+////////////////////////////////////////////////////////
+
 ////////////////////////////////////////////////////////
 
 typedef struct {
