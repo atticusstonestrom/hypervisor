@@ -8,6 +8,14 @@
 #ifndef __VMCS
 #define __VMCS
 
+//////////////////////////////
+//write ia32_vmx_basic.revision_identifier
+//disable shadow vmcs (bit 31)
+//check ia32_vmx_ept_vpid_cap for accessed/dirty
+//
+//
+//////////////////////////////
+
 ////////////////////////////////////////////////////////
 
 typedef struct {
@@ -340,6 +348,9 @@ typedef struct {
 
 	unsigned long executive_vmcs_pointer;
 
+	//consult ia32_vmx_ept_vpid_cap
+	//to determine whether accessed/
+	//dirty flags are supported
 	eptp_t eptp;
 
 	unsigned short virtual_processor_identifier;
@@ -351,7 +362,11 @@ typedef struct {
 
 	//for reserved bits, consult
 	//ia32_vmx_vmfunc
-	unsigned long eptp_switching:1;
+	//all reserved bits reserved to 0
+	struct __attribute__((packed)) {
+		unsigned long eptp_switching:1;
+		unsigned long rsv_1_63:63; }
+		vm_function_controls;
 
 	struct {
 		unsigned long vmread_bitmap_addr;
@@ -457,9 +472,9 @@ typedef struct {
 				//software exception:	6
 				//other event:		7
 			unsigned int deliver_error_code:1;
-			unsigned int rsv_12_30:19;	//set to 0
+			unsigned int rsv_12_30:19;	//set to 0??
 			unsigned int valid:1; }
-			idt_vectoring_info;
+			vm_entry_interruption_info;
 		
 		unsigned int vm_entry_exception_error_code;
 		unsigned int vm_entry_instruction_length;
@@ -474,7 +489,7 @@ typedef struct {
 			unsigned int enclave_incident:1;
 			unsigned int pending_mtf_vm_exit:1;
 			unsigned int vmx_root_exit:1;
-			unsigned int rsv_30:1;
+			unsigned int rsv_30:1;		//must be 0
 			unsigned int vm_entry_failure:1; }
 			exit_reason;
 
@@ -531,14 +546,6 @@ typedef struct {
 	unsigned int vm_instruction_error_field;
 } vm_exit_information_fields;
 
-
-
-//////////////////////////////
-//write ia32_vmx_basic.revision_identifier
-//disable shadow vmcs (bit 31)
-//check ia32_vmx_ept_vpid_cap for accessed/dirty
-//
-//
-//////////////////////////////
+////////////////////////////////////////////////////////
 
 #endif
