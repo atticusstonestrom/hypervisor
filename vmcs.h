@@ -373,8 +373,101 @@ typedef struct {
 } vm_execution_controls;
 
 typedef struct {
+	//for reserved bits, consult
+	//ia32_vmx_exit_ctls
+	//ia32_vmx_true_exit_ctls
+	struct __attribute__((packed)) {
+		unsigned int rsv_0_1:2;
+		unsigned int save_dbg_controls:1;
+		unsigned int rsv_3_8:6;
+		unsigned int host_addr_space_size:1;
+		unsigned int rsv_10_11:2;
+		unsigned int load_ia32_perf_global_ctrl:1;
+		unsigned int rsv_13_14:2;
+		unsigned int acknowledge_interrupt:1;
+		unsigned int rsv_16_17:2;
+		unsigned int save_ia32_pat:1;
+		unsigned int load_ia32_pat:1;
+		unsigned int save_ia32_efer:1;
+		unsigned int load_ia32_efer:1;
+		unsigned int save_preemption_timer:1;
+		unsigned int clear_ia32_bndcfgs:1;
+		unsigned int conceal_vm_exits:1;
+		unsigned int rsv_25_31:7; }
+		vm_exit_controls;
+	
 	struct {
-		struct {
+		struct __attribute__((packed)) {
+			unsigned int msr_index;
+			unsigned int rsv_32_63;
+			unsigned long msr_data; }
+			msr_entry;
+		//ia32_vmx_misc gives maximum supported count
+		//section 27.4
+		unsigned int msr_store_count;
+		unsigned long msr_store_addr;
+		unsigned long msr_store_paddr;
+		
+		//section 27.6
+		unsigned int msr_load_count;
+		unsigned long msr_load_addr;
+		unsigned long msr_load_paddr;
+	} msr_entry_controls;
+} vm_exit_control_fields;
+
+
+typedef struct {
+	//for reserved bits, consult
+	//ia32_vmx_entry_ctls
+	//ia32_vmx_true_entry_ctls
+	struct __attribute__((packed)) {
+		unsigned int rsv_0_1:2;
+		unsigned int load_dbg_controls:1;
+		unsigned int rsv_3_8:6;
+		unsigned int ia_32e_mode_guest:1;
+		unsigned int entry_to_smm:1;
+		unsigned int deactivate_dual_monitor_treatment:1;
+		unsigned int rsv_12:1;
+		unsigned int load_ia32_perf_global_ctrl:1;
+		unsigned int load_ia32_pat:1;
+		unsigned int load_ia32_efer:1;
+		unsigned int load_ia32_bndcfgs:1;
+		unsigned int conceal_vm_entries:1;
+		unsigned int rsv_18_31:14; }
+		vm_entry_controls;
+	
+	struct {
+		//ia32_vmx_misc gives maximum supported count
+		//section 26.4
+		unsigned int msr_load_count;
+		unsigned long msr_load_addr;
+		unsigned long msr_load_paddr;
+	} msr_entry_controls;
+	
+	struct {
+		struct __attribute__((packed)) {
+			unsigned int vector:8;
+			unsigned int type:3;
+				//external interrupt:	0
+				//nmi:			2
+				//hardware exception:	3
+				//software interrupt:	4
+				//privilege sw except:	5
+				//software exception:	6
+				//other event:		7
+			unsigned int deliver_error_code:1;
+			unsigned int rsv_12_30:19;	//set to 0
+			unsigned int valid:1; }
+			idt_vectoring_info;
+		
+		unsigned int vm_entry_exception_error_code;
+		unsigned int vm_entry_instruction_length;
+	} event_injection_entry_controls;
+} vm_entry_control_fields;
+
+typedef struct {
+	struct {
+		struct __attribute__((packed)) {
 			unsigned int basic_exit_reason:16;	//appendix C
 			unsigned int rsv_16_26:11;	//must be 0
 			unsigned int enclave_incident:1;
@@ -390,7 +483,7 @@ typedef struct {
 	} basic_vm_exit_info;
 	
 	struct {
-		struct {
+		struct __attribute__((packed)) {
 			unsigned int vector:8;
 			unsigned int type:3;
 				//external interrupt:	0
@@ -407,17 +500,21 @@ typedef struct {
 	} vector_vm_exit_info;
 	
 	struct {
-		struct {
+		struct __attribute__((packed)) {
 			unsigned int vector:8;
 			unsigned int type:3;
 				//external interrupt:	0
 				//nmi:			2
 				//hardware exception:	3
+				//software interrupt:	4
+				//privilege sw except:	5
 				//software exception:	6
 			unsigned int error_code_valid:1;
 			unsigned int rsv_12_30:19;	//set to 0
 			unsigned int valid:1; }
 			idt_vectoring_info;
+		
+		unsigned int idt_vectoring_error_code;
 	} event_delivery_vm_exit_info;
 	
 	struct {
@@ -431,7 +528,7 @@ typedef struct {
 	} instruction_execution_vm_exit_info;
 	
 	unsigned int vm_instruction_error_field;
-} vm_exit_controls;
+} vm_exit_information_fields;
 
 
 
