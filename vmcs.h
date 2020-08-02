@@ -225,7 +225,8 @@ typedef struct {
 		unsigned int activate_secondary_controls:1; }
 	primary_cpu_based_execution_controls;
 
-	//for reserved bits, consult
+	//all bits reserved to zero
+	//for bits settable to 1, consult
 	//ia32_vmx_procbased_ctls2
 	struct __attribute__((packed)) {
 		unsigned int virtualize_apic_accesses:1;
