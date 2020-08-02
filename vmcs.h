@@ -433,4 +433,14 @@ typedef struct {
 	unsigned int vm_instruction_error_field;
 } vm_exit_controls;
 
+
+
+//////////////////////////////
+//write ia32_vmx_basic.revision_identifier
+//disable shadow vmcs (bit 31)
+//
+//
+//
+//////////////////////////////
+
 #endif
