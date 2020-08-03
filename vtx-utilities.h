@@ -38,6 +38,26 @@ __asm__ __volatile__(		\
 	:"m"(paddr)		\
 	:"rax", "memory")
 
+#define VMWRITE(src, code, lhf)	\
+__asm__ __volatile__(		\
+	"vmwrite %1, %2;"	\
+	"lahf;"			\
+	"shr $8, %%rax;"	\
+	"movb %%al, %0;"	\
+	:"=r"(lhf.val)		\
+	:"r"(src), "r"(code)	\
+	:"rax", "memory")
+
+#define VMREAD(dst, code, lhf)	\
+__asm__ __volatile__(		\
+	"vmread %1, %2;"	\
+	"lahf;"			\
+	"shr $8, %%rax;"	\
+	"movb %%al, %0;"	\
+	:"=r"(lhf.val)		\
+	:"r"(code), "r"(dst)	\
+	:"rax", "memory")
+
 #define VMLAUNCH(lhf)		\
 __asm__ __volatile__(		\
 	"vmlaunch;"		\
