@@ -16,10 +16,11 @@
 //mutex, as in the intro to char devices
 //	http://derekmolloy.ie/writing-a-linux-kernel-module-part-2-a-character-device/
 //init() should be open()
-//save/restore caching type
 //check physical address width?
 //# of cores (and corresponding # of vmcs regions) as argument to open
 //mutexes on all resources?
+//all allocated pages should be writeback cacheable
+//	save/restore caching type
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
