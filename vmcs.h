@@ -271,6 +271,16 @@ enum VMCS_ENCODINGS {
 	HOST_IA32_S_CET =		0x00006c18,
 	HOST_SSP =			0x00006c1a,
 	HOST_IA32_ISTA =		0x00006c1c };	//interrupt_ssp_table_addr
+
+/*#define PRINT_VMCS_ENCODING(X) \
+printk("component 0x%08x:\n" \
+	       "\tname:\t%s\n" \
+	       "\tindex:\t0x%02x\n" \
+	       "\ttype:\t%d\n" \
+	       "\twidth:\t%d\n", \
+	       X, #X, ((vmcs_component_encoding)(unsigned int)(X)).index, \
+	       ((vmcs_component_encoding)(unsigned int)(X)).type, ((vmcs_component_encoding)(unsigned int)(X)).width);*/
+
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		unsigned int access_type:1;	//0=full, 1=high
