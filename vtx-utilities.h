@@ -45,7 +45,8 @@ __asm__ __volatile__(		\
 	"shr $8, %%rax;"	\
 	"movb %%al, %0;"	\
 	:"=r"(lhf.val)		\
-	:"r"(src), "r"(code)	\
+	:"r"((long)(src)),	\
+	 "r"((long)(code))	\
 	:"rax", "memory")
 
 #define VMREAD(dst, code, lhf)	\
@@ -55,7 +56,8 @@ __asm__ __volatile__(		\
 	"shr $8, %%rax;"	\
 	"movb %%al, %0;"	\
 	:"=r"(lhf.val)		\
-	:"r"(code), "r"(dst)	\
+	:"r"((long)(code)),	\
+	 "r"((long)(dst))	\
 	:"rax", "memory")
 
 #define VMLAUNCH(lhf)		\
