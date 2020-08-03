@@ -115,8 +115,8 @@ typedef union __attribute__((packed)) {
 	
 	#define IA32_VMX_CR0_FIXED0 0x486
 	#define IA32_VMX_CR0_FIXED1 0x487
-	#define IA32_VMX_CR0_FIXED0 0x488
-	#define IA32_VMX_CR0_FIXED1 0x489
+	#define IA32_VMX_CR4_FIXED0 0x488
+	#define IA32_VMX_CR4_FIXED1 0x489
 	struct __attribute__((packed)) {
 		unsigned long cr; }
 		vmx_cr_fixed_bits;
