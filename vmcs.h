@@ -14,6 +14,7 @@
 //check ia32_vmx_ept_vpid_cap for accessed/dirty
 //check bit 55 of ia32_vmx_basic to see
 //	if true_..._ctls are allowed
+//vmfunc rsved bits
 //////////////////////////////
 
 
