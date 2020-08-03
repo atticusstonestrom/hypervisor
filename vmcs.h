@@ -18,7 +18,7 @@
 
 
 ////////////////////////////////////////////////////////
-enum VMCS_ENCODINGS {
+enum vmcs_encodings {
 	VPID =				0x00000000,
 	PINV =				0x00000002,	//posted-interrupt notification vector
 	EPTP_INDEX =			0x00000004,
@@ -299,6 +299,75 @@ typedef union __attribute__((packed)) {
 		unsigned int rsv_15_31:17; };	//must be 0
 	unsigned int val;
 } vmcs_component_encoding;
+////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////
+enum basic_vm_exit_reasons {
+	ER_EXCEPTION_OR_NMI =	0,
+	ER_EXTERNAL_INTERRUPT =	1,
+	ER_TRIPLE_FAULT =	2,
+	ER_INIT_SIGNAL =	3,
+	ER_SIPI =		4,
+	ER_IO_SMI =		5,
+	ER_OTHER_SMI =		6,
+	ER_INTERRUPT_WINDOW =	7,
+	ER_NMI_WINDOW =		8,
+	ER_TASK_SWITCH =	9,
+	ER_CPUID =		10,
+	ER_GETSEC =		11,
+	ER_HLT =		12,
+	ER_INVD =		13,
+	ER_INVLPG =		14,
+	ER_RDPMC =		15,
+	ER_RDTSC =		16,
+	ER_RSM =		17,
+	ER_VMCALL =		18,
+	ER_VMCLEAR =		19,
+	ER_VMLAUNCH =		20,
+	ER_VMPTRLD =		21,
+	ER_VMPTRST =		22,
+	ER_VMREAD =		23,
+	ER_VMRESUME =		24,
+	ER_VMWRITE =		25,
+	ER_VMXOFF =		26,
+	ER_VMXON =		27,
+	ER_CR_ACCESS =		28,
+	ER_MOV_DR =		29,
+	ER_IO_INSTRUCTION =	30,
+	ER_RDMSR =		31,
+	ER_WRMSR =		32,
+	ER_INVL_GUEST_STATE =	33,	//entry failure
+	ER_MSR_LOADING =	34,	//entry failure
+	ER_MWAIT =		36,
+	ER_MONITOR_TRAP_FLAG =	37,
+	ER_MONITOR =		39,
+	ER_PAUSE =		40,
+	ER_MACHINE_CHECK =	41,	//entry failure
+	ER_TPR_BELOW_THESHOLD =	43,
+	ER_APIC_ACCESS =	44,
+	ER_VIRTUALIZED_EOI =	45,
+	ER_GDTR_IDTR_ACCESS =	46,
+	ER_LDTR_TR_ACCESS =	47,
+	ER_EPT_VIOLATION =	48,
+	ER_EPT_MISCONFIG =	49,
+	ER_INVEPT =		50,
+	ER_RDTSCP =		51,
+	ER_PREEMPTION_TIMER =	52,
+	ER_INVVPID =		53,
+	ER_WBIND =		54,
+	ER_XSETBV =		55,
+	ER_APIC_WRITE =		56,
+	ER_RDRAND =		57,
+	ER_INVPCID =		58,
+	ER_VMFUNC =		59,
+	ER_ENCLS =		60,
+	ER_RDSEED =		61,
+	ER_PM_LOG_FULL =	62,	//page modification log
+	ER_XSAVES =		63,
+	ER_XRSTORS =		64,
+	ER_SPP_RELATED_EVENT =	66,
+	ER_UMWAIT =		67,
+	ER_TPAUSE =		68 };
 ////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////
