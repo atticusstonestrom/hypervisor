@@ -151,106 +151,106 @@ static int __init hvc_init(void) {
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "GUEST_ES_SS", GUEST_ES_SS, (vmcs_component_encoding)(GUEST_ES_SS).index,
-	       (vmcs_component_encoding)(GUEST_ES_SS).type, (vmcs_component_encoding)(GUEST_ES_SS).width);
+	       "GUEST_ES_SS", GUEST_ES_SS, ((vmcs_component_encoding)(GUEST_ES_SS)).index,
+	       ((vmcs_component_encoding)(GUEST_ES_SS)).type, ((vmcs_component_encoding)(GUEST_ES_SS)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "HOST_ES_SS", HOST_ES_SS, (vmcs_component_encoding)(HOST_ES_SS).index,
-	       (vmcs_component_encoding)(HOST_ES_SS).type, (vmcs_component_encoding)(HOST_ES_SS).width);
+	       "HOST_ES_SS", HOST_ES_SS, ((vmcs_component_encoding)(HOST_ES_SS)).index,
+	       ((vmcs_component_encoding)(HOST_ES_SS)).type, ((vmcs_component_encoding)(HOST_ES_SS)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "IO_BMP_A_F", IO_BMP_A_F, (vmcs_component_encoding)(IO_BMP_A_F).index,
-	       (vmcs_component_encoding)(IO_BMP_A_F).type, (vmcs_component_encoding)(IO_BMP_A_F).width);
+	       "IO_BMP_A_F", IO_BMP_A_F, ((vmcs_component_encoding)(IO_BMP_A_F)).index,
+	       ((vmcs_component_encoding)(IO_BMP_A_F)).type, ((vmcs_component_encoding)(IO_BMP_A_F)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "GUEST_PADDR_F", GUEST_PADDR_F, (vmcs_component_encoding)(GUEST_PADDR_F).index,
-	       (vmcs_component_encoding)(GUEST_PADDR_F).type, (vmcs_component_encoding)(GUEST_PADDR_F).width);
+	       "GUEST_PADDR_F", GUEST_PADDR_F, ((vmcs_component_encoding)(GUEST_PADDR_F)).index,
+	       ((vmcs_component_encoding)(GUEST_PADDR_F)).type, ((vmcs_component_encoding)(GUEST_PADDR_F)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "VMCS_LINK_PTR_F", VMCS_LINK_PTR_F, (vmcs_component_encoding)(VMCS_LINK_PTR_F).index,
-	       (vmcs_component_encoding)(VMCS_LINK_PTR_F).type, (vmcs_component_encoding)(VMCS_LINK_PTR_F).width);
+	       "VMCS_LINK_PTR_F", VMCS_LINK_PTR_F, ((vmcs_component_encoding)(VMCS_LINK_PTR_F)).index,
+	       ((vmcs_component_encoding)(VMCS_LINK_PTR_F)).type, ((vmcs_component_encoding)(VMCS_LINK_PTR_F)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "HOST_IA32_PAT_F", HOST_IA32_PAT_F, (vmcs_component_encoding)(HOST_IA32_PAT_F).index,
-	       (vmcs_component_encoding)(HOST_IA32_PAT_F).type, (vmcs_component_encoding)(HOST_IA32_PAT_F).width);
+	       "HOST_IA32_PAT_F", HOST_IA32_PAT_F, ((vmcs_component_encoding)(HOST_IA32_PAT_F)).index,
+	       ((vmcs_component_encoding)(HOST_IA32_PAT_F)).type, ((vmcs_component_encoding)(HOST_IA32_PAT_F)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "PIN_BASED_X_CTLS", PIN_BASED_X_CTLS, (vmcs_component_encoding)(PIN_BASED_X_CTLS).index,
-	       (vmcs_component_encoding)(PIN_BASED_X_CTLS).type, (vmcs_component_encoding)(PIN_BASED_X_CTLS).width);
+	       "PIN_BASED_X_CTLS", PIN_BASED_X_CTLS, ((vmcs_component_encoding)(PIN_BASED_X_CTLS)).index,
+	       ((vmcs_component_encoding)(PIN_BASED_X_CTLS)).type, ((vmcs_component_encoding)(PIN_BASED_X_CTLS)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "VM_INSTRUCTION_ERROR", VM_INSTRUCTION_ERROR, (vmcs_component_encoding)(VM_INSTRUCTION_ERROR).index,
-	       (vmcs_component_encoding)(VM_INSTRUCTION_ERROR).type, (vmcs_component_encoding)(VM_INSTRUCTION_ERROR).width);
+	       "VM_INSTRUCTION_ERROR", VM_INSTRUCTION_ERROR, ((vmcs_component_encoding)(VM_INSTRUCTION_ERROR)).index,
+	       ((vmcs_component_encoding)(VM_INSTRUCTION_ERROR)).type, ((vmcs_component_encoding)(VM_INSTRUCTION_ERROR)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "GUEST_ES_LIMIT", GUEST_ES_LIMIT, (vmcs_component_encoding)(GUEST_ES_LIMIT).index,
-	       (vmcs_component_encoding)(GUEST_ES_LIMIT).type, (vmcs_component_encoding)(GUEST_ES_LIMIT).width);
+	       "GUEST_ES_LIMIT", GUEST_ES_LIMIT, ((vmcs_component_encoding)(GUEST_ES_LIMIT)).index,
+	       ((vmcs_component_encoding)(GUEST_ES_LIMIT)).type, ((vmcs_component_encoding)(GUEST_ES_LIMIT)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "HOST_IA32_SYSENTER_CS", HOST_IA32_SYSENTER_CS, (vmcs_component_encoding)(HOST_IA32_SYSENTER_CS).index,
-	       (vmcs_component_encoding)(HOST_IA32_SYSENTER_CS).type, (vmcs_component_encoding)(HOST_IA32_SYSENTER_CS).width);
+	       "HOST_IA32_SYSENTER_CS", HOST_IA32_SYSENTER_CS, ((vmcs_component_encoding)(HOST_IA32_SYSENTER_CS)).index,
+	       ((vmcs_component_encoding)(HOST_IA32_SYSENTER_CS)).type, ((vmcs_component_encoding)(HOST_IA32_SYSENTER_CS)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "CR0_GUEST_HOST_MASK", CR0_GUEST_HOST_MASK, (vmcs_component_encoding)(CR0_GUEST_HOST_MASK).index,
-	       (vmcs_component_encoding)(CR0_GUEST_HOST_MASK).type, (vmcs_component_encoding)(CR0_GUEST_HOST_MASK).width);
+	       "CR0_GUEST_HOST_MASK", CR0_GUEST_HOST_MASK, ((vmcs_component_encoding)(CR0_GUEST_HOST_MASK)).index,
+	       ((vmcs_component_encoding)(CR0_GUEST_HOST_MASK)).type, ((vmcs_component_encoding)(CR0_GUEST_HOST_MASK)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "EXIT_QUALIFICATION", EXIT_QUALIFICATION, (vmcs_component_encoding)(EXIT_QUALIFICATION).index,
-	       (vmcs_component_encoding)(EXIT_QUALIFICATION).type, (vmcs_component_encoding)(EXIT_QUALIFICATION).width);
+	       "EXIT_QUALIFICATION", EXIT_QUALIFICATION, ((vmcs_component_encoding)(EXIT_QUALIFICATION)).index,
+	       ((vmcs_component_encoding)(EXIT_QUALIFICATION)).type, ((vmcs_component_encoding)(EXIT_QUALIFICATION)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "GUEST_CR0", GUEST_CR0, (vmcs_component_encoding)(GUEST_CR0).index,
-	       (vmcs_component_encoding)(GUEST_CR0).type, (vmcs_component_encoding)(GUEST_CR0).width);
+	       "GUEST_CR0", GUEST_CR0, ((vmcs_component_encoding)(GUEST_CR0)).index,
+	       ((vmcs_component_encoding)(GUEST_CR0)).type, ((vmcs_component_encoding)(GUEST_CR0)).width);
 	printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "HOST_CR0", HOST_CR0, (vmcs_component_encoding)(HOST_CR0).index,
-	       (vmcs_component_encoding)(HOST_CR0).type, (vmcs_component_encoding)(HOST_CR0).width);
+	       "HOST_CR0", HOST_CR0, ((vmcs_component_encoding)(HOST_CR0)).index,
+	       ((vmcs_component_encoding)(HOST_CR0)).type, ((vmcs_component_encoding)(HOST_CR0)).width);
 	/*printk("component 0x%08x:\n"
 	       "name:\t%s\n",
 	       "index:\t0x%02x\n"
 	       "type:\t%d\n"
 	       "width:\t%d\n"
-	       "X", X, (vmcs_component_encoding)(X).index,
-	       (vmcs_component_encoding)(X).type, (vmcs_component_encoding)(X).width);*/
+	       "X", X, ((vmcs_component_encoding)(X)).index,
+	       ((vmcs_component_encoding)(X)).type, ((vmcs_component_encoding)(X)).width);*/
 	
 	//all of this should run only on a single processor
 	
