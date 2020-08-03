@@ -44,26 +44,6 @@ typedef union __attribute__((packed)) {
 		unsigned int edx; };
 	unsigned long val;
 	
-	#define IA32_VMX_BASIC 0x480
-	struct __attribute__((packed)) {
-		unsigned long revision_id:31;
-		unsigned long rsv_31:1;
-		unsigned long vm_region_size:13;
-		unsigned long rsv_45_47:3;
-		unsigned long address_width:1;		//if set, 32 bits. else physical address width
-		unsigned long dual_monitor:1;
-		unsigned long vm_caching_type:4;	//will be PAT_WB at present
-		unsigned long vm_exit_info_io:1;
-		unsigned long vmx_controls_clear:1;
-		unsigned long vm_entry_exception:1;
-		unsigned long rsv_57_63:7; }
-		vmx_basic;
-	
-	#define IA32_PAT 0x277
-	struct __attribute__((packed)) {
-		unsigned char entries[8]; }
-		pat;
-	
 	#define IA32_FEATURE_CONTROL 0x3a
 	struct __attribute__((packed)) {
 		unsigned long lock:1;
@@ -79,6 +59,108 @@ typedef union __attribute__((packed)) {
 		unsigned long lmce:1;
 		unsigned long rsv_21_63:43; }
 		feature_control;
+	
+	#define IA32_PAT 0x277
+	struct __attribute__((packed)) {
+		unsigned char entries[8]; }
+		pat;
+	
+	#define IA32_VMX_BASIC 0x480
+	struct __attribute__((packed)) {
+		unsigned long revision_id:31;
+		unsigned long rsv_31:1;
+		unsigned long vm_region_size:13;
+		unsigned long rsv_45_47:3;
+		unsigned long address_width:1;		//if set, 32 bits. else physical address width
+		unsigned long dual_monitor:1;
+		unsigned long vm_caching_type:4;	//will be PAT_WB at present
+		unsigned long vm_exit_info_io:1;
+		unsigned long vmx_controls_clear:1;	//<- bit 55
+		unsigned long vm_entry_exception:1;
+		unsigned long rsv_57_63:7; }
+		vmx_basic;
+	
+	#define IA32_VMX_PINBASED_CTLS 0x481
+	#define IA32_VMX_PROCBASED_CTLS 0x482
+	#define IA32_VMX_EXIT_CTLS 0x483
+	#define IA32_VMX_ENTRY_CTLS 0x484
+	#define IA32_VMX_PROCBASED_CTLS2 0x48b
+	#define IA32_VMX_TRUE_PINBASED_CTLS 0x48d
+	#define IA32_VMX_TRUE_PROCBASED_CTLS 0x48e
+	#define IA32_VMX_TRUE_EXIT_CTLS 0x48f
+	#define IA32_VMX_TRUE_ENTRY_CTLS 0x490
+	struct __attribute__((packed)) {
+		unsigned int allowed_zeroes;
+		unsigned int allowed_ones; }	//always correct, w or w/o TRUE
+		vmx_ctls;
+	
+	#define IA32_VMX_MISC 0x485
+	struct __attribute__((packed)) {
+		unsigned long vpt_tsc_relationship:5;	//vmx preemption timer
+		unsigned long ia32_efer_lma_str:1;
+		unsigned long hlt_support:1;		//activity state 1
+		unsigned long shutdown_support:1;	//activity state 2
+		unsigned long wait_for_sipi_support:1;	//activity state 3
+		unsigned long rsv_9_13:5;	//set to 0
+		unsigned long pt_allowed:1;
+		unsigned long ia32_smbase_msr_in_smm:1;
+		unsigned long max_cr3_target_count:9;
+		unsigned long max_msr_ld_list:5;	//512*(N+1)
+		unsigned long vmxoff_smi_blocks_allowed:1;
+		unsigned long vmwrite_to_vm_exit_info_allowed:1;
+		unsigned long instruction_length_0_injection_allowed:1;
+		unsigned long rsv_31;		//set to 0
+		unsigned long mseg_revision_id:32; }
+		vmx_misc;
+	
+	#define IA32_VMX_CR0_FIXED0 0x486
+	#define IA32_VMX_CR0_FIXED1 0x487
+	#define IA32_VMX_CR0_FIXED0 0x488
+	#define IA32_VMX_CR0_FIXED1 0x489
+	struct __attribute__((packed)) {
+		unsigned long cr; }
+		vmx_cr_fixed_bits;
+	
+	#define IA32_VMX_VMCS_ENUM 0x48a
+	struct __attribute__((packed)) {
+		unsigned long rsv_0:1;		//set to 0
+		unsigned long highest_vmcs_encoding_index_val:9;
+		unsigned long rsv_10_63:54; }	//set to 0
+		vmx_vmcs_enum;
+	
+	#define IA32_VMX_EPT_VPID_CAP	 0x48c
+	struct __attribute__((packed)) {
+		//rsv bits set to 0
+		unsigned long x_only_ept_translations:1;
+		unsigned long rsv_1_5:5;
+		unsigned long page_walk_len_4_support:1;
+		unsigned long rsv_7:1;
+		unsigned long caching_type_uc_allowed:1;
+		unsigned long rsv_9_13:5;
+		unsigned long caching_type_wb_allowed:1;
+		unsigned long rsv_15:1;
+		unsigned long two_mb_pages_allowed:1;
+		unsigned long one_gb_pages_allowed:1;
+		unsigned long invept_supported:1;
+		unsigned long accessed_dirty_flags_allowed:1;
+		unsigned long ept_violation_exit_info:1;
+		unsigned long shadow_stack_control_supported:1;
+		unsigned long rsv_24:1;
+		unsigned long single_context_invept_supported:1;
+		unsigned long all_context_invept_supported:1;
+		unsigned long rsv_27_31:5;
+		unsigned long invvpid_supported:1;
+		unsigned long rsv_33_39:8;
+		unsigned long individual_addr_invvpid_supported:1;
+		unsigned long single_context_invvpid_supported:1;
+		unsigned long all_context_invvpid_supported:1;
+		unsigned long retaining_globals_invvpid_supported:1;
+		unsigned long rsv_44_63:20; }
+		vmx_ept_vpid_cap;
+
+	#define IA32_VMX_VMFUNC 0x491
+	unsigned long vmx_vmfunc;
+		
 } msr_t;
 
 #define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id):"memory")
