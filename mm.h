@@ -215,6 +215,10 @@ static int initialize_ept(ept_data_t *data, const int ord_guest_pages) {
 	pml4[0].r=1;
 	pml4[0].w=1;
 	
+	/*msr_t msr;
+	READMSR(msr, IA32_VMX_PROCBASED_CTLS);
+	if( ((primary_cpu_based_execution_ctls)(msr.)).
+	READMSR(msr, IA32_VMX_EPT_VPID_CAP);*/
 	data->eptp=(eptp_t) {0};
 	data->eptp.accessed_dirty_control=1;
 	data->eptp.caching_type=PAT_WB;
