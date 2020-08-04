@@ -8,15 +8,6 @@
 #ifndef __VMCS
 #define __VMCS
 
-//////////////////////////////
-//write ia32_vmx_basic.revision_identifier
-//disable shadow vmcs (bit 31)
-//check ia32_vmx_ept_vpid_cap for accessed/dirty
-//check bit 55 of ia32_vmx_basic to see
-//	if true_..._ctls are allowed
-//vmfunc rsved bits
-//////////////////////////////
-
 
 ////////////////////////////////////////////////////////
 enum vmcs_encodings {
@@ -372,9 +363,66 @@ enum basic_vm_exit_reasons {
 ////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////
-/*void initialize_vpcs(unsigned long vmcs) {
-	*(unsigned int *)vmcs &= 0x7fffffff;	//not a shadow vmcs
-	*/
+//////////////////////////////
+//write ia32_vmx_basic.revision_identifier
+//disable shadow vmcs (bit 31)
+//check ia32_vmx_ept_vpid_cap for accessed/dirty
+//check bit 55 of ia32_vmx_basic to see
+//	if true_..._ctls are allowed
+//vmfunc rsved bits
+//////////////////////////////
+
+//assumes vpcs already current
+int initialize_vpcs(void) {
+	msr_t msr;
+	lhf_t lhf;
+	
+	
+	//////////////////////
+	//checks on vmx ctls
+	PIN_BASED_X_CTLS;	//2 MSRS
+	PRIMARY_CPU_BASED_X_CTLS;	//2 MSRS
+	if(primarycpuctls allow secondary) {
+		SECONDARY_CPU_BASED_X_CTLS; }	//1 MSR, reserved bits cleared
+	CR3_TARGET_COUNT<=4;	//ia32_vmx_misc
+	if(use_io_bitmaps) {
+		IO_BMP_A_F, IO_BMP_B_F page aligned; }
+	if(use_msr_bitmaps) {
+		MSR_BMP_ADDR_F page aligned; }
+	if(!use_tpr_shadow) {
+		!virtualize_x2apic_mode, !apic_register_virtualization, !virtual_interrupt_delivery; }
+	if(enable_ept) {
+		...;
+		check ia32_vmc_ept_vpid_cap before setting accessed_dirty!; }
+	
+	EXIT_CTLS;	//2 msrs?
+	if(!activate_vmx_preemption_timer) {
+		!save_vmx_preemption_timer_value; }
+	if(msr_store_count) {
+		//? ia32_lstar
+		must have !(msr_str_addr&0xffff); }
+	VMWRITE(0x50, HOST_CR0, lhf);
+	
+	ENTRY_CTLS;	//2 msrs?
+	interruption information field;
+	exception error code;
+	entry instruction length;
+	if(valid bit) { ...; }
+	if(msr_load_count) {
+		//?ia32_lstar
+		must have !(msr_ld_addr&0xffff); }
+	
+	HOST_CR0, HOST_CR4;	//vmx_cr_fixed_bits
+	HOST_CR3;	//bits beyond physical address width must be 0
+	IA32_SYSENTER_ESP, IA32_SYSENTER_EIP;	//canonical address
+	segment selectors;
+	segment base: ia32_gs_base, ia32_kernel_gs_base, ia32_fs_base;
+	
+	address space size checks;
+	
+	HOST_CR0, HOST_CR4;	//vmx_cr_fixed_bits
+	
+	return 0; }
 ////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////
