@@ -965,13 +965,103 @@ typedef struct {
 //vmfunc rsved bits
 //////////////////////////////
 
-//assumes vpcs already current
-/*int initialize_vpcs(void) {
+//assumes vmcs already current
+int initialize_vmcs(void) {
+	printk("[*]  initializing vmcs control fields\n");
+	
+	///////////////////////////
+	
 	msr_t msr;
-	lhf_t lhf;
+	//lhf_t lhf;
 	
-	READMSR(
+	pin_based_execution_controls_t pin_x_ctls;
+	primary_cpu_based_execution_controls_t pri_cpu_x_ctls;
+	secondary_cpu_based_execution_controls_t sec_cpu_x_ctls;
+	//vm_function_controls_t vm_func_ctls;
+	vm_exit_controls_t exit_ctls;
+	vm_entry_controls_t entry_ctls;
 	
+	///////////////////////////
+	
+	pin_x_ctls.val=0;
+	//pin_x_ctls.preemption_timer_active=1;
+	
+	pri_cpu_x_ctls.val=0;
+	pri_cpu_x_ctls.hlt_exiting=1;
+	//pri_cpu_x_ctls.use_msr_bitmaps=1;
+	pri_cpu_x_ctls.activate_secondary_controls=1;
+	
+	sec_cpu_x_ctls.val=0;
+	//sec_cpu_x_ctls.enable_ept=1;
+	
+	exit_ctls.val=0;
+	//exit_ctls.save_dbg_controls=1;
+	//exit_ctls.save_preemption_timer=1;
+	//exit_ctls.host_addr_space_size=?
+	
+	entry_ctls.val=0;
+	//entry_ctls.load_dbg_controls=1;
+	//////////////////////////
+	
+	READ_MSR(msr, IA32_VMX_BASIC);
+	printk("[**] ia32_vmx_basic:\t\t\t0x%lx\n", msr.val);
+	int true_flag=msr.vmx_basic.vmx_controls_clear;
+	printk("[**] %susing TRUE ctl msrs\n", true_flag ? "":"not ");
+	
+	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PINBASED_CTLS:IA32_VMX_PINBASED_CTLS);
+	pin_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
+	printk("[**] pinbased controls:\t\t\t0x%08x\n", pin_x_ctls.val);
+	if( (pin_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pin_x_ctls.val ) {
+		printk("[*]  unsupported bit set\n\n");
+		return -EOPNOTSUPP; }
+	
+	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PROCBASED_CTLS:IA32_VMX_PROCBASED_CTLS);
+	pri_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
+	printk("[**] primary cpu based controls:\t0x%08x\n", pri_cpu_x_ctls.val);
+	if( (pri_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pri_cpu_x_ctls.val ) {
+		printk("[*]  unsupported bit set\n\n");
+		return -EOPNOTSUPP; }
+	
+	READ_MSR(msr, IA32_VMX_PROCBASED_CTLS2);
+	sec_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;	//uneccessary
+	printk("[**] secondary cpu based controls:\t0x%08x\n", sec_cpu_x_ctls.val);
+	if( (sec_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=sec_cpu_x_ctls.val ) {
+		printk("[*]  unsupported bit set\n\n");
+		return -EOPNOTSUPP; }
+	
+	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_EXIT_CTLS:IA32_VMX_EXIT_CTLS);
+	exit_ctls.val|=msr.vmx_ctls.allowed_zeroes;
+	printk("[**] vm exit controls:\t\t\t0x%08x\n", exit_ctls.val);
+	if( (exit_ctls.val & msr.vmx_ctls.allowed_ones)!=exit_ctls.val ) {
+		printk("[*]  unsupported bit set\n\n");
+		return -EOPNOTSUPP; }
+	
+	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_ENTRY_CTLS:IA32_VMX_ENTRY_CTLS);
+	entry_ctls.val|=msr.vmx_ctls.allowed_zeroes;
+	printk("[**] vm entry controls:\t\t\t0x%08x\n", entry_ctls.val);
+	if( (entry_ctls.val & msr.vmx_ctls.allowed_ones)!=entry_ctls.val ) {
+		printk("[*]  unsupported bit set\n\n");
+		return -EOPNOTSUPP; }
+	
+	//vmx_misc preemption timer
+	
+	printk("[*]  initialization complete\n\n");
+	
+	
+	printk("[*]  initializing vmcs registers\n");
+	//only notify of vmwrite on failure
+	printk("[*]  initialization complete\n\n");
+	
+	return 0; }
+	//////////////////////////
+	
+	
+	/*access_rights_t;
+	interruptibility_state_t;
+	pending_dbg_exceptions_t;
+	guest_interrupt_status_t;
+	
+	exception_bitmap_t;
 	
 	//////////////////////
 	//checks on vmx ctls
