@@ -294,6 +294,11 @@ static int __init hvc_init(void) {
 		return -EINVAL; }
 	guest_state.active_flag=1;
 	printk("[*]  vmcs region activated\n\n"); 
+	
+	if( (ret=initialize_vmcs()) ) {
+		cleanup(&guest_state, &host_state);
+		return ret; }
+	//error check vmxon
 		
 	
 	
