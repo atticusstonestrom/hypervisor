@@ -363,27 +363,31 @@ enum basic_vm_exit_reasons {
 ////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////
-typedef struct __attribute__((packed)) {
-	unsigned int segment_type:4;
-	unsigned int s:1;	//descriptor type. 0=system, 1=code_or_data
-	unsigned int dpl:2;
-	unsigned int p:1;
-	unsigned int rsv_8_11:4;
-	unsigned int avl:1;
-	unsigned int l:1;	//64 bit mode active (for only CS)
-	unsigned int db:1;	//default operation size: 0=16 bit segment, 1=32 bit segment
-	unsigned int g:1;	//granularity
-	unsigned int unusable:1;
-	unsigned int rsv_17_31:15;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int segment_type:4;
+		unsigned int s:1;	//descriptor type. 0=system, 1=code_or_data
+		unsigned int dpl:2;
+		unsigned int p:1;
+		unsigned int rsv_8_11:4;
+		unsigned int avl:1;
+		unsigned int l:1;	//64 bit mode active (for only CS)
+		unsigned int db:1;	//default operation size: 0=16 bit segment, 1=32 bit segment
+		unsigned int g:1;	//granularity
+		unsigned int unusable:1;
+		unsigned int rsv_17_31:15; };
+	unsigned int val;
 } access_rights_t;
 
-typedef struct __attribute__((packed)) {
-	unsigned int sti:1;
-	unsigned int mov_ss:1;
-	unsigned int smi:1;
-	unsigned int nmi:1;
-	unsigned int enclave_interruption:1;
-	unsigned int rsv_5_31:27;	//must be 0
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int sti:1;
+		unsigned int mov_ss:1;
+		unsigned int smi:1;
+		unsigned int nmi:1;
+		unsigned int enclave_interruption:1;
+		unsigned int rsv_5_31:27; };	//must be 0
+	unsigned int val;
 } interruptibility_state_t;
 
 enum activity_state {
@@ -392,20 +396,24 @@ enum activity_state {
 	SHUTDOWN =	2,
 	WAIT_FOR_SIPI =	3 };
 
-typedef struct __attribute__((packed)) {
-	unsigned long b0_b3:4;
-	unsigned long rsv_4_11:8;	//must be 0
-	unsigned long enabled_bp:1;
-	unsigned long rsv_13:1;		//must be 0
-	unsigned long bs:1;
-	unsigned long rsv_15:1;		//must be 0
-	unsigned long rtm:1;
-	unsigned long rsv_17_63:47;	//must be 0
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned long b0_b3:4;
+		unsigned long rsv_4_11:8;	//must be 0
+		unsigned long enabled_bp:1;
+		unsigned long rsv_13:1;		//must be 0
+		unsigned long bs:1;
+		unsigned long rsv_15:1;		//must be 0
+		unsigned long rtm:1;
+		unsigned long rsv_17_63:47; };	//must be 0
+	unsigned long val;
 } pending_dbg_exceptions_t;
 
-typedef struct __attribute__((packed)) {
-	unsigned char rvi;	//rewuesting virtual interrupt
-	unsigned char svi;	//servicing virtual interrupt
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned char rvi;	//rewuesting virtual interrupt
+		unsigned char svi; };	//servicing virtual interrupt
+	unsigned short val;
 } guest_interrupt_status_t;
 
 typedef struct {
@@ -541,114 +549,124 @@ typedef struct {
 //for reserved bits, consult
 //ia32_vmx_pinbased_ctls
 //ia32_vmx_true_pinbased_ctls
-typedef struct __attribute__((packed)) {
-	unsigned int external_interrupt_exiting:1;
-	unsigned int rsv_1_2:2;
-	unsigned int nmi_exiting:1;
-	unsigned int rsv_4:1;
-	unsigned int virtual_nmis:1;
-	unsigned int preemption_timer_active:1;
-	unsigned int process_posted_interrupts:1;
-	unsigned int rsv_8_31:24;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int external_interrupt_exiting:1;
+		unsigned int rsv_1_2:2;
+		unsigned int nmi_exiting:1;
+		unsigned int rsv_4:1;
+		unsigned int virtual_nmis:1;
+		unsigned int preemption_timer_active:1;
+		unsigned int process_posted_interrupts:1;
+		unsigned int rsv_8_31:24; };
+	unsigned int val;
 } pin_based_execution_controls_t;
 
 //for reserved bits, consult
 //ia32_vmx_procbased_ctls
 //ia32_vmx_true_procbased_ctls
-typedef struct __attribute__((packed)) {
-	unsigned int rsv_0_1:2;
-	unsigned int interrupt_window_exiting:1;
-	unsigned int use_tsc_offsetting:1;
-	unsigned int rsv_4_6:3;
-	unsigned int hlt_exiting:1;
-	unsigned int rsv_8:1;
-	unsigned int invlpg_exiting:1;
-	unsigned int mwait_exiting:1;
-	unsigned int rdpmc_exiting:1;
-	unsigned int rdtsc_exiting:1;
-	unsigned int rsv_13_14:2;
-	unsigned int cr3_load_exiting:1;
-	unsigned int cr3_store_exiting:1;
-	unsigned int rsv_17_18:2;
-	unsigned int cr8_load_exiting:1;
-	unsigned int cr8_store_exiting:1;
-	unsigned int use_tpr_shadow:1;
-	unsigned int nmi_window_exiting:1;
-	unsigned int mov_dr_exiting:1;
-	unsigned int unconditional_io_exiting:1;
-	unsigned int use_io_bitmaps:1;
-	unsigned int rsv_26:1;
-	unsigned int monitor_trap_flag:1;
-	unsigned int use_msr_bitmaps:1;
-	unsigned int monitor_exiting:1;
-	unsigned int pause_exiting:1;
-	unsigned int activate_secondary_controls:1;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int rsv_0_1:2;
+		unsigned int interrupt_window_exiting:1;
+		unsigned int use_tsc_offsetting:1;
+		unsigned int rsv_4_6:3;
+		unsigned int hlt_exiting:1;
+		unsigned int rsv_8:1;
+		unsigned int invlpg_exiting:1;
+		unsigned int mwait_exiting:1;
+		unsigned int rdpmc_exiting:1;
+		unsigned int rdtsc_exiting:1;
+		unsigned int rsv_13_14:2;
+		unsigned int cr3_load_exiting:1;
+		unsigned int cr3_store_exiting:1;
+		unsigned int rsv_17_18:2;
+		unsigned int cr8_load_exiting:1;
+		unsigned int cr8_store_exiting:1;
+		unsigned int use_tpr_shadow:1;
+		unsigned int nmi_window_exiting:1;
+		unsigned int mov_dr_exiting:1;
+		unsigned int unconditional_io_exiting:1;
+		unsigned int use_io_bitmaps:1;
+		unsigned int rsv_26:1;
+		unsigned int monitor_trap_flag:1;
+		unsigned int use_msr_bitmaps:1;
+		unsigned int monitor_exiting:1;
+		unsigned int pause_exiting:1;
+		unsigned int activate_secondary_controls:1; };
+	unsigned int val;
 } primary_cpu_based_execution_controls_t;
 
 //all bits reserved to zero
 //for bits settable to 1, consult
 //ia32_vmx_procbased_ctls2
-typedef struct __attribute__((packed)) {
-	unsigned int virtualize_apic_accesses:1;
-	unsigned int enable_ept:1;
-	unsigned int descriptor_table_exiting:1;
-	unsigned int enable_rdtscp:1;
-	unsigned int virtualize_x2apic_mode:1;
-	unsigned int enable_vpid:1;
-	unsigned int wbinvd_exiting:1;
-	unsigned int unrestricted_guest:1;
-	unsigned int apic_register_virtualization:1;
-	unsigned int virtual_interrupt_delivery:1;
-	unsigned int pause_loop_exiting:1;
-	unsigned int rdrand_exiting:1;
-	unsigned int enable_invpcid:1;
-	unsigned int enable_vm_functions:1;
-	unsigned int vmcs_shadowing:1;
-	unsigned int enable_encls_exiting:1;
-	unsigned int rdseed_exiting:1;
-	unsigned int enable_pml:1;
-	unsigned int ept_violation_ve:1;
-	unsigned int conceal_vmx_nonroot:1;
-	unsigned int enable_xsaves_srstors:1;
-	unsigned int rsv_21:1;
-	unsigned int mode_based_x_control_ept:1;
-	unsigned int rsv_23_24:2;
-	unsigned int use_tsc_scaling:1;
-	unsigned int rsv_26_31:6;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int virtualize_apic_accesses:1;
+		unsigned int enable_ept:1;
+		unsigned int descriptor_table_exiting:1;
+		unsigned int enable_rdtscp:1;
+		unsigned int virtualize_x2apic_mode:1;
+		unsigned int enable_vpid:1;
+		unsigned int wbinvd_exiting:1;
+		unsigned int unrestricted_guest:1;
+		unsigned int apic_register_virtualization:1;
+		unsigned int virtual_interrupt_delivery:1;
+		unsigned int pause_loop_exiting:1;
+		unsigned int rdrand_exiting:1;
+		unsigned int enable_invpcid:1;
+		unsigned int enable_vm_functions:1;
+		unsigned int vmcs_shadowing:1;
+		unsigned int enable_encls_exiting:1;
+		unsigned int rdseed_exiting:1;
+		unsigned int enable_pml:1;
+		unsigned int ept_violation_ve:1;
+		unsigned int conceal_vmx_nonroot:1;
+		unsigned int enable_xsaves_srstors:1;
+		unsigned int rsv_21:1;
+		unsigned int mode_based_x_control_ept:1;
+		unsigned int rsv_23_24:2;
+		unsigned int use_tsc_scaling:1;
+		unsigned int rsv_26_31:6; };
+	unsigned int val;
 } secondary_cpu_based_execution_controls_t;
 
-typedef struct __attribute__((packed)) {
-	unsigned int zd:1;
-	unsigned int single_step:1;
-	unsigned int nmi:1;
-	unsigned int bp:1;
-	unsigned int overflow:1;
-	unsigned int bounds:1;
-	unsigned int invalid_opcode:1;
-	unsigned int coprocessor_not_available:1;
-	unsigned int double_fault:1;
-	unsigned int rsv_9:1;
-	unsigned int invalid_tss:1;
-	unsigned int segment_not_present:1;
-	unsigned int stack_fault:1;
-	unsigned int gp:1;
-	unsigned int pf:1;
-	unsigned int rsv_15:1;
-	unsigned int math_fault:1;
-	unsigned int alignment_check:1;
-	unsigned int machine_check:1;
-	unsigned int simd_fp_exception:1;
-	unsigned int ve:1;
-	unsigned int control_protection_exception:1;
-	unsigned int rsv_22_31:10;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int zd:1;
+		unsigned int single_step:1;
+		unsigned int nmi:1;
+		unsigned int bp:1;
+		unsigned int overflow:1;
+		unsigned int bounds:1;
+		unsigned int invalid_opcode:1;
+		unsigned int coprocessor_not_available:1;
+		unsigned int double_fault:1;
+		unsigned int rsv_9:1;
+		unsigned int invalid_tss:1;
+		unsigned int segment_not_present:1;
+		unsigned int stack_fault:1;
+		unsigned int gp:1;
+		unsigned int pf:1;
+		unsigned int rsv_15:1;
+		unsigned int math_fault:1;
+		unsigned int alignment_check:1;
+		unsigned int machine_check:1;
+		unsigned int simd_fp_exception:1;
+		unsigned int ve:1;
+		unsigned int control_protection_exception:1;
+		unsigned int rsv_22_31:10; };
+	unsigned int val;
 } exception_bitmap_t;
 
 //for reserved bits, consult
 //ia32_vmx_vmfunc
 //all reserved bits reserved to 0
-typedef struct __attribute__((packed)) {
-	unsigned long eptp_switching:1;
-	unsigned long rsv_1_63:63;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned long eptp_switching:1;
+		unsigned long rsv_1_63:63; };
+	unsigned long val;
 } vm_function_controls_t;
 
 typedef struct {
@@ -757,24 +775,26 @@ typedef struct {
 //for reserved bits, consult
 //ia32_vmx_exit_ctls
 //ia32_vmx_true_exit_ctls
-typedef struct __attribute__((packed)) {
-	unsigned int rsv_0_1:2;
-	unsigned int save_dbg_controls:1;
-	unsigned int rsv_3_8:6;
-	unsigned int host_addr_space_size:1;
-	unsigned int rsv_10_11:2;
-	unsigned int load_ia32_perf_global_ctrl:1;
-	unsigned int rsv_13_14:2;
-	unsigned int acknowledge_interrupt:1;
-	unsigned int rsv_16_17:2;
-	unsigned int save_ia32_pat:1;
-	unsigned int load_ia32_pat:1;
-	unsigned int save_ia32_efer:1;
-	unsigned int load_ia32_efer:1;
-	unsigned int save_preemption_timer:1;
-	unsigned int clear_ia32_bndcfgs:1;
-	unsigned int conceal_vm_exits:1;
-	unsigned int rsv_25_31:7;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int rsv_0_1:2;
+		unsigned int save_dbg_controls:1;
+		unsigned int rsv_3_8:6;
+		unsigned int host_addr_space_size:1;
+		unsigned int rsv_10_11:2;
+		unsigned int load_ia32_perf_global_ctrl:1;
+		unsigned int rsv_13_14:2;
+		unsigned int acknowledge_interrupt:1;
+		unsigned int rsv_16_17:2;
+		unsigned int save_ia32_pat:1;
+		unsigned int load_ia32_pat:1;
+		unsigned int save_ia32_efer:1;
+		unsigned int load_ia32_efer:1;
+		unsigned int save_preemption_timer:1;
+		unsigned int clear_ia32_bndcfgs:1;
+		unsigned int conceal_vm_exits:1;
+		unsigned int rsv_25_31:7; };
+	unsigned int val;
 } vm_exit_controls_t;
 
 typedef struct {
@@ -803,20 +823,22 @@ typedef struct {
 //for reserved bits, consult
 //ia32_vmx_entry_ctls
 //ia32_vmx_true_entry_ctls
-typedef struct __attribute__((packed)) {
-	unsigned int rsv_0_1:2;
-	unsigned int load_dbg_controls:1;
-	unsigned int rsv_3_8:6;
-	unsigned int ia_32e_mode_guest:1;
-	unsigned int entry_to_smm:1;
-	unsigned int deactivate_dual_monitor_treatment:1;
-	unsigned int rsv_12:1;
-	unsigned int load_ia32_perf_global_ctrl:1;
-	unsigned int load_ia32_pat:1;
-	unsigned int load_ia32_efer:1;
-	unsigned int load_ia32_bndcfgs:1;
-	unsigned int conceal_vm_entries:1;
-	unsigned int rsv_18_31:14;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int rsv_0_1:2;
+		unsigned int load_dbg_controls:1;
+		unsigned int rsv_3_8:6;
+		unsigned int ia_32e_mode_guest:1;
+		unsigned int entry_to_smm:1;
+		unsigned int deactivate_dual_monitor_treatment:1;
+		unsigned int rsv_12:1;
+		unsigned int load_ia32_perf_global_ctrl:1;
+		unsigned int load_ia32_pat:1;
+		unsigned int load_ia32_efer:1;
+		unsigned int load_ia32_bndcfgs:1;
+		unsigned int conceal_vm_entries:1;
+		unsigned int rsv_18_31:14; };
+	unsigned int val;
 } vm_entry_controls_t;
 
 typedef struct {
@@ -855,41 +877,47 @@ typedef struct {
 
 
 
-typedef struct __attribute__((packed)) {
-	unsigned int basic_exit_reason:16;	//appendix C
-	unsigned int rsv_16_26:11;	//must be 0
-	unsigned int enclave_incident:1;
-	unsigned int pending_mtf_vm_exit:1;
-	unsigned int vmx_root_exit:1;
-	unsigned int rsv_30:1;		//must be 0
-	unsigned int vm_entry_failure:1;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int basic_exit_reason:16;	//appendix C
+		unsigned int rsv_16_26:11;		//must be 0
+		unsigned int enclave_incident:1;
+		unsigned int pending_mtf_vm_exit:1;
+		unsigned int vmx_root_exit:1;
+		unsigned int rsv_30:1;			//must be 0
+		unsigned int vm_entry_failure:1; };
+	unsigned int val;
 } exit_reason_t;
 
-typedef struct __attribute__((packed)) {
-	unsigned int vector:8;
-	unsigned int type:3;
-		//external interrupt:	0
-		//nmi:			2
-		//hardware exception:	3
-		//software exception:	6
-	unsigned int error_code_valid:1;
-	unsigned int iret_nmi_unblocking:1;
-	unsigned int rsv_13_30:18;	//set to 0
-	unsigned int valid:1;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int vector:8;
+		unsigned int type:3;
+			//external interrupt:	0
+			//nmi:			2
+			//hardware exception:	3
+			//software exception:	6
+		unsigned int error_code_valid:1;
+		unsigned int iret_nmi_unblocking:1;
+		unsigned int rsv_13_30:18;	//set to 0
+		unsigned int valid:1; };
+	unsigned int val;
 } vm_exit_interruption_info_t;
 
-typedef struct __attribute__((packed)) {
-	unsigned int vector:8;
-	unsigned int type:3;
-		//external interrupt:	0
-		//nmi:			2
-		//hardware exception:	3
-		//software interrupt:	4
-		//privilege sw except:	5
-		//software exception:	6
-	unsigned int error_code_valid:1;
-	unsigned int rsv_12_30:19;	//set to 0
-	unsigned int valid:1;
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int vector:8;
+		unsigned int type:3;
+			//external interrupt:	0
+			//nmi:			2
+			//hardware exception:	3
+			//software interrupt:	4
+			//privilege sw except:	5
+			//software exception:	6
+		unsigned int error_code_valid:1;
+		unsigned int rsv_12_30:19;	//set to 0
+		unsigned int valid:1; };
+	unsigned int val;
 } idt_vectoring_info_t;
 
 typedef struct {
@@ -941,6 +969,8 @@ typedef struct {
 /*int initialize_vpcs(void) {
 	msr_t msr;
 	lhf_t lhf;
+	
+	READMSR(
 	
 	
 	//////////////////////
