@@ -992,7 +992,7 @@ int initialize_vmcs(void) {
 	pri_cpu_x_ctls.activate_secondary_controls=1;
 	
 	sec_cpu_x_ctls.val=0;
-	//sec_cpu_x_ctls.enable_ept=1;
+	//sec_cpu_x_ctls.enable_ept=1;	//[DEBUG]
 	
 	exit_ctls.val=0;
 	//exit_ctls.save_dbg_controls=1;
