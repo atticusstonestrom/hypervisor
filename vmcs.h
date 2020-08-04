@@ -1008,6 +1008,16 @@ int initialize_vmcs(void) {
 	int true_flag=msr.vmx_basic.vmx_controls_clear;
 	printk("[**] %susing TRUE ctl msrs\n", true_flag ? "":"not ");
 	
+//need to get error field from current vmcs
+#define ERROR_CHECK(lhf, instruction, errno) \
+if(!VMsucceed(lhf)) { \
+	if(VMfailValid(lhf)) { \
+		printk("[*]  %s failed with valid region\n\n", #instruction); } \
+	else if(VMfailInvalid(lhf)) { \
+		printk("[*]  %s failed with invalid region\n\n", #instruction); } \
+	if(errno) { \
+		return -errno; }}
+	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PINBASED_CTLS:IA32_VMX_PINBASED_CTLS);
 	pin_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
 	printk("[**] pinbased controls:\t\t\t0x%08x\n", pin_x_ctls.val);
@@ -1015,13 +1025,14 @@ int initialize_vmcs(void) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
 	VMWRITE(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf);
-	if(!VMsucceed(lhf)) {
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	/*if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
 			//should get error field from current vmcs
 			printk("[*]  vmwrite failed with valid region\n\n"); }
 		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmwrite failed with invalid region\n\n"); }
-		return -EINVAL; }
+		return -EINVAL; }*/
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PROCBASED_CTLS:IA32_VMX_PROCBASED_CTLS);
 	pri_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1030,13 +1041,7 @@ int initialize_vmcs(void) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
 	VMWRITE(pri_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
-	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			//should get error field from current vmcs
-			printk("[*]  vmwrite failed with valid region\n\n"); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmwrite failed with invalid region\n\n"); }
-		return -EINVAL; }
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 	READ_MSR(msr, IA32_VMX_PROCBASED_CTLS2);
 	sec_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;	//uneccessary
@@ -1045,13 +1050,7 @@ int initialize_vmcs(void) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
 	VMWRITE(sec_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
-	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			//should get error field from current vmcs
-			printk("[*]  vmwrite failed with valid region\n\n"); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmwrite failed with invalid region\n\n"); }
-		return -EINVAL; }
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_EXIT_CTLS:IA32_VMX_EXIT_CTLS);
 	exit_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1060,13 +1059,7 @@ int initialize_vmcs(void) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
 	VMWRITE(exit_ctls.val, PIN_BASED_X_CTLS, lhf);
-	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			//should get error field from current vmcs
-			printk("[*]  vmwrite failed with valid region\n\n"); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmwrite failed with invalid region\n\n"); }
-		return -EINVAL; }
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_ENTRY_CTLS:IA32_VMX_ENTRY_CTLS);
 	entry_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1075,21 +1068,53 @@ int initialize_vmcs(void) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
 	VMWRITE(entry_ctls.val, PIN_BASED_X_CTLS, lhf);
-	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			//should get error field from current vmcs
-			printk("[*]  vmwrite failed with valid region\n\n"); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmwrite failed with invalid region\n\n"); }
-		return -EINVAL; }
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 	//vmx_misc preemption timer
 	
 	printk("[*]  initialization complete\n\n");
 	
+	//////////////////////////
+	//////////////////////////
 	
 	printk("[*]  initializing vmcs registers\n");
-	//only notify of vmwrite on failure
+	unsigned long reg;
+	
+	__asm__ __volatile__("mov %%cr0, %0":"=r"(reg)::"memory");
+	printk("[**] cr0:\t0x%lx\n", reg);
+	VMWRITE(reg, GUEST_CR0, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%cr3, %0":"=r"(reg)::"memory");
+	printk("[**] cr3:\t0x%lx\n", reg);
+	VMWRITE(reg, GUEST_CR3, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%cr4, %0":"=r"(reg)::"memory");
+	printk("[**] cr4:\t0x%lx\n", reg);
+	VMWRITE(reg, GUEST_CR4, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%dr7, %0":"=r"(reg)::"memory");
+	printk("[**] dr7:\t0x%lx\n", reg);
+	VMWRITE(reg, GUEST_DR7, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%rsp, %0":"=r"(reg)::"memory");
+	printk("[**] rsp:\t0x%lx\n", reg);
+	VMWRITE(reg, GUEST_RSP, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("lea (%%rip), %0":"=r"(reg)::"memory");
+	printk("[**] rip:\t0x%lx\n", reg);
+	VMWRITE(reg, GUEST_RIP, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("pushf; pop %0":"=r"(reg)::"memory");
+	printk("[**] rflags:\t0x%lx\n", reg);
+	VMWRITE(reg, GUEST_RFLAGS, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
 	printk("[*]  initialization complete\n\n");
 	
 	return 0; }
