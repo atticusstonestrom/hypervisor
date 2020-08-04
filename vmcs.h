@@ -972,7 +972,7 @@ int initialize_vmcs(void) {
 	///////////////////////////
 	
 	msr_t msr;
-	//lhf_t lhf;
+	lhf_t lhf;
 	
 	pin_based_execution_controls_t pin_x_ctls;
 	primary_cpu_based_execution_controls_t pri_cpu_x_ctls;
@@ -1014,6 +1014,14 @@ int initialize_vmcs(void) {
 	if( (pin_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pin_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
+	VMWRITE(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
+			//should get error field from current vmcs
+			printk("[*]  vmwrite failed with valid region\n\n"); }
+		else if(VMfailInvalid(lhf)) {
+			printk("[*]  vmwrite failed with invalid region\n\n"); }
+		return -EINVAL; }
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PROCBASED_CTLS:IA32_VMX_PROCBASED_CTLS);
 	pri_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1021,6 +1029,14 @@ int initialize_vmcs(void) {
 	if( (pri_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pri_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
+	VMWRITE(pri_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
+			//should get error field from current vmcs
+			printk("[*]  vmwrite failed with valid region\n\n"); }
+		else if(VMfailInvalid(lhf)) {
+			printk("[*]  vmwrite failed with invalid region\n\n"); }
+		return -EINVAL; }
 	
 	READ_MSR(msr, IA32_VMX_PROCBASED_CTLS2);
 	sec_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;	//uneccessary
@@ -1028,6 +1044,14 @@ int initialize_vmcs(void) {
 	if( (sec_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=sec_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
+	VMWRITE(sec_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
+			//should get error field from current vmcs
+			printk("[*]  vmwrite failed with valid region\n\n"); }
+		else if(VMfailInvalid(lhf)) {
+			printk("[*]  vmwrite failed with invalid region\n\n"); }
+		return -EINVAL; }
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_EXIT_CTLS:IA32_VMX_EXIT_CTLS);
 	exit_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1035,6 +1059,14 @@ int initialize_vmcs(void) {
 	if( (exit_ctls.val & msr.vmx_ctls.allowed_ones)!=exit_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
+	VMWRITE(exit_ctls.val, PIN_BASED_X_CTLS, lhf);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
+			//should get error field from current vmcs
+			printk("[*]  vmwrite failed with valid region\n\n"); }
+		else if(VMfailInvalid(lhf)) {
+			printk("[*]  vmwrite failed with invalid region\n\n"); }
+		return -EINVAL; }
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_ENTRY_CTLS:IA32_VMX_ENTRY_CTLS);
 	entry_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1042,6 +1074,14 @@ int initialize_vmcs(void) {
 	if( (entry_ctls.val & msr.vmx_ctls.allowed_ones)!=entry_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
+	VMWRITE(entry_ctls.val, PIN_BASED_X_CTLS, lhf);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
+			//should get error field from current vmcs
+			printk("[*]  vmwrite failed with valid region\n\n"); }
+		else if(VMfailInvalid(lhf)) {
+			printk("[*]  vmwrite failed with invalid region\n\n"); }
+		return -EINVAL; }
 	
 	//vmx_misc preemption timer
 	
