@@ -161,7 +161,9 @@ typedef union __attribute__((packed)) {
 
 	#define IA32_VMX_VMFUNC 0x491
 	unsigned long vmx_vmfunc;
-		
+	
+	#define IA32_FS_BASE 0xc0000100
+	#define IA32_GS_BASE 0xc0000101
 } msr_t;
 
 #define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id):"memory")
