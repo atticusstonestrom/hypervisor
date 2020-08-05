@@ -100,6 +100,34 @@ typedef union __attribute__((packed)) {
 #define VMsucceed(lhf)		(!(lhf).cf && !(lhf).zf)
 #define VMfailInvalid(lhf)	((lhf).cf && !(lhf).zf)
 #define VMfailValid(lhf)	(!(lhf).cf && (lhf).zf)
+////////////////////////////////////////////////////////
+enum vm_instruction_error_numbers {
+	VMCALL_VMX_ROOT =	1,
+	VMCLEAR_INVL_PADDR =	2,
+	VMCLEAR_VMXON_PTR =	3,
+	VMLAUNCH_LAUNCH_VMCS =	4,
+	VMRESUME_CLEAR_VMCS =	5,
+	VMRESUME_AFTER_VMXOFF =	6,
+	VMENTRY_INVL_CTLS =	7,
+	VMENTRY_INVL_HOST =	8,
+	VMPTRLD_INVL_PADDR =	9,
+	VMPTRLD_VMXON_PTR =	10,
+	VMPTRLD_WRONG_REV_ID =	11,
+	VMRW_BAD_ENCODING =	12,
+	VMWRITE_TO_READ_ONLY =	13,
+	VMXON_VMX_ROOT =	15,
+	VM_ENTRY_INVL_EV_PTR =	16,	//executive vmcs
+	VM_ENTRY_CLEAR_EV_PTR =	17,
+	VM_ENTRY_EV_NOT_VMXON =	18,
+	VMCALL_LAUNCH_VMCS =	19,
+	VMCALL_INVL_CTLS =	20,
+	VMCALL_BAD_MSEG_ID =	22,
+	VMXOFF_DUAL_MONITOR =	23,
+	VMCALL_INVL_SMM =	24,
+	VM_ENTRY_INVL_CTLS_EV =	25,
+	VM_ENTRY_MOV_SS =	26,
+	INVL_INV_OP =		28 };	//invept,invvpid
+////////////////////////////////////////////////////////
 
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
