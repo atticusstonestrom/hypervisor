@@ -1023,7 +1023,7 @@ if(!VMsucceed(lhf)) { \
 	exit_ctls.val=0;
 	//exit_ctls.save_dbg_controls=1;
 	//exit_ctls.save_preemption_timer=1;
-	//exit_ctls.host_addr_space_size=?
+	exit_ctls.host_addr_space_size=1;
 	
 	entry_ctls.val=0;
 	//entry_ctls.load_dbg_controls=1;
