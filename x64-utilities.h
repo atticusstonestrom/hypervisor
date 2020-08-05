@@ -345,6 +345,13 @@ __asm__ __volatile__(	\
 /////////////////////////////////////////////////////
 typedef struct __attribute__((packed)) {
 	unsigned short lim_val;
+	unsigned long base;
+} dtr_t;
+/////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////
+typedef struct __attribute__((packed)) {
+	unsigned short lim_val;
 	void *addr;
 } gdtr_t;
 
