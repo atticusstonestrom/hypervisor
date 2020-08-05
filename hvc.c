@@ -146,6 +146,22 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 		vm_state->msr_bitmap=0; }
 	printk("[*]  all freed\n\n"); }
 
+
+__attribute__((__used__))
+static void hook(void) {
+	printk("[*]  in the hook!\n");
+	return; }
+
+__asm__ __volatile__(
+	".text;"
+	".global stub;"
+"stub:;"
+	PUSHA
+	"swapgs;"
+	"call hook;"
+	"swapgs;"
+	POPA
+extern void stub(void);
 	
 
 static int __init hvc_init(void) {
