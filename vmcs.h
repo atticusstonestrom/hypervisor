@@ -1137,20 +1137,36 @@ if(!VMsucceed(lhf)) { \
 	printk("[**] cs:\t0x%02lx\n", reg);
 	VMWRITE(reg, GUEST_CS_SELECTOR, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	access_rights.val=0;
+	access_rights.unusable=1;
+	VMWRITE(access_rights.val, GUEST_CS_ACCESS_RIGHTS, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 	__asm__ __volatile__("mov %%ss, %0":"=r"(reg)::"memory");
 	printk("[**] ss:\t0x%02lx\n", reg);
 	VMWRITE(reg, GUEST_SS_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	access_rights.val=0;
+	access_rights.unusable=1;
+	VMWRITE(access_rights.val, GUEST_SS_ACCESS_RIGHTS, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 	__asm__ __volatile__("mov %%ds, %0":"=r"(reg)::"memory");
 	printk("[**] ds:\t0x%02lx\n", reg);
 	VMWRITE(reg, GUEST_DS_SELECTOR, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	access_rights.val=0;
+	access_rights.unusable=1;
+	VMWRITE(access_rights.val, GUEST_DS_ACCESS_RIGHTS, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 	__asm__ __volatile__("mov %%es, %0":"=r"(reg)::"memory");
 	printk("[**] es:\t0x%02lx\n", reg);
 	VMWRITE(reg, GUEST_ES_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	access_rights.val=0;
+	access_rights.unusable=1;
+	VMWRITE(access_rights.val, GUEST_ES_ACCESS_RIGHTS, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 	__asm__ __volatile__("mov %%fs, %0":"=r"(reg)::"memory");
@@ -1168,6 +1184,7 @@ if(!VMsucceed(lhf)) { \
 	printk("[**] tr:\t0x%04x\n", tr);
 	VMWRITE(tr, GUEST_TR_SELECTOR, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	//do get_tss here
 	
 	dtr_t dtr;
 	
@@ -1187,9 +1204,18 @@ if(!VMsucceed(lhf)) { \
 	VMWRITE(dtr.base, GUEST_GDTR_BASE, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
+	//[debug]
+	int i=0;
+	for(i=0; i<dtr.lim_val; i+=8) {
+		printk("0x%lx: 0x%lx\n", dtr.base+i, *(unsigned long *)(dtr.base+i)); }
+	
 	__asm__ __volatile__("sldt %0"::"m"(tr):"memory");
 	printk("[**] ldtr:\t0x%04x\n", tr);
 	VMWRITE(tr, GUEST_LDTR_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	access_rights.val=0;
+	access_rights.unusable=1;
+	VMWRITE(access_rights.val, GUEST_LDTR_ACCESS_RIGHTS, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 	
