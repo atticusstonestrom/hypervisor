@@ -141,6 +141,7 @@ typedef union __attribute__((packed)) {
 		unsigned long rsv_15:1;
 		unsigned long two_mb_pages_allowed:1;
 		unsigned long one_gb_pages_allowed:1;
+		unsigned long rsv_18_19:2;
 		unsigned long invept_supported:1;
 		unsigned long accessed_dirty_flags_allowed:1;
 		unsigned long ept_violation_exit_info:1;
@@ -150,7 +151,7 @@ typedef union __attribute__((packed)) {
 		unsigned long all_context_invept_supported:1;
 		unsigned long rsv_27_31:5;
 		unsigned long invvpid_supported:1;
-		unsigned long rsv_33_39:8;
+		unsigned long rsv_33_39:7;
 		unsigned long individual_addr_invvpid_supported:1;
 		unsigned long single_context_invvpid_supported:1;
 		unsigned long all_context_invvpid_supported:1;
