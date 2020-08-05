@@ -301,6 +301,17 @@ static int __init hvc_init(void) {
 		cleanup(&guest_state, &host_state);
 		return ret; }
 	//error check vmxon
+	
+	unsigned long error_code;
+	VMLAUNCH(lhf);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
+			VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
+			printk("[*]  vmlaunch failed with error code %ld\n\n", error_code); }
+		else if(VMfailInvalid(lhf)) {
+			printk("[*]  vmlaunch failed with invalid region\n\n"); }
+		cleanup(&guest_state, &host_state);
+		return -EOPNOTSUPP; }
 		
 	
 	
