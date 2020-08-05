@@ -150,18 +150,32 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 __attribute__((__used__))
 static void hook(void) {
 	printk("[*]  in the hook!\n");
+	unsigned long exit_reason=0;
+	lhf_t lhf;
+	VMREAD(exit_reason, EXIT_REASON, lhf);
+	printk("[**] exit reason: %ld\n", exit_reason);
 	return; }
 
-__asm__ __volatile__(
+unsigned long return_rsp;
+unsigned long return_rbp;
+__asm__(
 	".text;"
 	".global stub;"
 "stub:;"
-	PUSHA
-	"swapgs;"
-	"call hook;"
-	"swapgs;"
-	POPA
+	//PUSHA
+	//"swapgs;"
+	//"call hook;"
+	//"swapgs;"
+	//POPA
+	"jmp return_from_init;");
 extern void stub(void);
+
+__asm__(
+	".text;"
+	".global guest_stub;"
+"guest_stub:;"
+	"rdtsc;");
+extern void guest_stub(void);
 	
 
 static int __init hvc_init(void) {
@@ -175,7 +189,7 @@ static int __init hvc_init(void) {
 	CPUID(cpuid.leaf_0, 0);
 	printk("[**] vendor id: '%.12s'\n", cpuid.leaf_0.vendor_id);
 	if(strncmp(cpuid.leaf_0.vendor_id, "GenuineIntel", 12)) {
-		printk("[*] not intel, aborting\n");
+		printk("[*]  not intel, aborting\n");
 		return -EOPNOTSUPP; }
 	CPUID(cpuid, 1);
 	printk("[**] cpuid.1:ecx.vmx[bit 5]: %d\n", cpuid.leaf_1.vmx);
@@ -313,13 +327,19 @@ static int __init hvc_init(void) {
 	guest_state.active_flag=1;
 	printk("[*]  vmcs region activated\n\n"); 
 	
-	if( (ret=initialize_vmcs(&guest_state.ept_data.eptp)) ) {
+	if( (ret=initialize_vmcs(\
+	         &guest_state.ept_data.eptp, (unsigned long)&guest_stub, (unsigned long)&stub, host_state.vmm_stack, host_state.vmm_stack)) ) {
 		cleanup(&guest_state, &host_state);
 		return ret; }
 	//error check vmxon
-	
+
+	__asm__ __volatile__(
+		"mov %%rsp, %0;"
+		"mov %%rbp, %1;"
+		:"=r"(return_rsp), "=r"(return_rbp)
+		::"memory");
+	/*VMLAUNCH(lhf);
 	unsigned long error_code;
-	VMLAUNCH(lhf);
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
 			VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
@@ -327,7 +347,12 @@ static int __init hvc_init(void) {
 		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmlaunch failed with invalid region\n\n"); }
 		cleanup(&guest_state, &host_state);
-		return -EOPNOTSUPP; }
+		return -EOPNOTSUPP; }*/
+	__asm__ __volatile__(
+	"return_from_init:"
+		"mov %0, %%rsp;"
+		"mov %1, %%rbp;"
+		::"r"(return_rsp), "r"(return_rbp));
 		
 	
 	
