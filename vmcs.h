@@ -478,7 +478,12 @@ typedef struct {
 	msr_t ia32_pat;
 	msr_t ia32_efer;
 	msr_t ia32_bndcfgs;
-
+	msr_t ia32_rtit_ctl;
+	msr_t ia32_s_cet;
+	mrs_t ia32_interrupt_ssp_table_addr;
+	msr_t ia32_pkrs;
+	
+	unsigned long ssp;
 	unsigned int smbase;
 
 	////////////////////////////////////////////////
@@ -541,6 +546,10 @@ typedef struct {
 	msr_t ia32_perf_global_ctrl;
 	msr_t ia32_pat;
 	msr_t ia32_efer;
+	msr_t ia32_s_cet;
+	msr_t ia32_interrupt_ssp_table_addr;
+	msr_t ia32_pkrs;
+	unsigned long ssp;
 } host_state_area;
 
 
@@ -1018,6 +1027,41 @@ if(!VMsucceed(lhf)) { \
 		printk("[*]  %s failed with invalid region\n\n", #instruction); } \
 	if(errno) { \
 		return -errno; }}
+
+#define EC_VMWRITE(src, code, lhf) \
+VMWRITE(src, code, lhf); \
+ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+#define GET_ACCESS_RIGHTS(access_rights, selector, gdt_base) \
+if(!selector) { \
+	access_rights.val=0; \
+	access_rights.unusable=1; } \
+else { \
+	access_rights.val=\
+		((*(unsigned int *)(gdt_base+selector+4))&0x00ffff00)>>8; } \
+printk("[**]\trights:\t0x%x\n", access_rights.val)
+
+#define GET_LIM_VAL(lim, selector, gdt_base) \
+if(!selector) { \
+	lim=0; } \
+else { \
+	lim=0 \
+		| (*(unsigned short *)(gdt_base+selector)) \
+		| ((*(unsigned int *)(gdt_base+selector+4))&0x000f0000); \
+	if( (*(unsigned int *)(gdt_base+selector+4)) & 0x00800000 ) { \
+		lim<<=12; \
+		lim|=0xfff; }} \
+printk("[**]\tlim:\t0x%x\n", lim)
+	
+#define GET_BASE(base, selector, gdt_base) \
+if(!selector) { \
+	base=0; } \
+else { \
+	base=0 \
+		| (*(unsigned short *)(gdt_base+selector+2)) \
+		| ((*(unsigned int *)(gdt_base+selector+4))&0xff)<<16 \
+		| ((*(unsigned int *)(gdt_base+selector+4))&0xff000000); } \
+printk("[**]\tbase:\t0x%lx\n", base)
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PINBASED_CTLS:IA32_VMX_PINBASED_CTLS);
 	pin_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1025,8 +1069,7 @@ if(!VMsucceed(lhf)) { \
 	if( (pin_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pin_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	VMWRITE(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf);
 	/*if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
 			//should get error field from current vmcs
@@ -1041,8 +1084,7 @@ if(!VMsucceed(lhf)) { \
 	if( (pri_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pri_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	VMWRITE(pri_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(pri_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
 	
 	READ_MSR(msr, IA32_VMX_PROCBASED_CTLS2);
 	sec_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;	//uneccessary
@@ -1050,8 +1092,7 @@ if(!VMsucceed(lhf)) { \
 	if( (sec_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=sec_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	VMWRITE(sec_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(sec_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_EXIT_CTLS:IA32_VMX_EXIT_CTLS);
 	exit_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1059,8 +1100,7 @@ if(!VMsucceed(lhf)) { \
 	if( (exit_ctls.val & msr.vmx_ctls.allowed_ones)!=exit_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	VMWRITE(exit_ctls.val, PIN_BASED_X_CTLS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(exit_ctls.val, PIN_BASED_X_CTLS, lhf);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_ENTRY_CTLS:IA32_VMX_ENTRY_CTLS);
 	entry_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1068,8 +1108,7 @@ if(!VMsucceed(lhf)) { \
 	if( (entry_ctls.val & msr.vmx_ctls.allowed_ones)!=entry_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	VMWRITE(entry_ctls.val, PIN_BASED_X_CTLS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(entry_ctls.val, PIN_BASED_X_CTLS, lhf);
 	
 	//vmx_misc preemption timer
 	
@@ -1091,13 +1130,13 @@ if(!VMsucceed(lhf)) { \
 	if( (reg & msr.val)!=reg ) {
 		printk("[*]  unsupported bit clear\n");
 		return -EOPNOTSUPP; }
-	VMWRITE(reg, GUEST_CR0, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(reg, GUEST_CR0, lhf);
+	EC_VMWRITE(reg, HOST_CR0, lhf);
 	
 	__asm__ __volatile__("mov %%cr3, %0":"=r"(reg)::"memory");
 	printk("[**] cr3:\t0x%lx\n", reg);
-	VMWRITE(reg, GUEST_CR3, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(reg, GUEST_CR3, lhf);
+	EC_VMWRITE(reg, HOST_CR3, lhf);
 	
 	__asm__ __volatile__("mov %%cr4, %0":"=r"(reg)::"memory");
 	printk("[**] cr4:\t0x%lx\n", reg);
@@ -1109,82 +1148,32 @@ if(!VMsucceed(lhf)) { \
 	if( (reg & msr.val)!=reg ) {
 		printk("[*]  unsupported bit clear\n");
 		return -EOPNOTSUPP; }
-	VMWRITE(reg, GUEST_CR4, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(reg, GUEST_CR4, lhf);
+	EC_VMWRITE(reg, HOST_CR4, lhf);
 	
 	__asm__ __volatile__("mov %%dr7, %0":"=r"(reg)::"memory");
 	printk("[**] dr7:\t0x%lx\n", reg);
-	VMWRITE(reg, GUEST_DR7, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(reg, GUEST_DR7, lhf);
 	
 	__asm__ __volatile__("mov %%rsp, %0":"=r"(reg)::"memory");
 	printk("[**] rsp:\t0x%lx\n", reg);
-	VMWRITE(reg, GUEST_RSP, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(reg, GUEST_RSP, lhf);
+	/////VNN STACK?
 	
 	__asm__ __volatile__("lea (%%rip), %0":"=r"(reg)::"memory");
 	printk("[**] rip:\t0x%lx\n", reg);
-	VMWRITE(reg, GUEST_RIP, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(reg, GUEST_RIP, lhf);
+	//////EXIT HANDLER
 	
 	__asm__ __volatile__("pushf; pop %0":"=r"(reg)::"memory");
 	printk("[**] rflags:\t0x%lx\n", reg);
-	VMWRITE(reg, GUEST_RFLAGS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	
-	access_rights_t access_rights;
-	
-	__asm__ __volatile__("mov %%cs, %0":"=r"(reg)::"memory");
-	printk("[**] cs:\t0x%02lx\n", reg);
-	VMWRITE(reg, GUEST_CS_SELECTOR, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	access_rights.val=0;
-	access_rights.unusable=1;
-	VMWRITE(access_rights.val, GUEST_CS_ACCESS_RIGHTS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	
-	__asm__ __volatile__("mov %%ss, %0":"=r"(reg)::"memory");
-	printk("[**] ss:\t0x%02lx\n", reg);
-	VMWRITE(reg, GUEST_SS_SELECTOR, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	access_rights.val=0;
-	access_rights.unusable=1;
-	VMWRITE(access_rights.val, GUEST_SS_ACCESS_RIGHTS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	
-	__asm__ __volatile__("mov %%ds, %0":"=r"(reg)::"memory");
-	printk("[**] ds:\t0x%02lx\n", reg);
-	VMWRITE(reg, GUEST_DS_SELECTOR, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	access_rights.val=0;
-	access_rights.unusable=1;
-	VMWRITE(access_rights.val, GUEST_DS_ACCESS_RIGHTS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	
-	__asm__ __volatile__("mov %%es, %0":"=r"(reg)::"memory");
-	printk("[**] es:\t0x%02lx\n", reg);
-	VMWRITE(reg, GUEST_ES_SELECTOR, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	access_rights.val=0;
-	access_rights.unusable=1;
-	VMWRITE(access_rights.val, GUEST_ES_ACCESS_RIGHTS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	
-	__asm__ __volatile__("mov %%fs, %0":"=r"(reg)::"memory");
-	printk("[**] fs:\t0x%02lx\n", reg);
-	VMWRITE(reg, GUEST_FS_SELECTOR, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	
-	__asm__ __volatile__("mov %%gs, %0":"=r"(reg)::"memory");
-	printk("[**] gs:\t0x%02lx\n", reg);
-	VMWRITE(reg, GUEST_GS_SELECTOR, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(reg, GUEST_RFLAGS, lhf);
 	
 	unsigned short tr=0;
 	__asm__ __volatile__("str %0"::"m"(tr):"memory");
 	printk("[**] tr:\t0x%04x\n", tr);
-	VMWRITE(tr, GUEST_TR_SELECTOR, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(tr, GUEST_TR_SELECTOR, lhf);
+	EC_VMWRITE(tr, HOST_TR_SELECTOR, lhf);
 	//do get_tss here
 	
 	dtr_t dtr;
@@ -1192,32 +1181,98 @@ if(!VMsucceed(lhf)) { \
 	__asm__ __volatile__("sidt %0"::"m"(dtr):"memory");
 	printk("[**] idtr:\t0x%016lx\n", dtr.base);
 	printk("[**]\tlim:\t0x%x\n", dtr.lim_val);
-	VMWRITE(dtr.lim_val, GUEST_IDTR_LIMIT, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	VMWRITE(dtr.base, GUEST_IDTR_BASE, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(dtr.lim_val, GUEST_IDTR_LIMIT, lhf);
+	EC_VMWRITE(dtr.base, GUEST_IDTR_BASE, lhf);
+	EC_VMWRITE(dtr.base, HOST_IDTR_BASE, lhf);
 	
 	__asm__ __volatile__("sgdt %0"::"m"(dtr):"memory");
 	printk("[**] gdtr:\t0x%016lx\n", dtr.base);
 	printk("[**]\tlim:\t0x%x\n", dtr.lim_val);
-	VMWRITE(dtr.lim_val, GUEST_GDTR_LIMIT, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	VMWRITE(dtr.base, GUEST_GDTR_BASE, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(dtr.lim_val, GUEST_GDTR_LIMIT, lhf);
+	EC_VMWRITE(dtr.base, GUEST_GDTR_BASE, lhf);
+	EC_VMWRITE(dtr.base, HOST_GDTR_BASE, lhf);
+
 	
-	//[debug]
-	int i=0;
-	for(i=0; i<dtr.lim_val; i+=8) {
-		printk("0x%lx: 0x%lx\n", dtr.base+i, *(unsigned long *)(dtr.base+i)); }
+	
+	unsigned long base;
+	unsigned int lim;
+	access_rights_t access_rights;
 	
 	__asm__ __volatile__("sldt %0"::"m"(tr):"memory");
 	printk("[**] ldtr:\t0x%04x\n", tr);
-	VMWRITE(tr, GUEST_LDTR_SELECTOR, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-	access_rights.val=0;
-	access_rights.unusable=1;
-	VMWRITE(access_rights.val, GUEST_LDTR_ACCESS_RIGHTS, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(tr, GUEST_LDTR_SELECTOR, lhf);
+	GET_ACCESS_RIGHTS(access_rights, tr, dtr.base);
+	EC_VMWRITE(access_rights.val, GUEST_LDTR_ACCESS_RIGHTS, lhf);
+	GET_LIM_VAL(lim, tr, dtr.base);
+	EC_VMWRITE(lim, GUEST_LDTR_LIMIT, lhf);
+	GET_BASE(base, tr, dtr.base);
+	EC_VMWRITE(lim, GUEST_LDTR_BASE, lhf);
+	
+	__asm__ __volatile__("mov %%cs, %0":"=r"(reg)::"memory");
+	printk("[**] cs:\t0x%02lx\n", reg);
+	EC_VMWRITE(reg, GUEST_CS_SELECTOR, lhf);
+	EC_VMWRITE(reg, HOST_CS_SELECTOR, lhf);
+	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
+	EC_VMWRITE(access_rights.val, GUEST_CS_ACCESS_RIGHTS, lhf);
+	GET_LIM_VAL(lim, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_CS_LIMIT, lhf);
+	GET_BASE(base, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_CS_BASE, lhf);
+	
+	__asm__ __volatile__("mov %%ss, %0":"=r"(reg)::"memory");
+	printk("[**] ss:\t0x%02lx\n", reg);
+	EC_VMWRITE(reg, GUEST_SS_SELECTOR, lhf);
+	EC_VMWRITE(reg, HOST_SS_SELECTOR, lhf);
+	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
+	EC_VMWRITE(access_rights.val, GUEST_SS_ACCESS_RIGHTS, lhf);
+	GET_LIM_VAL(lim, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_SS_LIMIT, lhf);
+	GET_BASE(base, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_SS_BASE, lhf);
+	
+	__asm__ __volatile__("mov %%ds, %0":"=r"(reg)::"memory");
+	printk("[**] ds:\t0x%02lx\n", reg);
+	EC_VMWRITE(reg, GUEST_DS_SELECTOR, lhf);
+	EC_VMWRITE(reg, HOST_DS_SELECTOR, lhf);
+	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
+	EC_VMWRITE(access_rights.val, GUEST_DS_ACCESS_RIGHTS, lhf);
+	GET_LIM_VAL(lim, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_DS_LIMIT, lhf);
+	GET_BASE(base, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_DS_BASE, lhf);
+	
+	__asm__ __volatile__("mov %%es, %0":"=r"(reg)::"memory");
+	printk("[**] es:\t0x%02lx\n", reg);
+	EC_VMWRITE(reg, GUEST_ES_SELECTOR, lhf);
+	EC_VMWRITE(reg, HOST_ES_SELECTOR, lhf);
+	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
+	EC_VMWRITE(access_rights.val, GUEST_ES_ACCESS_RIGHTS, lhf);
+	GET_LIM_VAL(lim, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_ES_LIMIT, lhf);
+	GET_BASE(base, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_ES_BASE, lhf);
+	
+	__asm__ __volatile__("mov %%fs, %0":"=r"(reg)::"memory");
+	printk("[**] fs:\t0x%02lx\n", reg);
+	EC_VMWRITE(reg, GUEST_FS_SELECTOR, lhf);
+	EC_VMWRITE(reg, HOST_FS_SELECTOR, lhf);
+	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
+	EC_VMWRITE(access_rights.val, GUEST_FS_ACCESS_RIGHTS, lhf);
+	GET_LIM_VAL(lim, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_FS_LIMIT, lhf);
+	GET_BASE(base, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_FS_BASE, lhf);
+	
+	__asm__ __volatile__("mov %%gs, %0":"=r"(reg)::"memory");
+	printk("[**] gs:\t0x%02lx\n", reg);
+	EC_VMWRITE(reg, GUEST_GS_SELECTOR, lhf);
+	EC_VMWRITE(reg, HOST_GS_SELECTOR, lhf);
+	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
+	EC_VMWRITE(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf);
+	GET_LIM_VAL(lim, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_GS_LIMIT, lhf);
+	GET_BASE(base, reg, dtr.base);
+	EC_VMWRITE(lim, GUEST_GS_BASE, lhf);
 	
 	
 	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
@@ -1225,8 +1280,7 @@ if(!VMsucceed(lhf)) { \
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
 		printk("[*]  accessed/dirty ept bits not supported\n");
 		return -EOPNOTSUPP; }
-	VMWRITE(eptp_p->val, EPTP_F, lhf);
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	EC_VMWRITE(eptp_p->val, EPTP_F, lhf);
 
 	
 	
