@@ -966,7 +966,7 @@ typedef struct {
 //////////////////////////////
 
 //assumes vmcs already current
-int initialize_vmcs(void) {
+int initialize_vmcs(eptp_t *eptp_p) {
 	printk("[*]  initializing vmcs control fields\n");
 	
 	///////////////////////////
@@ -1082,6 +1082,14 @@ if(!VMsucceed(lhf)) { \
 	
 	__asm__ __volatile__("mov %%cr0, %0":"=r"(reg)::"memory");
 	printk("[**] cr0:\t0x%lx\n", reg);
+	READ_MSR(msr, IA32_VMX_CR0_FIXED0);
+	if( (reg | msr.val)!=reg ) {
+		printk("[*]  unsupported bit set\n");
+		return -EOPNOTSUPP; }
+	READ_MSR(msr, IA32_VMX_CR0_FIXED1);
+	if( (reg & msr.val)!=reg ) {
+		printk("[*]  unsupported bit clear\n");
+		return -EOPNOTSUPP; }
 	VMWRITE(reg, GUEST_CR0, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
@@ -1092,6 +1100,14 @@ if(!VMsucceed(lhf)) { \
 	
 	__asm__ __volatile__("mov %%cr4, %0":"=r"(reg)::"memory");
 	printk("[**] cr4:\t0x%lx\n", reg);
+	READ_MSR(msr, IA32_VMX_CR4_FIXED0);
+	if( (reg | msr.val)!=reg ) {
+		printk("[*]  unsupported bit set\n");
+		return -EOPNOTSUPP; }
+	READ_MSR(msr, IA32_VMX_CR4_FIXED1);
+	if( (reg & msr.val)!=reg ) {
+		printk("[*]  unsupported bit clear\n");
+		return -EOPNOTSUPP; }
 	VMWRITE(reg, GUEST_CR4, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
@@ -1114,6 +1130,8 @@ if(!VMsucceed(lhf)) { \
 	printk("[**] rflags:\t0x%lx\n", reg);
 	VMWRITE(reg, GUEST_RFLAGS, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	access_rights_t access_rights;
 	
 	__asm__ __volatile__("mov %%cs, %0":"=r"(reg)::"memory");
 	printk("[**] cs:\t0x%02lx\n", reg);
@@ -1150,6 +1168,39 @@ if(!VMsucceed(lhf)) { \
 	printk("[**] tr:\t0x%04x\n", tr);
 	VMWRITE(tr, GUEST_TR_SELECTOR, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	dtr_t dtr;
+	
+	__asm__ __volatile__("sidt %0"::"m"(dtr):"memory");
+	printk("[**] idtr:\t0x%016lx\n", dtr.base);
+	printk("[**]\tlim:\t0x%x\n", dtr.lim_val);
+	VMWRITE(dtr.lim_val, GUEST_IDTR_LIMIT, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	VMWRITE(dtr.base, GUEST_IDTR_BASE, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("sgdt %0"::"m"(dtr):"memory");
+	printk("[**] gdtr:\t0x%016lx\n", dtr.base);
+	printk("[**]\tlim:\t0x%x\n", dtr.lim_val);
+	VMWRITE(dtr.lim_val, GUEST_GDTR_LIMIT, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	VMWRITE(dtr.base, GUEST_GDTR_BASE, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("sldt %0"::"m"(tr):"memory");
+	printk("[**] ldtr:\t0x%04x\n", tr);
+	VMWRITE(tr, GUEST_LDTR_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	
+	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
+	printk("[**] eptp:\t0x%lx\n", eptp_p->val);
+	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
+		printk("[*]  accessed/dirty ept bits not supported\n");
+		return -EOPNOTSUPP; }
+	VMWRITE(eptp_p->val, EPTP_F, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+
 	
 	
 	printk("[*]  initialization complete\n\n");
