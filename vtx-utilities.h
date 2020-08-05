@@ -101,20 +101,6 @@ typedef union __attribute__((packed)) {
 #define VMfailInvalid(lhf)	((lhf).cf && !(lhf).zf)
 #define VMfailValid(lhf)	(!(lhf).cf && (lhf).zf)
 
-//need to get error field from current vmcs
-#define ERROR_CHECK(lhf, instruction, errno) \
-if(!VMsucceed(lhf)) { \
-	if(VMfailValid(lhf)) { \
-		printk("[*]  %s failed with valid region\n\n", #instruction); } \
-	else if(VMfailInvalid(lhf)) { \
-		printk("[*]  %s failed with invalid region\n\n", #instruction); } \
-	if(errno) { \
-		return -errno; }}
-
-#define EC_VMWRITE(src, code, lhf) \
-	VMWRITE(src, code, lhf); \
-	ERROR_CHECK(lhf, vmwrite, EINVAL);
-
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		unsigned long caching_type:3;
