@@ -993,6 +993,7 @@ int initialize_vmcs(eptp_t *eptp_p) {
 	
 	sec_cpu_x_ctls.val=0;
 	sec_cpu_x_ctls.enable_ept=1;	//[DEBUG]
+	sec_cpu_x_ctls.unrestricted_guest=1;
 	
 	exit_ctls.val=0;
 	//exit_ctls.save_dbg_controls=1;
