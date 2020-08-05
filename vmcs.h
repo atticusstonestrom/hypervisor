@@ -975,7 +975,7 @@ typedef struct {
 //////////////////////////////
 
 //assumes vmcs already current
-int initialize_vmcs(eptp_t *eptp_p) {
+int initialize_vmcs(eptp_t *eptp_p, unsigned long guest_rip, unsigned long host_rip, unsigned long guest_rsp, unsigned long host_rsp) {
 	printk("[*]  initializing vmcs control fields\n");
 	
 	///////////////////////////
@@ -1017,7 +1017,7 @@ if(!VMsucceed(lhf)) { \
 	pri_cpu_x_ctls.activate_secondary_controls=1;
 	
 	sec_cpu_x_ctls.val=0;
-	sec_cpu_x_ctls.enable_ept=1;	//[DEBUG]
+	//sec_cpu_x_ctls.enable_ept=1;	//[DEBUG]
 	sec_cpu_x_ctls.unrestricted_guest=1;
 	
 	exit_ctls.val=0;
@@ -1027,7 +1027,9 @@ if(!VMsucceed(lhf)) { \
 	
 	entry_ctls.val=0;
 	//entry_ctls.load_dbg_controls=1;
+	entry_ctls.ia_32e_mode_guest=1;
 	//////////////////////////
+
 	
 	READ_MSR(msr, IA32_VMX_BASIC);
 	printk("[**] ia32_vmx_basic:\t\t\t0x%lx\n", msr.val);
@@ -1087,7 +1089,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (pri_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pri_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(pri_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
+	EC_VMWRITE(pri_cpu_x_ctls.val, PRIMARY_CPU_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, IA32_VMX_PROCBASED_CTLS2);
 	sec_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;	//uneccessary
@@ -1095,7 +1097,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (sec_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=sec_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(sec_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
+	EC_VMWRITE(sec_cpu_x_ctls.val, SECONDARY_CPU_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_EXIT_CTLS:IA32_VMX_EXIT_CTLS);
 	exit_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1103,7 +1105,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (exit_ctls.val & msr.vmx_ctls.allowed_ones)!=exit_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(exit_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
+	EC_VMWRITE(exit_ctls.val, EXIT_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_ENTRY_CTLS:IA32_VMX_ENTRY_CTLS);
 	entry_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1111,7 +1113,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (entry_ctls.val & msr.vmx_ctls.allowed_ones)!=entry_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(entry_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
+	EC_VMWRITE(entry_ctls.val, ENTRY_CTLS, lhf, error_code);
 	
 	//vmx_misc preemption timer
 	
@@ -1158,26 +1160,30 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] dr7:\t0x%lx\n", reg);
 	EC_VMWRITE(reg, GUEST_DR7, lhf, error_code);
 	
-	__asm__ __volatile__("mov %%rsp, %0":"=r"(reg)::"memory");
+	/*__asm__ __volatile__("mov %%rsp, %0":"=r"(reg)::"memory");
 	printk("[**] rsp:\t0x%lx\n", reg);
-	EC_VMWRITE(reg, GUEST_RSP, lhf, error_code);
+	EC_VMWRITE(guest_rsp, GUEST_RSP, lhf, error_code);
 	/////VNN STACK?
 	
 	__asm__ __volatile__("lea (%%rip), %0":"=r"(reg)::"memory");
 	printk("[**] rip:\t0x%lx\n", reg);
 	EC_VMWRITE(reg, GUEST_RIP, lhf, error_code);
-	//////EXIT HANDLER
+	//////EXIT HANDLER*/
+	
+	printk("[**] guest rip:\t0x%lx\n", guest_rip);
+	EC_VMWRITE(guest_rip, GUEST_RIP, lhf, error_code);
+	printk("[**] host rip:\t0x%lx\n", host_rip);
+	EC_VMWRITE(host_rip, HOST_RIP, lhf, error_code);
+	printk("[**] guest rsp:\t0x%lx\n", guest_rsp);
+	EC_VMWRITE(guest_rsp, GUEST_RSP, lhf, error_code);
+	printk("[**] host rsp:\t0x%lx\n", host_rsp);
+	EC_VMWRITE(host_rsp, HOST_RSP, lhf, error_code);
+	
 	
 	__asm__ __volatile__("pushf; pop %0":"=r"(reg)::"memory");
 	printk("[**] rflags:\t0x%lx\n", reg);
 	EC_VMWRITE(reg, GUEST_RFLAGS, lhf, error_code);
 	
-	unsigned short tr=0;
-	__asm__ __volatile__("str %0"::"m"(tr):"memory");
-	printk("[**] tr:\t0x%04x\n", tr);
-	EC_VMWRITE(tr, GUEST_TR_SELECTOR, lhf, error_code);
-	EC_VMWRITE(tr, HOST_TR_SELECTOR, lhf, error_code);
-	//do get_tss here
 	
 	dtr_t dtr;
 	
@@ -1194,12 +1200,38 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(dtr.lim_val, GUEST_GDTR_LIMIT, lhf, error_code);
 	EC_VMWRITE(dtr.base, GUEST_GDTR_BASE, lhf, error_code);
 	EC_VMWRITE(dtr.base, HOST_GDTR_BASE, lhf, error_code);
-
-	
 	
 	unsigned long base;
 	unsigned int lim;
 	access_rights_t access_rights;
+	
+	unsigned short tr=0;
+	__asm__ __volatile__("str %0"::"m"(tr):"memory");
+	printk("[**] tr:\t0x%04x\n", tr);
+	EC_VMWRITE(tr, GUEST_TR_SELECTOR, lhf, error_code);
+	EC_VMWRITE(tr, HOST_TR_SELECTOR, lhf, error_code);
+	access_rights=(access_rights_t) {{
+		.segment_type=((tssd_t *)(dtr.base+tr))->type,
+		.dpl=((tssd_t *)(dtr.base+tr))->dpl,
+		.p=((tssd_t *)(dtr.base+tr))->p,
+		.avl=((tssd_t *)(dtr.base+tr))->avl,
+		.g=((tssd_t *)(dtr.base+tr))->granularity }};
+	printk("[**]\trights:\t0x%x\n", access_rights.val);
+	lim=0
+		| ((int)(((tssd_t *)(dtr.base+tr))->seg_lim_0_15))
+		| ((int)(((tssd_t *)(dtr.base+tr))->seg_lim_16_19)<<16);
+	lim=((tssd_t *)(dtr.base+tr))->granularity ? ((lim<<12)|0xfff):lim;
+	printk("[**]\tlim:\t0x%x\n", lim);
+	EC_VMWRITE(lim, GUEST_TR_LIMIT, lhf, error_code);
+	base=0
+		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_0_15))
+		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_16_23)<<16)
+		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_24_31)<<24)
+		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_32_63)<<32);
+	printk("[**]\tbase:\t0x%lx\n", base);
+	EC_VMWRITE(tr, GUEST_TR_BASE, lhf, error_code);
+	EC_VMWRITE(tr, HOST_TR_BASE, lhf, error_code);
+
 	
 	__asm__ __volatile__("sldt %0"::"m"(tr):"memory");
 	printk("[**] ldtr:\t0x%04x\n", tr);
@@ -1265,6 +1297,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(lim, GUEST_FS_LIMIT, lhf, error_code);
 	GET_BASE(base, reg, dtr.base);
 	EC_VMWRITE(lim, GUEST_FS_BASE, lhf, error_code);
+	EC_VMWRITE(lim, HOST_FS_BASE, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%gs, %0":"=r"(reg)::"memory");
 	printk("[**] gs:\t0x%02lx\n", reg);
@@ -1276,6 +1309,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(lim, GUEST_GS_LIMIT, lhf, error_code);
 	GET_BASE(base, reg, dtr.base);
 	EC_VMWRITE(lim, GUEST_GS_BASE, lhf, error_code);
+	EC_VMWRITE(lim, HOST_GS_BASE, lhf, error_code);
 	
 	
 	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
