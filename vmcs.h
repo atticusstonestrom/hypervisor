@@ -1286,10 +1286,6 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	
 	printk("[**] vmcs link:\t0x%lx", 0xffffffffffffffff);
 	EC_VMWRITE(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
-	
-	
-	
-	EC_VMWRITE(0, 0xfefefe, lhf, error_code);
 
 	
 	
