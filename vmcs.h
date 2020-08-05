@@ -1064,6 +1064,7 @@ else { \
 		| ((*(unsigned int *)(gdt_base+selector+4))&0xff)<<16 \
 		| ((*(unsigned int *)(gdt_base+selector+4))&0xff000000); } \
 printk("[**]\tbase:\t0x%lx\n", base)
+
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PINBASED_CTLS:IA32_VMX_PINBASED_CTLS);
 	pin_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
