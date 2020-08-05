@@ -21,6 +21,8 @@
 //mutexes on all resources?
 //all allocated pages should be writeback cacheable
 //	save/restore caching type
+//check error code in vmfailvalid
+//	check which instruction can vmfailvalid
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
