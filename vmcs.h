@@ -480,7 +480,7 @@ typedef struct {
 	msr_t ia32_bndcfgs;
 	msr_t ia32_rtit_ctl;
 	msr_t ia32_s_cet;
-	mrs_t ia32_interrupt_ssp_table_addr;
+	msr_t ia32_interrupt_ssp_table_addr;
 	msr_t ia32_pkrs;
 	
 	unsigned long ssp;
