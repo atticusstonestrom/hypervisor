@@ -1297,6 +1297,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(lim, GUEST_FS_LIMIT, lhf, error_code);
 	READ_MSR(msr, IA32_FS_BASE);
 	base=msr.val;
+	printk("[**]\tbase:\t0x%lx\n", base);
 	EC_VMWRITE(base, GUEST_FS_BASE, lhf, error_code);
 	EC_VMWRITE(base, HOST_FS_BASE, lhf, error_code);
 	
@@ -1310,6 +1311,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(lim, GUEST_GS_LIMIT, lhf, error_code);
 	READ_MSR(msr, IA32_GS_BASE);
 	base=msr.val;
+	printk("[**]\tbase:\t0x%lx\n", base);
 	EC_VMWRITE(base, GUEST_GS_BASE, lhf, error_code);
 	EC_VMWRITE(base, HOST_GS_BASE, lhf, error_code);
 	
