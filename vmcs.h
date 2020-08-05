@@ -982,6 +982,22 @@ int initialize_vmcs(eptp_t *eptp_p) {
 	
 	msr_t msr;
 	lhf_t lhf;
+	unsigned long error_code;
+
+//need to get error field from current vmcs
+#define ERROR_CHECK(lhf, instruction, errno, error_code) \
+if(!VMsucceed(lhf)) { \
+	if(VMfailValid(lhf)) { \
+		VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf); \
+		printk("[*]  %s failed with error code %ld\n\n", #instruction, error_code); } \
+	else if(VMfailInvalid(lhf)) { \
+		printk("[*]  %s failed with invalid region\n\n", #instruction); } \
+	if(errno) { \
+		return -errno; }}
+
+#define EC_VMWRITE(src, code, lhf, error_code) \
+	VMWRITE(src, code, lhf); \
+	ERROR_CHECK(lhf, vmwrite, EINVAL, error_code);
 	
 	pin_based_execution_controls_t pin_x_ctls;
 	primary_cpu_based_execution_controls_t pri_cpu_x_ctls;
@@ -1017,20 +1033,6 @@ int initialize_vmcs(eptp_t *eptp_p) {
 	printk("[**] ia32_vmx_basic:\t\t\t0x%lx\n", msr.val);
 	int true_flag=msr.vmx_basic.vmx_controls_clear;
 	printk("[**] %susing TRUE ctl msrs\n", true_flag ? "":"not ");
-	
-//need to get error field from current vmcs
-#define ERROR_CHECK(lhf, instruction, errno) \
-if(!VMsucceed(lhf)) { \
-	if(VMfailValid(lhf)) { \
-		printk("[*]  %s failed with valid region\n\n", #instruction); } \
-	else if(VMfailInvalid(lhf)) { \
-		printk("[*]  %s failed with invalid region\n\n", #instruction); } \
-	if(errno) { \
-		return -errno; }}
-
-#define EC_VMWRITE(src, code, lhf) \
-VMWRITE(src, code, lhf); \
-ERROR_CHECK(lhf, vmwrite, EINVAL);
 	
 #define GET_ACCESS_RIGHTS(access_rights, selector, gdt_base) \
 if(!selector) { \
@@ -1069,7 +1071,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (pin_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pin_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf);
+	EC_VMWRITE(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
 	/*if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
 			//should get error field from current vmcs
@@ -1084,7 +1086,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (pri_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pri_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(pri_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
+	EC_VMWRITE(pri_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, IA32_VMX_PROCBASED_CTLS2);
 	sec_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;	//uneccessary
@@ -1092,7 +1094,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (sec_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=sec_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(sec_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf);
+	EC_VMWRITE(sec_cpu_x_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_EXIT_CTLS:IA32_VMX_EXIT_CTLS);
 	exit_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1100,7 +1102,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (exit_ctls.val & msr.vmx_ctls.allowed_ones)!=exit_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(exit_ctls.val, PIN_BASED_X_CTLS, lhf);
+	EC_VMWRITE(exit_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_ENTRY_CTLS:IA32_VMX_ENTRY_CTLS);
 	entry_ctls.val|=msr.vmx_ctls.allowed_zeroes;
@@ -1108,7 +1110,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (entry_ctls.val & msr.vmx_ctls.allowed_ones)!=entry_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(entry_ctls.val, PIN_BASED_X_CTLS, lhf);
+	EC_VMWRITE(entry_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
 	
 	//vmx_misc preemption timer
 	
@@ -1130,13 +1132,13 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (reg & msr.val)!=reg ) {
 		printk("[*]  unsupported bit clear\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(reg, GUEST_CR0, lhf);
-	EC_VMWRITE(reg, HOST_CR0, lhf);
+	EC_VMWRITE(reg, GUEST_CR0, lhf, error_code);
+	EC_VMWRITE(reg, HOST_CR0, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%cr3, %0":"=r"(reg)::"memory");
 	printk("[**] cr3:\t0x%lx\n", reg);
-	EC_VMWRITE(reg, GUEST_CR3, lhf);
-	EC_VMWRITE(reg, HOST_CR3, lhf);
+	EC_VMWRITE(reg, GUEST_CR3, lhf, error_code);
+	EC_VMWRITE(reg, HOST_CR3, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%cr4, %0":"=r"(reg)::"memory");
 	printk("[**] cr4:\t0x%lx\n", reg);
@@ -1148,32 +1150,32 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if( (reg & msr.val)!=reg ) {
 		printk("[*]  unsupported bit clear\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(reg, GUEST_CR4, lhf);
-	EC_VMWRITE(reg, HOST_CR4, lhf);
+	EC_VMWRITE(reg, GUEST_CR4, lhf, error_code);
+	EC_VMWRITE(reg, HOST_CR4, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%dr7, %0":"=r"(reg)::"memory");
 	printk("[**] dr7:\t0x%lx\n", reg);
-	EC_VMWRITE(reg, GUEST_DR7, lhf);
+	EC_VMWRITE(reg, GUEST_DR7, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%rsp, %0":"=r"(reg)::"memory");
 	printk("[**] rsp:\t0x%lx\n", reg);
-	EC_VMWRITE(reg, GUEST_RSP, lhf);
+	EC_VMWRITE(reg, GUEST_RSP, lhf, error_code);
 	/////VNN STACK?
 	
 	__asm__ __volatile__("lea (%%rip), %0":"=r"(reg)::"memory");
 	printk("[**] rip:\t0x%lx\n", reg);
-	EC_VMWRITE(reg, GUEST_RIP, lhf);
+	EC_VMWRITE(reg, GUEST_RIP, lhf, error_code);
 	//////EXIT HANDLER
 	
 	__asm__ __volatile__("pushf; pop %0":"=r"(reg)::"memory");
 	printk("[**] rflags:\t0x%lx\n", reg);
-	EC_VMWRITE(reg, GUEST_RFLAGS, lhf);
+	EC_VMWRITE(reg, GUEST_RFLAGS, lhf, error_code);
 	
 	unsigned short tr=0;
 	__asm__ __volatile__("str %0"::"m"(tr):"memory");
 	printk("[**] tr:\t0x%04x\n", tr);
-	EC_VMWRITE(tr, GUEST_TR_SELECTOR, lhf);
-	EC_VMWRITE(tr, HOST_TR_SELECTOR, lhf);
+	EC_VMWRITE(tr, GUEST_TR_SELECTOR, lhf, error_code);
+	EC_VMWRITE(tr, HOST_TR_SELECTOR, lhf, error_code);
 	//do get_tss here
 	
 	dtr_t dtr;
@@ -1181,16 +1183,16 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	__asm__ __volatile__("sidt %0"::"m"(dtr):"memory");
 	printk("[**] idtr:\t0x%016lx\n", dtr.base);
 	printk("[**]\tlim:\t0x%x\n", dtr.lim_val);
-	EC_VMWRITE(dtr.lim_val, GUEST_IDTR_LIMIT, lhf);
-	EC_VMWRITE(dtr.base, GUEST_IDTR_BASE, lhf);
-	EC_VMWRITE(dtr.base, HOST_IDTR_BASE, lhf);
+	EC_VMWRITE(dtr.lim_val, GUEST_IDTR_LIMIT, lhf, error_code);
+	EC_VMWRITE(dtr.base, GUEST_IDTR_BASE, lhf, error_code);
+	EC_VMWRITE(dtr.base, HOST_IDTR_BASE, lhf, error_code);
 	
 	__asm__ __volatile__("sgdt %0"::"m"(dtr):"memory");
 	printk("[**] gdtr:\t0x%016lx\n", dtr.base);
 	printk("[**]\tlim:\t0x%x\n", dtr.lim_val);
-	EC_VMWRITE(dtr.lim_val, GUEST_GDTR_LIMIT, lhf);
-	EC_VMWRITE(dtr.base, GUEST_GDTR_BASE, lhf);
-	EC_VMWRITE(dtr.base, HOST_GDTR_BASE, lhf);
+	EC_VMWRITE(dtr.lim_val, GUEST_GDTR_LIMIT, lhf, error_code);
+	EC_VMWRITE(dtr.base, GUEST_GDTR_BASE, lhf, error_code);
+	EC_VMWRITE(dtr.base, HOST_GDTR_BASE, lhf, error_code);
 
 	
 	
@@ -1200,79 +1202,79 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	
 	__asm__ __volatile__("sldt %0"::"m"(tr):"memory");
 	printk("[**] ldtr:\t0x%04x\n", tr);
-	EC_VMWRITE(tr, GUEST_LDTR_SELECTOR, lhf);
+	EC_VMWRITE(tr, GUEST_LDTR_SELECTOR, lhf, error_code);
 	GET_ACCESS_RIGHTS(access_rights, tr, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_LDTR_ACCESS_RIGHTS, lhf);
+	EC_VMWRITE(access_rights.val, GUEST_LDTR_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, tr, dtr.base);
-	EC_VMWRITE(lim, GUEST_LDTR_LIMIT, lhf);
+	EC_VMWRITE(lim, GUEST_LDTR_LIMIT, lhf, error_code);
 	GET_BASE(base, tr, dtr.base);
-	EC_VMWRITE(lim, GUEST_LDTR_BASE, lhf);
+	EC_VMWRITE(lim, GUEST_LDTR_BASE, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%cs, %0":"=r"(reg)::"memory");
 	printk("[**] cs:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_CS_SELECTOR, lhf);
-	EC_VMWRITE(reg, HOST_CS_SELECTOR, lhf);
+	EC_VMWRITE(reg, GUEST_CS_SELECTOR, lhf, error_code);
+	EC_VMWRITE(reg, HOST_CS_SELECTOR, lhf, error_code);
 	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_CS_ACCESS_RIGHTS, lhf);
+	EC_VMWRITE(access_rights.val, GUEST_CS_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_CS_LIMIT, lhf);
+	EC_VMWRITE(lim, GUEST_CS_LIMIT, lhf, error_code);
 	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_CS_BASE, lhf);
+	EC_VMWRITE(lim, GUEST_CS_BASE, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%ss, %0":"=r"(reg)::"memory");
 	printk("[**] ss:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_SS_SELECTOR, lhf);
-	EC_VMWRITE(reg, HOST_SS_SELECTOR, lhf);
+	EC_VMWRITE(reg, GUEST_SS_SELECTOR, lhf, error_code);
+	EC_VMWRITE(reg, HOST_SS_SELECTOR, lhf, error_code);
 	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_SS_ACCESS_RIGHTS, lhf);
+	EC_VMWRITE(access_rights.val, GUEST_SS_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_SS_LIMIT, lhf);
+	EC_VMWRITE(lim, GUEST_SS_LIMIT, lhf, error_code);
 	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_SS_BASE, lhf);
+	EC_VMWRITE(lim, GUEST_SS_BASE, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%ds, %0":"=r"(reg)::"memory");
 	printk("[**] ds:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_DS_SELECTOR, lhf);
-	EC_VMWRITE(reg, HOST_DS_SELECTOR, lhf);
+	EC_VMWRITE(reg, GUEST_DS_SELECTOR, lhf, error_code);
+	EC_VMWRITE(reg, HOST_DS_SELECTOR, lhf, error_code);
 	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_DS_ACCESS_RIGHTS, lhf);
+	EC_VMWRITE(access_rights.val, GUEST_DS_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_DS_LIMIT, lhf);
+	EC_VMWRITE(lim, GUEST_DS_LIMIT, lhf, error_code);
 	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_DS_BASE, lhf);
+	EC_VMWRITE(lim, GUEST_DS_BASE, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%es, %0":"=r"(reg)::"memory");
 	printk("[**] es:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_ES_SELECTOR, lhf);
-	EC_VMWRITE(reg, HOST_ES_SELECTOR, lhf);
+	EC_VMWRITE(reg, GUEST_ES_SELECTOR, lhf, error_code);
+	EC_VMWRITE(reg, HOST_ES_SELECTOR, lhf, error_code);
 	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_ES_ACCESS_RIGHTS, lhf);
+	EC_VMWRITE(access_rights.val, GUEST_ES_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_ES_LIMIT, lhf);
+	EC_VMWRITE(lim, GUEST_ES_LIMIT, lhf, error_code);
 	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_ES_BASE, lhf);
+	EC_VMWRITE(lim, GUEST_ES_BASE, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%fs, %0":"=r"(reg)::"memory");
 	printk("[**] fs:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_FS_SELECTOR, lhf);
-	EC_VMWRITE(reg, HOST_FS_SELECTOR, lhf);
+	EC_VMWRITE(reg, GUEST_FS_SELECTOR, lhf, error_code);
+	EC_VMWRITE(reg, HOST_FS_SELECTOR, lhf, error_code);
 	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_FS_ACCESS_RIGHTS, lhf);
+	EC_VMWRITE(access_rights.val, GUEST_FS_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_FS_LIMIT, lhf);
+	EC_VMWRITE(lim, GUEST_FS_LIMIT, lhf, error_code);
 	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_FS_BASE, lhf);
+	EC_VMWRITE(lim, GUEST_FS_BASE, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%gs, %0":"=r"(reg)::"memory");
 	printk("[**] gs:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_GS_SELECTOR, lhf);
-	EC_VMWRITE(reg, HOST_GS_SELECTOR, lhf);
+	EC_VMWRITE(reg, GUEST_GS_SELECTOR, lhf, error_code);
+	EC_VMWRITE(reg, HOST_GS_SELECTOR, lhf, error_code);
 	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf);
+	EC_VMWRITE(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_GS_LIMIT, lhf);
+	EC_VMWRITE(lim, GUEST_GS_LIMIT, lhf, error_code);
 	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_GS_BASE, lhf);
+	EC_VMWRITE(lim, GUEST_GS_BASE, lhf, error_code);
 	
 	
 	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
@@ -1280,7 +1282,14 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
 		printk("[*]  accessed/dirty ept bits not supported\n");
 		return -EOPNOTSUPP; }
-	EC_VMWRITE(eptp_p->val, EPTP_F, lhf);
+	EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);
+	
+	printk("[**] vmcs link:\t0x%lx", 0xffffffffffffffff);
+	EC_VMWRITE(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
+	
+	
+	
+	EC_VMWRITE(0, 0xfefefe, lhf, error_code);
 
 	
 	
