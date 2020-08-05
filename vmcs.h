@@ -15,25 +15,25 @@ enum vmcs_encodings {
 	PINV =				0x00000002,	//posted-interrupt notification vector
 	EPTP_INDEX =			0x00000004,
 
-	GUEST_ES_SS =			0x00000800,
-	GUEST_CS_SS =			0x00000802,
-	GUEST_SS_SS =			0x00000804,
-	GUEST_DS_SS =			0x00000806,
-	GUEST_FS_SS =			0x00000808,
-	GUEST_GS_SS =			0x0000080a,
-	GUEST_LDTR_SS =			0x0000080c,
-	GUEST_TR_SS =			0x0000080e,
+	GUEST_ES_SELECTOR =		0x00000800,
+	GUEST_CS_SELECTOR =		0x00000802,
+	GUEST_SS_SELECTOR =		0x00000804,
+	GUEST_DS_SELECTOR =		0x00000806,
+	GUEST_FS_SELECTOR =		0x00000808,
+	GUEST_GS_SELECTOR =		0x0000080a,
+	GUEST_LDTR_SELECTOR =		0x0000080c,
+	GUEST_TR_SELECTOR =		0x0000080e,
 
 	GUEST_INTERRUPT_STATUS =	0x00000810,
 	PML_INDEX =			0x00000812,
 
-	HOST_ES_SS =			0x00000c00,
-	HOST_CS_SS =			0x00000c02,
-	HOST_SS_SS =			0x00000c04,
-	HOST_DS_SS =			0x00000c06,
-	HOST_FS_SS =			0x00000c08,
-	HOST_GS_SS =			0x00000c0a,
-	HOST_TR_SS =			0x00000c0c,
+	HOST_ES_SELECTOR =		0x00000c00,
+	HOST_CS_SELECTOR =		0x00000c02,
+	HOST_SS_SELECTOR =		0x00000c04,
+	HOST_DS_SELECTOR =		0x00000c06,
+	HOST_FS_SELECTOR =		0x00000c08,
+	HOST_GS_SELECTOR =		0x00000c0a,
+	HOST_TR_SELECTOR =		0x00000c0c,
 
 	IO_BMP_A_F =			0x00002000,
 	IO_BMP_A_H =			0x00002001,
@@ -1114,6 +1114,43 @@ if(!VMsucceed(lhf)) { \
 	printk("[**] rflags:\t0x%lx\n", reg);
 	VMWRITE(reg, GUEST_RFLAGS, lhf);
 	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%cs, %0":"=r"(reg)::"memory");
+	printk("[**] cs:\t0x%02lx\n", reg);
+	VMWRITE(reg, GUEST_CS_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%ss, %0":"=r"(reg)::"memory");
+	printk("[**] ss:\t0x%02lx\n", reg);
+	VMWRITE(reg, GUEST_SS_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%ds, %0":"=r"(reg)::"memory");
+	printk("[**] ds:\t0x%02lx\n", reg);
+	VMWRITE(reg, GUEST_DS_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%es, %0":"=r"(reg)::"memory");
+	printk("[**] es:\t0x%02lx\n", reg);
+	VMWRITE(reg, GUEST_ES_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%fs, %0":"=r"(reg)::"memory");
+	printk("[**] fs:\t0x%02lx\n", reg);
+	VMWRITE(reg, GUEST_FS_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	__asm__ __volatile__("mov %%gs, %0":"=r"(reg)::"memory");
+	printk("[**] gs:\t0x%02lx\n", reg);
+	VMWRITE(reg, GUEST_GS_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
+	unsigned short tr=0;
+	__asm__ __volatile__("str %0"::"m"(tr):"memory");
+	printk("[**] tr:\t0x%04x\n", tr);
+	VMWRITE(tr, GUEST_TR_SELECTOR, lhf);
+	ERROR_CHECK(lhf, vmwrite, EINVAL);
+	
 	
 	printk("[*]  initialization complete\n\n");
 	
