@@ -1329,39 +1329,47 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
 
 	READ_MSR(msr, IA32_DEBUGCTL);
-	EC_VMWRITE(msr.val, GUEST_IA32_DEBUGCTL_F, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_DEBUGCTL_F, lhf);
+	printk("[**] debugctl:\t0x%lx\n", msr.val);
+	EC_VMWRITE(msr.val, GUEST_IA32_DEBUGCTL_F, lhf, error_code);
 	READ_MSR(msr, IA32_SYSENTER_CS);
-	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_CS, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_CS, lhf);
+	printk("[**] cs:\t0x%lx\n", msr.val);
+	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_CS, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_CS, lhf, error_code);
 	READ_MSR(msr, IA32_SYSENTER_ESP);
-	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_ESP, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_ESP, lhf);
+	printk("[**] esp:\t0x%lx\n", msr.val);
+	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_ESP, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_ESP, lhf, error_code);
 	READ_MSR(msr, IA32_SYSENTER_EIP);
-	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_EIP, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_EIP, lhf);
+	printk("[**] eip:\t0x%lx\n", msr.val);
+	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_EIP, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_EIP, lhf, error_code);
 	READ_MSR(msr, IA32_PERF_GLOBAL_CTRL);
-	EC_VMWRITE(msr.val, GUEST_IA32_PERF_GLOBAL_CTRL_F, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_PERF_GLOBAL_CTRL_F, lhf);
+	printk("[**] pgc:\t0x%lx\n", msr.val);
+	EC_VMWRITE(msr.val, GUEST_IA32_PERF_GLOBAL_CTRL_F, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_PERF_GLOBAL_CTRL_F, lhf, error_code);
 	READ_MSR(msr, IA32_PAT);
-	EC_VMWRITE(msr.val, GUEST_IA32_PAT_F, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_PAT_F, lhf);
+	printk("[**] pat:\t0x%lx\n", msr.val);
+	EC_VMWRITE(msr.val, GUEST_IA32_PAT_F, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_PAT_F, lhf, error_code);
 	READ_MSR(msr, IA32_EFER);
-	EC_VMWRITE(msr.val, GUEST_IA32_EFER_F, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_EFER_F, lhf);
-	READ_MSR(msr, IA32_BNDCFGS);
-	EC_VMWRITE(msr.val, GUEST_IA32_BNDCFGS_F, lhf);
-	READ_MSR(msr, IA32_RTIT_CTL);
-	EC_VMWRITE(msr.val, GUEST_IA32_RTIT_CTL_F, lhf);
-	READ_MSR(msr, IA32_S_CET);
-	EC_VMWRITE(msr.val, GUEST_IA32_S_CET, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_S_CET, lhf);
-	READ_MSR(msr, IA32_INTERRUPT_SSP_TABLE_ADDR);
-	EC_VMWRITE(msr.val, GUEST_IA32_ISTA, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_ISTA, lhf);
-	READ_MSR(msr, IA32_PKRS);
-	EC_VMWRITE(msr.val, GUEST_IA32_PKRS_F, lhf);
-	EC_VMWRITE(msr.val, HOST_IA32_PKRS_F, lhf);
+	printk("[**] efer:\t0x%lx\n", msr.val);
+	EC_VMWRITE(msr.val, GUEST_IA32_EFER_F, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_EFER_F, lhf, error_code);
+	/*READ_MSR(msr, IA32_BNDCFGS);
+	EC_VMWRITE(msr.val, GUEST_IA32_BNDCFGS_F, lhf, error_code);*/
+	/*READ_MSR(msr, IA32_RTIT_CTL);
+	EC_VMWRITE(msr.val, GUEST_IA32_RTIT_CTL_F, lhf, error_code);*/
+	/*READ_MSR(msr, IA32_S_CET);
+	EC_VMWRITE(msr.val, GUEST_IA32_S_CET, lhf, error_code);
+	E8C_VMWRITE(msr.val, HOST_IA32_S_CET, lhf, error_code);*/
+	/*READ_MSR(msr, IA32_INTERRUPT_SSP_TABLE_ADDR);
+	printk("[**] ista:\t0x%lx\n", msr.val);
+	EC_VMWRITE(msr.val, GUEST_IA32_ISTA, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_ISTA, lhf, error_code);*/
+	/*READ_MSR(msr, IA32_PKRS);
+	printk("[**] pkrs:\t0x%lx\n", msr.val);
+	EC_VMWRITE(msr.val, GUEST_IA32_PKRS_F, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_PKRS_F, lhf, error_code);*/
 	
 	printk("[*]  initialization complete\n\n");
 	
