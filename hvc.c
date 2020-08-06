@@ -153,15 +153,16 @@ static void hook(void) {
 	lhf_t lhf;
 	unsigned long reason=0xdeadbeef;
 	VMREAD(reason, EXIT_REASON, lhf);
-	printk("[*]  exit reason:\t0x%lx\n", reason);
+	printk("[**] exit reason:\t0x%lx\n", reason);
 	VMREAD(reason, EXIT_QUALIFICATION, lhf);
-	printk("[*]  exit qual:\t0x%lx\n\n", reason);
+	printk("[**] exit qual:\t\t0x%lx\n", reason);
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
 			VMREAD(reason, VM_INSTRUCTION_ERROR, lhf);
 			printk("[*]  vmread failed with error code %ld\n\n", reason); }
 		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmread failed with invalid region\n\n"); }}
+	printk("[*]  leaving hook\n\n");
 	return; }
 
 unsigned long return_rsp;
@@ -386,12 +387,12 @@ static int __init hvc_init(void) {
 	return 0; }
 
 static void __exit hvc_exit(void) {
-	lhf_t lhf;
+	/*lhf_t lhf;
 	unsigned long reason=0xdeadbeef;
 	VMREAD(reason, EXIT_REASON, lhf);
 	printk("[*]  exit reason:\t0x%lx\n", reason);
 	VMREAD(reason, EXIT_QUALIFICATION, lhf);
-	printk("[*]  exit qual:\t0x%lx\n\n", reason);
+	printk("[*]  exit qual:\t\t0x%lx\n\n", reason);*/
 	
 	cleanup(&guest_state, &host_state);
 	
