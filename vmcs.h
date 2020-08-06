@@ -1219,6 +1219,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 		.avl=((tssd_t *)(dtr.base+tr))->avl,
 		.g=((tssd_t *)(dtr.base+tr))->granularity }};
 	printk("[**]\trights:\t0x%x\n", access_rights.val);
+	EC_VMWRITE(access_rights.val, GUEST_TR_ACCESS_RIGHTS, lhf, error_code);
 	lim=0
 		| ((int)(((tssd_t *)(dtr.base+tr))->seg_lim_0_15))
 		| ((int)(((tssd_t *)(dtr.base+tr))->seg_lim_16_19)<<16);
