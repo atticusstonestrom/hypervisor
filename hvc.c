@@ -149,9 +149,20 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 
 __attribute__((__used__))
 static void hook(void) {
+	/*lhf_t lhf;
+	unsigned long exit_reason=0xdeadbeef, exit_qual=0xdeadbeef;
+	VMREAD(exit_reason, EXIT_REASON, lhf);
+	VMREAD(exit_qual, EXIT_QUALIFICATION, lhf);
+	__asm__ __volatile__("vmxoff");
+	guest_state.active_flag=0;
+	host_state.vmxon_flag=0;
 	printk("[*]  in the hook!\n");
+	printk("[**] exited vmx operation\n");
+	printk("[**] exit reason:\t0x%lx\n", exit_reason);
+	printk("[**] exit qual:\t\t0x%lx\n", exit_qual);*/
 	lhf_t lhf;
 	unsigned long reason=0xdeadbeef;
+	printk("[*]  in the hook!\n");
 	VMREAD(reason, EXIT_REASON, lhf);
 	printk("[**] exit reason:\t0x%lx\n", reason);
 	VMREAD(reason, EXIT_QUALIFICATION, lhf);
