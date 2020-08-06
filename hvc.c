@@ -359,7 +359,8 @@ static int __init hvc_init(void) {
 	__asm__ __volatile__(
 	"return_from_init:"
 		"movq (return_rsp), %rsp;"
-		"movq (return_rbp), %rbp;");	
+		"movq (return_rbp), %rbp;");
+	cleanup(&guest_state, &host_state);
 		
 	
 	
