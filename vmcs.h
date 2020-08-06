@@ -1332,8 +1332,9 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] vmcs link:\t0x%lx", 0xffffffffffffffff);
 	EC_VMWRITE(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
 
+	printk("[**] msrs:\n");
 	READ_MSR(msr, IA32_DEBUGCTL);
-	printk("[**] ia32 dbgctl:\t0x%lx\n", msr.val);
+	printk("[**]\tdbgctl:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_DEBUGCTL_F, lhf, error_code);
 	READ_MSR(msr, IA32_SYSENTER_CS);
 	printk("[**] sysenter msrs:\n");
