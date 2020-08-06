@@ -1131,11 +1131,11 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] cr0:\t0x%lx\n", reg);
 	READ_MSR(msr, IA32_VMX_CR0_FIXED0);
 	if( (reg | msr.val)!=reg ) {
-		printk("[*]  unsupported bit set\n");
+		printk("[*]  unsupported bit clear\n");
 		return -EOPNOTSUPP; }
 	READ_MSR(msr, IA32_VMX_CR0_FIXED1);
 	if( (reg & msr.val)!=reg ) {
-		printk("[*]  unsupported bit clear\n");
+		printk("[*]  unsupported bit set\n");
 		return -EOPNOTSUPP; }
 	EC_VMWRITE(reg, GUEST_CR0, lhf, error_code);
 	EC_VMWRITE(reg, HOST_CR0, lhf, error_code);
@@ -1149,11 +1149,11 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] cr4:\t0x%lx\n", reg);
 	READ_MSR(msr, IA32_VMX_CR4_FIXED0);
 	if( (reg | msr.val)!=reg ) {
-		printk("[*]  unsupported bit set\n");
+		printk("[*]  unsupported bit clear\n");
 		return -EOPNOTSUPP; }
 	READ_MSR(msr, IA32_VMX_CR4_FIXED1);
 	if( (reg & msr.val)!=reg ) {
-		printk("[*]  unsupported bit clear\n");
+		printk("[*]  unsupported bit set\n");
 		return -EOPNOTSUPP; }
 	EC_VMWRITE(reg, GUEST_CR4, lhf, error_code);
 	EC_VMWRITE(reg, HOST_CR4, lhf, error_code);
