@@ -164,6 +164,19 @@ typedef union __attribute__((packed)) {
 	
 	#define IA32_FS_BASE 0xc0000100
 	#define IA32_GS_BASE 0xc0000101
+	
+	
+	#define IA32_DEBUGCTL 0x1d9
+	#define IA32_SYSENTER_CS 0x174
+	#define IA32_SYSENTER_ESP 0x175
+	#define IA32_SYSENTER_EIP 0x176
+	#define IA32_PERF_GLOBAL_CTRL 0x38f
+	#define IA32_EFER 0xc0000080
+	#define IA32_BNDCFGS 0xd90
+	#define IA32_RTIT_CTL 0x570
+	#define IA32_S_CET 0x6a2
+	#define IA32_INTERRUPT_SSP_TABLE_ADDR 0x6a8
+	#define IA32_PKRS 0x6e1
 } msr_t;
 
 #define READ_MSR(dst, id)  __asm__ __volatile__("rdmsr":"=a"((dst).eax), "=d"((dst).edx):"c"(id):"memory")
