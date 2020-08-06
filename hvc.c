@@ -352,7 +352,7 @@ static int __init hvc_init(void) {
 	"return_from_init:"
 		"mov %0, %%rsp;"
 		"mov %1, %%rbp;"
-		::"r"(return_rsp), "r"(return_rbp));
+		::"r"(return_rsp), "r"(return_rbp));	
 		
 	
 	
