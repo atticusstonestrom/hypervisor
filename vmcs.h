@@ -1297,10 +1297,11 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(access_rights.val, GUEST_FS_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, reg, dtr.base);
 	EC_VMWRITE(lim, GUEST_FS_LIMIT, lhf, error_code);
+	GET_BASE(base, reg, dtr.base);
+	EC_VMWRITE(base, GUEST_FS_BASE, lhf, error_code);
 	READ_MSR(msr, IA32_FS_BASE);
 	base=msr.val;
-	printk("[**]\tbase:\t0x%lx\n", base);
-	EC_VMWRITE(base, GUEST_FS_BASE, lhf, error_code);
+	printk("[**] host fs:\t0x%lx\n", base);
 	EC_VMWRITE(base, HOST_FS_BASE, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%gs, %0":"=r"(reg)::"memory");
@@ -1311,10 +1312,12 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, reg, dtr.base);
 	EC_VMWRITE(lim, GUEST_GS_LIMIT, lhf, error_code);
+	GET_BASE(base, reg, dtr.base);
+	EC_VMWRITE(base, GUEST_GS_BASE, lhf, error_code);
+	
 	READ_MSR(msr, IA32_GS_BASE);
 	base=msr.val;
-	printk("[**]\tbase:\t0x%lx\n", base);
-	EC_VMWRITE(base, GUEST_GS_BASE, lhf, error_code);
+	printk("[**] host gs:\t0x%lx\n", base);
 	EC_VMWRITE(base, HOST_GS_BASE, lhf, error_code);
 	
 	
