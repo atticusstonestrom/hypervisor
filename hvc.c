@@ -150,25 +150,33 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 __attribute__((__used__))
 static void hook(void) {
 	printk("[*]  in the hook!\n");
-	unsigned long exit_reason=0;
 	lhf_t lhf;
-	VMREAD(exit_reason, EXIT_REASON, lhf);
-	printk("[**] exit reason: %ld\n", exit_reason);
+	unsigned long reason=0xdeadbeef;
+	VMREAD(reason, EXIT_REASON, lhf);
+	printk("[*]  exit reason:\t0x%lx\n", reason);
+	VMREAD(reason, EXIT_QUALIFICATION, lhf);
+	printk("[*]  exit qual:\t0x%lx\n\n", reason);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
+			VMREAD(reason, VM_INSTRUCTION_ERROR, lhf);
+			printk("[*]  vmread failed with error code %ld\n\n", reason); }
+		else if(VMfailInvalid(lhf)) {
+			printk("[*]  vmread failed with invalid region\n\n"); }}
 	return; }
 
 unsigned long return_rsp;
 unsigned long return_rbp;
 __asm__(
 	".text;"
-	".global stub;"
-"stub:;"
-	//PUSHA
+	".global host_stub;"
+"host_stub:;"
+	PUSHA
 	//"swapgs;"
-	//"call hook;"
+	"call hook;"
 	//"swapgs;"
-	//POPA
+	POPA
 	"jmp return_from_init;");
-extern void stub(void);
+extern void host_stub(void);
 
 __asm__(
 	".text;"
@@ -176,7 +184,6 @@ __asm__(
 "guest_stub:;"
 	"rdtsc;");
 extern void guest_stub(void);
-	
 
 static int __init hvc_init(void) {
 	//all of this should run only on a single processor
@@ -328,7 +335,7 @@ static int __init hvc_init(void) {
 	printk("[*]  vmcs region activated\n\n"); 
 	
 	if( (ret=initialize_vmcs(\
-	         &guest_state.ept_data.eptp, (unsigned long)&guest_stub, (unsigned long)&stub, host_state.vmm_stack, host_state.vmm_stack)) ) {
+	         &guest_state.ept_data.eptp, (unsigned long)&guest_stub, (unsigned long)&host_stub, host_state.vmm_stack, host_state.vmm_stack)) ) {
 		cleanup(&guest_state, &host_state);
 		return ret; }
 	//error check vmxon
@@ -338,7 +345,7 @@ static int __init hvc_init(void) {
 		"mov %%rbp, %1;"
 		:"=r"(return_rsp), "=r"(return_rbp)
 		::"memory");
-	/*VMLAUNCH(lhf);
+	VMLAUNCH(lhf);
 	unsigned long error_code;
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
@@ -347,12 +354,11 @@ static int __init hvc_init(void) {
 		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmlaunch failed with invalid region\n\n"); }
 		cleanup(&guest_state, &host_state);
-		return -EOPNOTSUPP; }*/
+		return -EOPNOTSUPP; }
 	__asm__ __volatile__(
 	"return_from_init:"
-		"mov %0, %%rsp;"
-		"mov %1, %%rbp;"
-		::"r"(return_rsp), "r"(return_rbp));	
+		"movq (return_rsp), %rsp;"
+		"movq (return_rbp), %rbp;");	
 		
 	
 	
@@ -380,6 +386,13 @@ static int __init hvc_init(void) {
 	return 0; }
 
 static void __exit hvc_exit(void) {
+	lhf_t lhf;
+	unsigned long reason=0xdeadbeef;
+	VMREAD(reason, EXIT_REASON, lhf);
+	printk("[*]  exit reason:\t0x%lx\n", reason);
+	VMREAD(reason, EXIT_QUALIFICATION, lhf);
+	printk("[*]  exit qual:\t0x%lx\n\n", reason);
+	
 	cleanup(&guest_state, &host_state);
 	
 	device_destroy(hvc_class, MKDEV(major_num, 0));
