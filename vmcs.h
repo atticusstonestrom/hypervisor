@@ -1018,7 +1018,7 @@ if(!VMsucceed(lhf)) { \
 	
 	sec_cpu_x_ctls.val=0;
 	//sec_cpu_x_ctls.enable_ept=1;	//[DEBUG]
-	sec_cpu_x_ctls.unrestricted_guest=1;
+	//sec_cpu_x_ctls.unrestricted_guest=1;
 	
 	exit_ctls.val=0;
 	//exit_ctls.save_dbg_controls=1;
@@ -1325,39 +1325,41 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] eptp:\t0x%lx\n", eptp_p->val);
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
 		printk("[*]  accessed/dirty ept bits not supported\n");
-		return -EOPNOTSUPP; }
+		//return -EOPNOTSUPP; }
+		eptp_p->accessed_dirty_control=0; }
 	EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);
 	
 	printk("[**] vmcs link:\t0x%lx", 0xffffffffffffffff);
 	EC_VMWRITE(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
 
 	READ_MSR(msr, IA32_DEBUGCTL);
-	printk("[**] debugctl:\t0x%lx\n", msr.val);
+	printk("[**] ia32 dbgctl:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_DEBUGCTL_F, lhf, error_code);
 	READ_MSR(msr, IA32_SYSENTER_CS);
-	printk("[**] cs:\t0x%lx\n", msr.val);
+	printk("[**] sysenter msrs:\n");
+	printk("[**]\tcs:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_CS, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_CS, lhf, error_code);
 	READ_MSR(msr, IA32_SYSENTER_ESP);
-	printk("[**] esp:\t0x%lx\n", msr.val);
+	printk("[**]\tesp:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_ESP, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_ESP, lhf, error_code);
 	READ_MSR(msr, IA32_SYSENTER_EIP);
-	printk("[**] eip:\t0x%lx\n", msr.val);
+	printk("[**]\teip:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_EIP, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_EIP, lhf, error_code);
-	READ_MSR(msr, IA32_PERF_GLOBAL_CTRL);
+	/*READ_MSR(msr, IA32_PERF_GLOBAL_CTRL);
 	printk("[**] pgc:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_PERF_GLOBAL_CTRL_F, lhf, error_code);
-	EC_VMWRITE(msr.val, HOST_IA32_PERF_GLOBAL_CTRL_F, lhf, error_code);
-	READ_MSR(msr, IA32_PAT);
+	EC_VMWRITE(msr.val, HOST_IA32_PERF_GLOBAL_CTRL_F, lhf, error_code);*/
+	/*READ_MSR(msr, IA32_PAT);
 	printk("[**] pat:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_PAT_F, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_PAT_F, lhf, error_code);
 	READ_MSR(msr, IA32_EFER);
 	printk("[**] efer:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_EFER_F, lhf, error_code);
-	EC_VMWRITE(msr.val, HOST_IA32_EFER_F, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_EFER_F, lhf, error_code);*/
 	/*READ_MSR(msr, IA32_BNDCFGS);
 	EC_VMWRITE(msr.val, GUEST_IA32_BNDCFGS_F, lhf, error_code);*/
 	/*READ_MSR(msr, IA32_RTIT_CTL);
