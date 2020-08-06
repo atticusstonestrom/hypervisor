@@ -1042,7 +1042,9 @@ if(!selector) { \
 	access_rights.unusable=1; } \
 else { \
 	access_rights.val=\
-		((*(unsigned int *)(gdt_base+selector+4))&0x00ffff00)>>8; } \
+		((*(unsigned int *)(gdt_base+selector+4))&0x00ffff00)>>8; \
+	access_rights.rsv_8_11=0; \
+	access_rights.rsv_17_31=0; } \
 printk("[**]\trights:\t0x%x\n", access_rights.val)
 
 #define GET_LIM_VAL(lim, selector, gdt_base) \
