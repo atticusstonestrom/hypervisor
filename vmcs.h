@@ -1036,19 +1036,29 @@ if(!VMsucceed(lhf)) { \
 	int true_flag=msr.vmx_basic.vmx_controls_clear;
 	printk("[**] %susing TRUE ctl msrs\n", true_flag ? "":"not ");
 	
-#define GET_ACCESS_RIGHTS(access_rights, selector, gdt_base) \
+/*#define GET_ACCESS_RIGHTS(access_rights, selector, gdt_base) \
 if(!selector) { \
 	access_rights.val=0; \
 	access_rights.unusable=1; } \
 else { \
 	access_rights.val=\
 		((*(unsigned int *)(gdt_base+selector+4))&0x00ffff00)>>8; \
-	access_rights.avl=1; \
+	access_rights.rsv_8_11=0; \
+	access_rights.rsv_17_31=0; } \
+printk("[**]\trights:\t0x%x\n", access_rights.val)*/
+	
+#define GET_ACCESS_RIGHTS(access_rights, selector, gdt_base) \
+if(!selector) { \
+	access_rights.val=0; \
+	access_rights.unusable=1; } \
+else { \
+	__asm__ __volatile__("lar %%ax, %%eax":"=a"(access_rights.val):"a"(selector):"memory"); \
+	access_rights.val>>=8; \
 	access_rights.rsv_8_11=0; \
 	access_rights.rsv_17_31=0; } \
 printk("[**]\trights:\t0x%x\n", access_rights.val)
 
-#define GET_LIM_VAL(lim, selector, gdt_base) \
+/*#define GET_LIM_VAL(lim, selector, gdt_base) \
 if(!selector) { \
 	lim=0; } \
 else { \
@@ -1058,6 +1068,13 @@ else { \
 	if( (*(unsigned int *)(gdt_base+selector+4)) & 0x00800000 ) { \
 		lim<<=12; \
 		lim|=0xfff; }} \
+printk("[**]\tlim:\t0x%x\n", lim)*/
+	
+#define GET_LIM_VAL(lim, selector, gdt_base) \
+if(!selector) { \
+	lim=0; } \
+else { \
+	__asm__ __volatile__("lsl %%ax, %%rax":"=a"(lim):"a"(selector):"memory"); } \
 printk("[**]\tlim:\t0x%x\n", lim)
 	
 #define GET_BASE(base, selector, gdt_base) \
@@ -1213,20 +1230,21 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] tr:\t0x%04x\n", tr);
 	EC_VMWRITE(tr, GUEST_TR_SELECTOR, lhf, error_code);
 	EC_VMWRITE(tr, HOST_TR_SELECTOR, lhf, error_code);
-	access_rights=(access_rights_t) {{
+	/*access_rights=(access_rights_t) {{
 		.segment_type=((tssd_t *)(dtr.base+tr))->type,
 		.dpl=((tssd_t *)(dtr.base+tr))->dpl,
 		.p=((tssd_t *)(dtr.base+tr))->p,
 		.avl=((tssd_t *)(dtr.base+tr))->avl,
 		.g=((tssd_t *)(dtr.base+tr))->granularity }};
-	access_rights.avl=1;
-	printk("[**]\trights:\t0x%x\n", access_rights.val);
+	printk("[**]\trights:\t0x%x\n", access_rights.val);*/
+	GET_ACCESS_RIGHTS(access_rights, tr, dtr.base);
 	EC_VMWRITE(access_rights.val, GUEST_TR_ACCESS_RIGHTS, lhf, error_code);
-	lim=0
+	/*lim=0
 		| ((int)(((tssd_t *)(dtr.base+tr))->seg_lim_0_15))
 		| ((int)(((tssd_t *)(dtr.base+tr))->seg_lim_16_19)<<16);
 	lim=((tssd_t *)(dtr.base+tr))->granularity ? ((lim<<12)|0xfff):lim;
-	printk("[**]\tlim:\t0x%x\n", lim);
+	printk("[**]\tlim:\t0x%x\n", lim);*/
+	GET_LIM_VAL(lim, tr, dtr.base);
 	EC_VMWRITE(lim, GUEST_TR_LIMIT, lhf, error_code);
 	base=0
 		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_0_15))
