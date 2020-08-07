@@ -1018,7 +1018,7 @@ if(!VMsucceed(lhf)) { \
 	
 	sec_cpu_x_ctls.val=0;
 	//sec_cpu_x_ctls.enable_ept=1;	//[DEBUG]
-	sec_cpu_x_ctls.unrestricted_guest=1;
+	//sec_cpu_x_ctls.unrestricted_guest=1;
 	
 	exit_ctls.val=0;
 	//exit_ctls.save_dbg_controls=1;
@@ -1328,8 +1328,8 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] gs:\t0x%02lx\n", reg);
 	EC_VMWRITE(reg, GUEST_GS_SELECTOR, lhf, error_code);
 	EC_VMWRITE(reg, HOST_GS_SELECTOR, lhf, error_code);
-	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf, error_code);
+	/*GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
+	EC_VMWRITE(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf, error_code);*/
 	GET_LIM_VAL(lim, reg, dtr.base);
 	EC_VMWRITE(lim, GUEST_GS_LIMIT, lhf, error_code);
 	READ_MSR(msr, IA32_GS_BASE);
@@ -1342,10 +1342,10 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
 	printk("[**] eptp:\t0x%lx\n", eptp_p->val);
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
-		printk("[*]  accessed/dirty ept bits not supported\n");
+		printk("[**] accessed/dirty ept bits not supported\n");
 		//return -EOPNOTSUPP; }
 		eptp_p->accessed_dirty_control=0; }
-	EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);
+	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);
 	
 	printk("[**] vmcs link:\t0x%lx", 0xffffffffffffffff);
 	EC_VMWRITE(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
