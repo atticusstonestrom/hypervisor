@@ -1043,6 +1043,7 @@ if(!selector) { \
 else { \
 	access_rights.val=\
 		((*(unsigned int *)(gdt_base+selector+4))&0x00ffff00)>>8; \
+	access_rights.avl=1; \
 	access_rights.rsv_8_11=0; \
 	access_rights.rsv_17_31=0; } \
 printk("[**]\trights:\t0x%x\n", access_rights.val)
@@ -1218,6 +1219,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 		.p=((tssd_t *)(dtr.base+tr))->p,
 		.avl=((tssd_t *)(dtr.base+tr))->avl,
 		.g=((tssd_t *)(dtr.base+tr))->granularity }};
+	access_rights.avl=1;
 	printk("[**]\trights:\t0x%x\n", access_rights.val);
 	EC_VMWRITE(access_rights.val, GUEST_TR_ACCESS_RIGHTS, lhf, error_code);
 	lim=0
