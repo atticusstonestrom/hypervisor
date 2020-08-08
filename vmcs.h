@@ -1018,7 +1018,7 @@ if(!VMsucceed(lhf)) { \
 	
 	sec_cpu_x_ctls.val=0;
 	//sec_cpu_x_ctls.enable_ept=1;	//[DEBUG]
-	//sec_cpu_x_ctls.unrestricted_guest=1;
+	sec_cpu_x_ctls.unrestricted_guest=1;
 	
 	exit_ctls.val=0;
 	//exit_ctls.save_dbg_controls=1;
@@ -1328,8 +1328,8 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] gs:\t0x%02lx\n", reg);
 	EC_VMWRITE(reg, GUEST_GS_SELECTOR, lhf, error_code);
 	EC_VMWRITE(reg, HOST_GS_SELECTOR, lhf, error_code);
-	/*GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf, error_code);*/
+	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
+	EC_VMWRITE(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf, error_code);
 	GET_LIM_VAL(lim, reg, dtr.base);
 	EC_VMWRITE(lim, GUEST_GS_LIMIT, lhf, error_code);
 	READ_MSR(msr, IA32_GS_BASE);
