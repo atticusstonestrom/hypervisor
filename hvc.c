@@ -37,6 +37,10 @@
 #include "vmcs.h"
 #include "mm.h"
 
+static int param_cpu_id;
+module_param(param_cpu_id, int, (S_IRUSR|S_IRGRP|S_IROTH));
+MODULE_PARM_DESC(param_cpu_id, "cpu id that operations run on");
+
 #define DEVICE_NAME "hvchar"
 #define CLASS_NAME "hvc"
 
@@ -198,6 +202,12 @@ __asm__(
 extern void guest_stub(void);
 
 static int __init hvc_init(void) {
+	int cpu_id;
+	if(param_cpu_id!=0) {
+		printk("[*] unable to load module without cpu parameter 0\n");
+		return -EINVAL; }
+	cpu_id=get_cpu();
+	printk("[*]  called on cpu: %d\n\n", cpu_id);
 	//all of this should run only on a single processor
 	
 	guest_state=(guest_state_t) {0};
@@ -396,6 +406,8 @@ static int __init hvc_init(void) {
 		return PTR_ERR(hvc_device); }
 	//printk("[*] device class created correctly\n");
 
+	cleanup(&guest_state, &host_state);
+	put_cpu();
 	return 0; }
 
 static void __exit hvc_exit(void) {
