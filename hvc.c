@@ -376,7 +376,7 @@ static int __init hvc_init(void) {
 		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmlaunch failed with invalid region\n\n"); }
 		cleanup(&guest_state, &host_state);
-		return -EOPNOTSUPP; }
+		return -EINVAL; }
 	__asm__ __volatile__(
 	"return_from_init:"
 		"movq (return_rsp), %rsp;"
