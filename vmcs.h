@@ -1339,13 +1339,13 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(base, HOST_GS_BASE, lhf, error_code);
 	
 	
-	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
+	/*READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
 	printk("[**] eptp:\t0x%lx\n", eptp_p->val);
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
 		printk("[**] accessed/dirty ept bits not supported\n");
 		//return -EOPNOTSUPP; }
 		eptp_p->accessed_dirty_control=0; }
-	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);
+	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);*/
 	
 	printk("[**] vmcs link:\t0x%lx", 0xffffffffffffffff);
 	EC_VMWRITE(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
