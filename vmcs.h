@@ -1093,7 +1093,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] pinbased controls:\t\t\t0x%08x\n", pin_x_ctls.val);
 	if( (pin_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pin_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
-		return -EOPNOTSUPP; }
+		return -EINVAL; }
 	EC_VMWRITE(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
 	/*if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
@@ -1108,7 +1108,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] primary cpu based controls:\t0x%08x\n", pri_cpu_x_ctls.val);
 	if( (pri_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pri_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
-		return -EOPNOTSUPP; }
+		return -EINVAL; }
 	EC_VMWRITE(pri_cpu_x_ctls.val, PRIMARY_CPU_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, IA32_VMX_PROCBASED_CTLS2);
@@ -1116,7 +1116,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] secondary cpu based controls:\t0x%08x\n", sec_cpu_x_ctls.val);
 	if( (sec_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=sec_cpu_x_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
-		return -EOPNOTSUPP; }
+		return -EINVAL; }
 	EC_VMWRITE(sec_cpu_x_ctls.val, SECONDARY_CPU_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_EXIT_CTLS:IA32_VMX_EXIT_CTLS);
@@ -1124,7 +1124,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] vm exit controls:\t\t\t0x%08x\n", exit_ctls.val);
 	if( (exit_ctls.val & msr.vmx_ctls.allowed_ones)!=exit_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
-		return -EOPNOTSUPP; }
+		return -EINVAL; }
 	EC_VMWRITE(exit_ctls.val, EXIT_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_ENTRY_CTLS:IA32_VMX_ENTRY_CTLS);
@@ -1132,7 +1132,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**] vm entry controls:\t\t\t0x%08x\n", entry_ctls.val);
 	if( (entry_ctls.val & msr.vmx_ctls.allowed_ones)!=entry_ctls.val ) {
 		printk("[*]  unsupported bit set\n\n");
-		return -EOPNOTSUPP; }
+		return -EINVAL; }
 	EC_VMWRITE(entry_ctls.val, ENTRY_CTLS, lhf, error_code);
 	
 	//vmx_misc preemption timer
@@ -1154,7 +1154,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	READ_MSR(msr, IA32_VMX_CR0_FIXED1);
 	if( (reg & msr.val)!=reg ) {
 		printk("[*]  unsupported bit set\n");
-		return -EOPNOTSUPP; }
+		return -EINVAL; }
 	EC_VMWRITE(reg, GUEST_CR0, lhf, error_code);
 	EC_VMWRITE(reg, HOST_CR0, lhf, error_code);
 	
@@ -1168,11 +1168,11 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	READ_MSR(msr, IA32_VMX_CR4_FIXED0);
 	if( (reg | msr.val)!=reg ) {
 		printk("[*]  unsupported bit clear\n");
-		return -EOPNOTSUPP; }
+		return -EINVAL; }
 	READ_MSR(msr, IA32_VMX_CR4_FIXED1);
 	if( (reg & msr.val)!=reg ) {
 		printk("[*]  unsupported bit set\n");
-		return -EOPNOTSUPP; }
+		return -EINVAL; }
 	EC_VMWRITE(reg, GUEST_CR4, lhf, error_code);
 	EC_VMWRITE(reg, HOST_CR4, lhf, error_code);
 	
