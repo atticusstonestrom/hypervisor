@@ -1374,11 +1374,11 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	/*READ_MSR(msr, IA32_PAT);
 	printk("[**] pat:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_PAT_F, lhf, error_code);
-	EC_VMWRITE(msr.val, HOST_IA32_PAT_F, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_PAT_F, lhf, error_code);*/
 	READ_MSR(msr, IA32_EFER);
 	printk("[**] efer:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_EFER_F, lhf, error_code);
-	EC_VMWRITE(msr.val, HOST_IA32_EFER_F, lhf, error_code);*/
+	EC_VMWRITE(msr.val, HOST_IA32_EFER_F, lhf, error_code);
 	/*READ_MSR(msr, IA32_BNDCFGS);
 	EC_VMWRITE(msr.val, GUEST_IA32_BNDCFGS_F, lhf, error_code);*/
 	/*READ_MSR(msr, IA32_RTIT_CTL);
