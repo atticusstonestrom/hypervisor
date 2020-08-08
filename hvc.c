@@ -406,7 +406,6 @@ static int __init hvc_init(void) {
 		return PTR_ERR(hvc_device); }
 	//printk("[*] device class created correctly\n");
 
-	cleanup(&guest_state, &host_state);
 	put_cpu();
 	return 0; }
 
