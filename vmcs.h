@@ -1024,10 +1024,13 @@ if(!VMsucceed(lhf)) { \
 	//exit_ctls.save_dbg_controls=1;
 	//exit_ctls.save_preemption_timer=1;
 	exit_ctls.host_addr_space_size=1;
+	exit_ctls.save_ia32_efer=1;
+	exit_ctls.load_ia32_efer=1;
 	
 	entry_ctls.val=0;
 	//entry_ctls.load_dbg_controls=1;
 	entry_ctls.ia_32e_mode_guest=1;
+	entry_ctls.load_ia32_efer=1;
 	//////////////////////////
 
 	
