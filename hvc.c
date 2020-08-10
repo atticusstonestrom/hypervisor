@@ -175,6 +175,8 @@ static void hook(void) {
 	printk("[**] exit reason:\t0x%lx\n", reason);
 	VMREAD(reason, EXIT_QUALIFICATION, lhf);
 	printk("[**] exit qual:\t\t0x%lx\n", reason);
+	VMREAD(reason, EXIT_INSTRUCTION_LENGTH, lhf);
+	printk("[**] instruction len:\t%ld\n", reason);
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
 			VMREAD(reason, VM_INSTRUCTION_ERROR, lhf);
