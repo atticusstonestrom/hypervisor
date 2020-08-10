@@ -1354,19 +1354,18 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	READ_MSR(msr, IA32_DEBUGCTL);
 	printk("[**]\tdbgctl:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_DEBUGCTL_F, lhf, error_code);
-	READ_MSR(msr, IA32_SYSENTER_CS);
 	/*READ_MSR(msr, IA32_PERF_GLOBAL_CTRL);
 	printk("[**]\tpgc:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_PERF_GLOBAL_CTRL_F, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_PERF_GLOBAL_CTRL_F, lhf, error_code);*/
-	READ_MSR(msr, IA32_PAT);
+	/*READ_MSR(msr, IA32_PAT);
 	printk("[**]\tpat:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_PAT_F, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_PAT_F, lhf, error_code);
 	READ_MSR(msr, IA32_EFER);
 	printk("[**]\tefer:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_EFER_F, lhf, error_code);
-	EC_VMWRITE(msr.val, HOST_IA32_EFER_F, lhf, error_code);
+	EC_VMWRITE(msr.val, HOST_IA32_EFER_F, lhf, error_code);*/
 	/*READ_MSR(msr, IA32_BNDCFGS);
 	EC_VMWRITE(msr.val, GUEST_IA32_BNDCFGS_F, lhf, error_code);*/
 	/*READ_MSR(msr, IA32_RTIT_CTL);
@@ -1383,6 +1382,7 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(msr.val, GUEST_IA32_PKRS_F, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_PKRS_F, lhf, error_code);*/
 	printk("[**] sysenter msrs:\n");
+	READ_MSR(msr, IA32_SYSENTER_CS);
 	printk("[**]\tcs:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_CS, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_CS, lhf, error_code);
