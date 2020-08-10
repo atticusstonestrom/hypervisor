@@ -286,7 +286,8 @@ static int __init hvc_init(void) {
 		return ret; }
 	
 	printk("[*]  allocating vmm stack\n");
-	if( !(host_state.vmm_stack=__get_free_pages(__GFP_ZERO, VMM_STACK_ORDER)) ) {
+	host_state.vmm_stack_order=VMM_STACK_ORDER;
+	if( !(host_state.vmm_stack=__get_free_pages(__GFP_ZERO, host_state.vmm_stack_order)) ) {
 		printk("[*]  no free page available\n");
 		return -ENOMEM; }
 	printk("[**] stack:\t0x%lx (%d pages)\n", host_state.vmm_stack, 1<<(host_state.vmm_stack_order));
