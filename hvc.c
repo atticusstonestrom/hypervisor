@@ -143,7 +143,8 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 		free_page(vm_state->vmcs_region);
 		vm_state->vmcs_region=0; }
 	if(vmm_state->vmm_stack) {
-		printk("[**] vmm stack:\t\t0x%lx\n", vmm_state->vmm_stack);
+		printk("[**] vmm stack:\t\t0x%lx (%d pages)\n",
+		       vmm_state->vmm_stack, 1<<(vmm_state->vmm_stack_order));
 		free_pages(vmm_state->vmm_stack, vmm_state->vmm_stack_order);
 		vmm_state->vmm_stack=0; }
 	if(vm_state->msr_bitmap) {
@@ -288,7 +289,7 @@ static int __init hvc_init(void) {
 	if( !(host_state.vmm_stack=__get_free_pages(__GFP_ZERO, VMM_STACK_ORDER)) ) {
 		printk("[*]  no free page available\n");
 		return -ENOMEM; }
-	printk("[**] stack:\t0x%lx\n", host_state.vmm_stack);
+	printk("[**] stack:\t0x%lx (%d pages)\n", host_state.vmm_stack, 1<<(host_state.vmm_stack_order));
 	printk("[*]  allocated successfully\n\n");
 	
 	
