@@ -371,16 +371,17 @@ static int __init hvc_init(void) {
 		"mov %%rbp, %1;"
 		:"=r"(return_rsp), "=r"(return_rbp)
 		::"memory");
-	VMLAUNCH(lhf);
+
+	/*VMLAUNCH(lhf);
 	unsigned long error_code;
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
-			VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
+			//VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
 			printk("[*]  vmlaunch failed with error code %ld\n\n", error_code); }
 		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmlaunch failed with invalid region\n\n"); }
 		cleanup(&guest_state, &host_state);
-		return -EINVAL; }
+		return -EINVAL; }*/
 	__asm__ __volatile__(
 	"return_from_init:"
 		"movq (return_rsp), %rsp;"
