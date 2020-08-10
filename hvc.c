@@ -204,7 +204,8 @@ __asm__(
 	".text;"
 	".global guest_stub;"
 "guest_stub:;"
-	"rdtsc;");
+//	"rdtsc;");
+	"hlt;");
 extern void guest_stub(void);
 
 static int __init hvc_init(void) {
