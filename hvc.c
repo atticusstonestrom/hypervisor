@@ -89,7 +89,9 @@ guest_state_t guest_state;
 typedef struct {
 	cr4_t old_cr4;
 	int vmxon_flag;
+#define VMM_STACK_ORDER 5
 	unsigned long vmm_stack;
+	int vmm_stack_order;
 	//linked list of active guest_states?
 } host_state_t;
 host_state_t host_state;
@@ -142,7 +144,7 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 		vm_state->vmcs_region=0; }
 	if(vmm_state->vmm_stack) {
 		printk("[**] vmm stack:\t\t0x%lx\n", vmm_state->vmm_stack);
-		free_page(vmm_state->vmm_stack);
+		free_pages(vmm_state->vmm_stack, vmm_state->vmm_stack_order);
 		vmm_state->vmm_stack=0; }
 	if(vm_state->msr_bitmap) {
 		printk("[**] msr bitmap:\t0x%lx\n", vm_state->msr_bitmap);
@@ -283,7 +285,7 @@ static int __init hvc_init(void) {
 		return ret; }
 	
 	printk("[*]  allocating vmm stack\n");
-	if( !(host_state.vmm_stack=get_zeroed_page(GFP_KERNEL)) ) {
+	if( !(host_state.vmm_stack=__get_free_pages(__GFP_ZERO, VMM_STACK_ORDER)) ) {
 		printk("[*]  no free page available\n");
 		return -ENOMEM; }
 	printk("[**] stack:\t0x%lx\n", host_state.vmm_stack);
