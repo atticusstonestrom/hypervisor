@@ -89,9 +89,10 @@ guest_state_t guest_state;
 typedef struct {
 	cr4_t old_cr4;
 	int vmxon_flag;
-#define VMM_STACK_ORDER 5
-	unsigned long vmm_stack;
+#define VMM_STACK_ORDER 1
+	unsigned long vmm_stack_base;
 	int vmm_stack_order;
+	unsigned long vmm_stack_top;
 	//linked list of active guest_states?
 } host_state_t;
 host_state_t host_state;
@@ -142,11 +143,11 @@ void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
 		printk("[**] vmcs region:\t0x%lx\n", vm_state->vmcs_region);
 		free_page(vm_state->vmcs_region);
 		vm_state->vmcs_region=0; }
-	if(vmm_state->vmm_stack) {
+	if(vmm_state->vmm_stack_base) {
 		printk("[**] vmm stack:\t\t0x%lx (%d pages)\n",
-		       vmm_state->vmm_stack, 1<<(vmm_state->vmm_stack_order));
-		free_pages(vmm_state->vmm_stack, vmm_state->vmm_stack_order);
-		vmm_state->vmm_stack=0; }
+		       vmm_state->vmm_stack_base, 1<<(vmm_state->vmm_stack_order));
+		free_pages(vmm_state->vmm_stack_base, vmm_state->vmm_stack_order);
+		vmm_state->vmm_stack_base=0; }
 	if(vm_state->msr_bitmap) {
 		printk("[**] msr bitmap:\t0x%lx\n", vm_state->msr_bitmap);
 		free_page(vm_state->msr_bitmap);
@@ -287,10 +288,12 @@ static int __init hvc_init(void) {
 	
 	printk("[*]  allocating vmm stack\n");
 	host_state.vmm_stack_order=VMM_STACK_ORDER;
-	if( !(host_state.vmm_stack=__get_free_pages(__GFP_ZERO, host_state.vmm_stack_order)) ) {
+	if( !(host_state.vmm_stack_base=__get_free_pages(__GFP_ZERO, host_state.vmm_stack_order)) ) {
 		printk("[*]  no free page available\n");
 		return -ENOMEM; }
-	printk("[**] stack:\t0x%lx (%d pages)\n", host_state.vmm_stack, 1<<(host_state.vmm_stack_order));
+	printk("[**] stack base:\t0x%lx (%d pages)\n", host_state.vmm_stack_base, 1<<(host_state.vmm_stack_order));
+	host_state.vmm_stack_top=host_state.vmm_stack_base+((1<<12)<<(host_state.vmm_stack_order));
+	printk("[**] stack top:\t\t0x%lx\n", host_state.vmm_stack_top);
 	printk("[*]  allocated successfully\n\n");
 	
 	
@@ -361,7 +364,7 @@ static int __init hvc_init(void) {
 	printk("[*]  vmcs region activated\n\n"); 
 	
 	if( (ret=initialize_vmcs(\
-	         &guest_state.ept_data.eptp, (unsigned long)&guest_stub, (unsigned long)&host_stub, host_state.vmm_stack, host_state.vmm_stack)) ) {
+	         &guest_state.ept_data.eptp, (unsigned long)&guest_stub, (unsigned long)&host_stub, host_state.vmm_stack_top, host_state.vmm_stack_top)) ) {
 		cleanup(&guest_state, &host_state);
 		return ret; }
 	//error check vmxon
