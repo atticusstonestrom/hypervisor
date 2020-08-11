@@ -209,7 +209,11 @@ __asm__(
 extern void guest_stub(void);
 
 static void per_cpu_print(void *info) {
-	printk("id: %d\n", smp_processor_id()); }
+	cpuid_t cpuid;
+	unsigned int ia32_tsc_aux;
+	__asm__ __volatile__("rdtscp":"=c"(ia32_tsc_aux));
+	CPUID(cpuid, 0x0b);
+	printk("linux id: %d\t\tapic id: %d\t\ttsc_aux: %d\n", smp_processor_id(), cpuid.edx, ia32_tsc_aux); }
 
 static int __init hvc_init(void) {
 	on_each_cpu(per_cpu_print, NULL, 1);
