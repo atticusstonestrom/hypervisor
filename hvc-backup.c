@@ -208,7 +208,11 @@ __asm__(
 	"hlt;");
 extern void guest_stub(void);
 
+static void per_cpu_print(void *info) {
+	printk("id: %d\n", smp_processor_id()); }
+
 static int __init hvc_init(void) {
+	on_each_cpu(per_cpu_print, NULL, 1);
 	int cpu_id;
 	if(param_cpu_id!=0) {
 		printk("[*] unable to load module without cpu parameter 0\n");
