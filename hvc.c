@@ -208,6 +208,9 @@ __asm__(
 	"hlt;");
 extern void guest_stub(void);
 
+
+//	https://stackoverflow.com/questions/6146059/how-can-i-detect-the-number-of-cores-in-x86-assembly
+//	https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)
 static void per_cpu_print(void *info) {
 	cpuid_t cpuid;
 	unsigned int ia32_tsc_aux;
