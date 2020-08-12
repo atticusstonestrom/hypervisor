@@ -416,145 +416,6 @@ typedef union __attribute__((packed)) {
 	unsigned short val;
 } guest_interrupt_status_t;
 
-typedef struct {
-	unsigned long cr0;
-	unsigned long cr3;
-	unsigned long cr4;
-	unsigned long dr7;
-	unsigned long rsp;
-	unsigned long rip;
-	unsigned long rflags;
-	
-	access_rights_t access_rights;
-
-	unsigned short cs_selector;
-	unsigned long cs_base;
-	unsigned int cs_lim;
-	unsigned int cs_access_rights;
-	
-	unsigned short ss_selector;
-	unsigned long ss_base;
-	unsigned int ss_lim;
-	unsigned int ss_access_rights;
-	
-	unsigned short ds_selector;
-	unsigned long ds_base;
-	unsigned int ds_lim;
-	unsigned int ds_access_rights;
-	
-	unsigned short es_selector;
-	unsigned long es_base;
-	unsigned int es_lim;
-	unsigned int es_access_rights;
-	
-	unsigned short fs_selector;
-	unsigned long fs_base;
-	unsigned int fs_lim;
-	unsigned int fs_access_rights;
-	
-	unsigned short gs_selector;
-	unsigned long gs_base;
-	unsigned int gs_lim;
-	unsigned int gs_access_rights;
-	
-	unsigned short ldtr_selector;
-	unsigned long ldtr_base;
-	unsigned int ldtr_lim;
-	unsigned int ldtr_access_rights;
-	
-	unsigned short tr_selector;
-	unsigned long tr_base;
-	unsigned int tr_lim;
-	unsigned int tr_access_rights;
-	
-	gdtr_t gdtr;
-	idtr_t idtr;
-	
-	msr_t ia32_debugctl;
-	msr_t ia32_sysenter_cs;
-	msr_t ia32_sysenter_esp;
-	msr_t ia32_sysenter_eip;
-	msr_t ia32_perf_global_ctrl;
-	msr_t ia32_pat;
-	msr_t ia32_efer;
-	msr_t ia32_bndcfgs;
-	msr_t ia32_rtit_ctl;
-	msr_t ia32_s_cet;
-	msr_t ia32_interrupt_ssp_table_addr;
-	msr_t ia32_pkrs;
-	
-	unsigned long ssp;
-	unsigned int smbase;
-
-	////////////////////////////////////////////////
-	
-	unsigned int activity_state;
-		//active:	0
-		//hlt:		1
-		//shutdown:	2
-		//waitforsipi:	3
-		//active, HLT, shutdown, wait-for-sipi
-	
-	interruptibility_state_t interruptibility_state;
-	
-	pending_dbg_exceptions_t pending_dbg_exceptions;
-	
-	unsigned long vmcs_link_pointer;	//for vmcs shadowing
-	unsigned int preemption_timer;
-	unsigned long pdpte0;
-	unsigned long pdpte1;
-	unsigned long pdpte2;
-	unsigned long pdpte3;
-
-	guest_interrupt_status_t guest_interrupt_status;
-	
-	unsigned short pml_index;
-} guest_state_area;
-
-
-
-
-typedef struct {
-	unsigned long cr0;
-	unsigned long cr3;
-	unsigned long cr4;
-	unsigned long rsp;
-	unsigned long rip;
-	
-	access_rights_t access_rights;
-
-	unsigned short cs_selector;
-	unsigned short ss_selector;
-	unsigned short ds_selector;
-	unsigned short es_selector;
-	
-	unsigned short fs_selector;
-	unsigned long fs_base;
-	
-	unsigned short gs_selector;
-	unsigned long gs_base;
-	
-	unsigned short tr_selector;
-	unsigned long tr_base;
-	
-	unsigned long gdtr_base;
-	unsigned long idtr_base;
-	
-	msr_t ia32_sysenter_cs;
-	msr_t ia32_sysenter_esp;
-	msr_t ia32_sysenter_eip;
-	msr_t ia32_perf_global_ctrl;
-	msr_t ia32_pat;
-	msr_t ia32_efer;
-	msr_t ia32_s_cet;
-	msr_t ia32_interrupt_ssp_table_addr;
-	msr_t ia32_pkrs;
-	unsigned long ssp;
-} host_state_area;
-
-
-
-
 //for reserved bits, consult
 //ia32_vmx_pinbased_ctls
 //ia32_vmx_true_pinbased_ctls
@@ -678,109 +539,6 @@ typedef union __attribute__((packed)) {
 	unsigned long val;
 } vm_function_controls_t;
 
-typedef struct {
-	
-	pin_based_execution_controls_t pin_based_execution_controls;
-	primary_cpu_based_execution_controls_t primary_cpu_based_execution_controls;
-	secondary_cpu_based_execution_controls_t secondary_cpu_based_execution_controls;
-	exception_bitmap_t exception_bitmap;
-
-	struct {
-		unsigned long io_bitmap_a;	//ports 0000 to 7fff
-		unsigned long bitmap_a_paddr;
-		unsigned long io_bitmap_b;	//ports 8000 to ffff
-		unsigned long bitmap_b_paddr; }
-		io_bitmap_addrs;
-
-	struct {
-		unsigned long tsc_offset;
-		unsigned long tsc_multiplier; }
-		tsc_fields;
-
-	struct {
-		unsigned long cr0_mask;
-		unsigned long cr0_shadow;
-		unsigned long cr4_mask;
-		unsigned long cr4_shadow; }
-		cr_masks_and_shadows;
-
-	//read ia32_vmx_misc for supported count
-	struct {
-		unsigned int cr3_target_count;
-		unsigned long cr3_target_0;
-		unsigned long cr3_target_1;
-		unsigned long cr3_target_2;
-		unsigned long cr3_target_3; }
-		cr3_target_controls;
-
-	struct {
-		unsigned long apic_access_page;
-		unsigned long apic_access_paddr;
-
-		unsigned long virtual_apic_page;
-		unsigned long virtual_apic_paddr;
-
-		unsigned int tpr_threshold;
-
-		unsigned long eoi_exit0;
-		unsigned long eoi_exit1;
-		unsigned long eoi_exit2;
-		unsigned long eoi_exit3;
-
-		unsigned short posted_interrupt_notification_vector;
-		unsigned long posted_interrupt_descriptor_addr; }
-		apic_virtualization_controls;
-
-	struct {
-		//read bitmap for low msrs	00000000 to 00001fff
-		//read bitmap for high msrs	c0000000 to c0001fff
-		//write bitmap for low msrs
-		//write bitmap for high msrs
-		unsigned long msr_bitmap_addr;
-		unsigned long msr_bitmap_paddr; }
-		msr_bitmap_controls;
-
-	unsigned long executive_vmcs_pointer;
-
-	//consult ia32_vmx_ept_vpid_cap
-	//to determine whether accessed/
-	//dirty flags are supported
-	eptp_t eptp;
-
-	unsigned short virtual_processor_identifier;
-
-	struct {
-		unsigned int ple_gap;
-		unsigned int ple_window; }
-	pause_loop_exiting_controls;
-
-	vm_function_controls_t vm_function_controls;
-
-	struct {
-		unsigned long vmread_bitmap_addr;
-		unsigned long vmread_bitmap_paddr;
-		unsigned long vmwrite_bitmap_addr;
-		unsigned long vmwrite_bitmap_paddr; }
-	vmcs_shadowing_bitmaps;
-
-	unsigned long encls_exiting_bitmap;
-	
-	unsigned long page_modification_log;			//paddr?
-	
-	struct {
-		unsigned long virtualization_exception_info_area;
-		unsigned long virtualization_exception_info_paddr;
-		unsigned short eptp_index; }
-	virtualization_exception_controls;
-	
-	unsigned long xss_exiting_bitmap;
-} vm_execution_controls;
-
-
-
-
-
-
 //for reserved bits, consult
 //ia32_vmx_exit_ctls
 //ia32_vmx_true_exit_ctls
@@ -806,29 +564,6 @@ typedef union __attribute__((packed)) {
 	unsigned int val;
 } vm_exit_controls_t;
 
-typedef struct {
-	vm_exit_controls_t vm_exit_controls;
-	
-	struct {
-		struct __attribute__((packed)) {
-			unsigned int msr_index;
-			unsigned int rsv_32_63;
-			unsigned long msr_data; }
-			msr_entry;
-		//ia32_vmx_misc gives maximum supported count
-		//section 27.4
-		unsigned int msr_store_count;
-		unsigned long msr_store_addr;
-		unsigned long msr_store_paddr;
-		
-		//section 27.6
-		unsigned int msr_load_count;
-		unsigned long msr_load_addr;
-		unsigned long msr_load_paddr;
-	} msr_entry_controls;
-} vm_exit_control_fields;
-
-
 //for reserved bits, consult
 //ia32_vmx_entry_ctls
 //ia32_vmx_true_entry_ctls
@@ -849,42 +584,6 @@ typedef union __attribute__((packed)) {
 		unsigned int rsv_18_31:14; };
 	unsigned int val;
 } vm_entry_controls_t;
-
-typedef struct {
-	vm_entry_controls_t vm_entry_controls;
-	
-	struct {
-		//ia32_vmx_misc gives maximum supported count
-		//section 26.4
-		unsigned int msr_load_count;
-		unsigned long msr_load_addr;
-		unsigned long msr_load_paddr;
-	} msr_entry_controls;
-	
-	struct {
-		struct __attribute__((packed)) {
-			unsigned int vector:8;
-			unsigned int type:3;
-				//external interrupt:	0
-				//nmi:			2
-				//hardware exception:	3
-				//software interrupt:	4
-				//privilege sw except:	5
-				//software exception:	6
-				//other event:		7
-			unsigned int deliver_error_code:1;
-			unsigned int rsv_12_30:19;	//set to 0??
-			unsigned int valid:1; }
-			vm_entry_interruption_info;
-		
-		unsigned int vm_entry_exception_error_code;
-		unsigned int vm_entry_instruction_length;
-	} event_injection_entry_controls;
-} vm_entry_control_fields;
-
-
-
-
 
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
@@ -928,76 +627,67 @@ typedef union __attribute__((packed)) {
 		unsigned int valid:1; };
 	unsigned int val;
 } idt_vectoring_info_t;
+////////////////////////////////////////////////////////
 
-typedef struct {
-	struct {
-		exit_reason_t exit_reason;
-		unsigned long exit_qualification;	//section 27.2.1
-		unsigned long guest_linear_addr;
-		unsigned long guest_paddr;
-	} basic_vm_exit_info;
+////////////////////////////////////////////////////////
+#define get_access_rights(access_rights, selector, gdt_base) 					\
+if(!selector) {											\
+	access_rights.val=0;									\
+	access_rights.unusable=1; }								\
+else {												\
+	__asm__ __volatile__("lar %%ax, %%eax":"=a"(access_rights.val):"a"(selector):"memory");	\
+	access_rights.val>>=8;									\
+	access_rights.rsv_8_11=0;								\
+	access_rights.rsv_17_31=0; }
 	
-	struct {
-		vm_exit_interruption_info_t vm_exit_interruption_info;
-
-		unsigned int interruption_error_code;
-	} vector_vm_exit_info;
+#define get_lim_val(lim, selector, gdt_base)						\
+if(!selector) {										\
+	lim=0; }									\
+else {											\
+	__asm__ __volatile__("lsl %%ax, %%rax":"=a"(lim):"a"(selector):"memory"); }
 	
-	struct {
-		idt_vectoring_info_t idt_vectoring_info;
-		unsigned int idt_vectoring_error_code;
-	} event_delivery_vm_exit_info;
-	
-	struct {
-		unsigned int instruction_length;
-		unsigned int instruction_info;	//27.2.4
-		
-		unsigned long io_rcx;
-		unsigned long io_rsi;
-		unsigned long io_rdi;
-		unsigned long io_rip;
-	} instruction_execution_vm_exit_info;
-	
-	unsigned int vm_instruction_error_field;
-} vm_exit_information_fields;
-
+#define get_base(base, selector, gdt_base)					\
+if(!selector) {									\
+	base=0; }								\
+else {										\
+	base=0									\
+		| (*(unsigned short *)(gdt_base+selector+2))			\
+		| ((*(unsigned int *)(gdt_base+selector+4))&0xff)<<16		\
+		| ((*(unsigned int *)(gdt_base+selector+4))&0xff000000); }
 ////////////////////////////////////////////////////////
 
 
 ////////////////////////////////////////////////////////
-//////////////////////////////
-//write ia32_vmx_basic.revision_identifier
-//disable shadow vmcs (bit 31)
-//check ia32_vmx_ept_vpid_cap for accessed/dirty
-//check bit 55 of ia32_vmx_basic to see
-//	if true_..._ctls are allowed
-//vmfunc rsved bits
-//////////////////////////////
+#define ec_vmwrite(src, code, lhf, error_code)							\
+VMWRITE(src, code, lhf);									\
+if(!VMsucceed(lhf)) {										\
+	if(VMfailValid(lhf)) {									\
+		VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);					\
+		printk("[%02d] vmwrite failed with error code %ld\n", core, error_code); }	\
+	else if(VMfailInvalid(lhf)) {								\
+		printk("[%02d] vmwrite failed with invalid region\n", core); }			\
+	errors[core]=-EINVAL;									\
+	return; }
+////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////
+extern state_t *state;
+extern int *errors;
+extern void host_stub(void);
+extern void guest_stub(void);
 
 //assumes vmcs already current
-int initialize_vmcs(eptp_t *eptp_p, unsigned long guest_rip, unsigned long host_rip, unsigned long guest_rsp, unsigned long host_rsp) {
-	printk("[*]  initializing vmcs control fields\n");
+int fill_core_vmcs(void *) {
+	int core=smp_processor_id();
+	errors[core]=0;
 	
 	///////////////////////////
 	
-	msr_t msr;
+	msr_t msr, msr2, msr3;
 	lhf_t lhf;
 	unsigned long error_code;
 
-//need to get error field from current vmcs
-#define ERROR_CHECK(lhf, instruction, errno, error_code) \
-if(!VMsucceed(lhf)) { \
-	if(VMfailValid(lhf)) { \
-		VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf); \
-		printk("[*]  %s failed with error code %ld\n\n", #instruction, error_code); } \
-	else if(VMfailInvalid(lhf)) { \
-		printk("[*]  %s failed with invalid region\n\n", #instruction); } \
-	if(errno) { \
-		return -errno; }}
-
-#define EC_VMWRITE(src, code, lhf, error_code) \
-	VMWRITE(src, code, lhf); \
-	ERROR_CHECK(lhf, vmwrite, EINVAL, error_code);
 	
 	pin_based_execution_controls_t pin_x_ctls;
 	primary_cpu_based_execution_controls_t pri_cpu_x_ctls;
@@ -1036,154 +726,96 @@ if(!VMsucceed(lhf)) { \
 
 	
 	READ_MSR(msr, IA32_VMX_BASIC);
-	printk("[**] ia32_vmx_basic:\t\t\t0x%lx\n", msr.val);
-	printk("[**] preemption timer tick:tsc tick:\t%d\n", 1<<msr.vmx_misc.vpt_tsc_relationship);
 	int true_flag=msr.vmx_basic.vmx_controls_clear;
-	printk("[**] %susing TRUE ctl msrs\n", true_flag ? "":"not ");
-	
-/*#define GET_ACCESS_RIGHTS(access_rights, selector, gdt_base) \
-if(!selector) { \
-	access_rights.val=0; \
-	access_rights.unusable=1; } \
-else { \
-	access_rights.val=\
-		((*(unsigned int *)(gdt_base+selector+4))&0x00ffff00)>>8; \
-	access_rights.rsv_8_11=0; \
-	access_rights.rsv_17_31=0; } \
-printk("[**]\trights:\t0x%x\n", access_rights.val)*/
-	
-#define GET_ACCESS_RIGHTS(access_rights, selector, gdt_base) \
-if(!selector) { \
-	access_rights.val=0; \
-	access_rights.unusable=1; } \
-else { \
-	__asm__ __volatile__("lar %%ax, %%eax":"=a"(access_rights.val):"a"(selector):"memory"); \
-	access_rights.val>>=8; \
-	access_rights.rsv_8_11=0; \
-	access_rights.rsv_17_31=0; } \
-printk("[**]\trights:\t0x%x\n", access_rights.val)
-
-/*#define GET_LIM_VAL(lim, selector, gdt_base) \
-if(!selector) { \
-	lim=0; } \
-else { \
-	lim=0 \
-		| (*(unsigned short *)(gdt_base+selector)) \
-		| ((*(unsigned int *)(gdt_base+selector+4))&0x000f0000); \
-	if( (*(unsigned int *)(gdt_base+selector+4)) & 0x00800000 ) { \
-		lim<<=12; \
-		lim|=0xfff; }} \
-printk("[**]\tlim:\t0x%x\n", lim)*/
-	
-#define GET_LIM_VAL(lim, selector, gdt_base) \
-if(!selector) { \
-	lim=0; } \
-else { \
-	__asm__ __volatile__("lsl %%ax, %%rax":"=a"(lim):"a"(selector):"memory"); } \
-printk("[**]\tlim:\t0x%x\n", lim)
-	
-#define GET_BASE(base, selector, gdt_base) \
-if(!selector) { \
-	base=0; } \
-else { \
-	base=0 \
-		| (*(unsigned short *)(gdt_base+selector+2)) \
-		| ((*(unsigned int *)(gdt_base+selector+4))&0xff)<<16 \
-		| ((*(unsigned int *)(gdt_base+selector+4))&0xff000000); } \
-printk("[**]\tbase:\t0x%lx\n", base)
-
+	printk("[%02d] ia32_vmx_basic:\t\t\t0x%lx\t[%susing TRUE ctls]\n", core, msr.val, true_flag ? "":"not ");
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PINBASED_CTLS:IA32_VMX_PINBASED_CTLS);
 	pin_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
-	printk("[**] pinbased controls:\t\t\t0x%08x\n", pin_x_ctls.val);
 	if( (pin_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pin_x_ctls.val ) {
-		printk("[*]  unsupported bit set\n\n");
-		return -EINVAL; }
-	EC_VMWRITE(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
-	/*if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			//should get error field from current vmcs
-			printk("[*]  vmwrite failed with valid region\n\n"); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmwrite failed with invalid region\n\n"); }
-		return -EINVAL; }*/
+		printk("[%02d] pinbased controls:\t\t\t0x%08x\t[unsupported bit set]\n", core, pin_x_ctls.val);
+		errors[core]=-EINVAL;
+		return; }
+	printk("[%02d] pinbased controls:\t\t\t0x%08x\t[okay]\n", core, pin_x_ctls.val);
+	ec_vmwrite(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PROCBASED_CTLS:IA32_VMX_PROCBASED_CTLS);
 	pri_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
-	printk("[**] primary cpu based controls:\t0x%08x\n", pri_cpu_x_ctls.val);
 	if( (pri_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pri_cpu_x_ctls.val ) {
-		printk("[*]  unsupported bit set\n\n");
-		return -EINVAL; }
-	EC_VMWRITE(pri_cpu_x_ctls.val, PRIMARY_CPU_BASED_X_CTLS, lhf, error_code);
+		printk("[%02d] primary cpu based controls:\t0x%08x\t[unsupported bit set]\n", core, pri_cpu_x_ctls.val);
+		errors[core]=-EINVAL;
+		return; }
+	printk("[%02d] primary cpu based controls:\t0x%08x\t[okay]\n", core, pri_cpu_x_ctls.val);
+	ec_vmwrite(pri_cpu_x_ctls.val, PRIMARY_CPU_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, IA32_VMX_PROCBASED_CTLS2);
 	sec_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;	//uneccessary
-	printk("[**] secondary cpu based controls:\t0x%08x\n", sec_cpu_x_ctls.val);
 	if( (sec_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=sec_cpu_x_ctls.val ) {
-		printk("[*]  unsupported bit set\n\n");
-		return -EINVAL; }
-	EC_VMWRITE(sec_cpu_x_ctls.val, SECONDARY_CPU_BASED_X_CTLS, lhf, error_code);
+		printk("[%02d] secondary cpu based controls:\t0x%08x\t[unsupported bit set]\n", core, sec_cpu_x_ctls.val);
+		errors[core]=-EINVAL;
+		return; }
+	printk("[%02d] secondary cpu based controls:\t0x%08x\t[okay]\n", core, sec_cpu_x_ctls.val);
+	ec_vmwrite(sec_cpu_x_ctls.val, SECONDARY_CPU_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_EXIT_CTLS:IA32_VMX_EXIT_CTLS);
 	exit_ctls.val|=msr.vmx_ctls.allowed_zeroes;
-	printk("[**] vm exit controls:\t\t\t0x%08x\n", exit_ctls.val);
 	if( (exit_ctls.val & msr.vmx_ctls.allowed_ones)!=exit_ctls.val ) {
-		printk("[*]  unsupported bit set\n\n");
-		return -EINVAL; }
-	EC_VMWRITE(exit_ctls.val, EXIT_CTLS, lhf, error_code);
+		printk("[%02d] vm exit controls:\t\t\t0x%08x\t[unsupported bit set]\n", core, exit_ctls.val);
+		errors[core]=-EINVAL;
+		return; }
+	printk("[%02d] vm exit controls:\t\t\t0x%08x\t[okay]\n", core, exit_ctls.val);
+	ec_vmwrite(exit_ctls.val, EXIT_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_ENTRY_CTLS:IA32_VMX_ENTRY_CTLS);
 	entry_ctls.val|=msr.vmx_ctls.allowed_zeroes;
-	printk("[**] vm entry controls:\t\t\t0x%08x\n", entry_ctls.val);
 	if( (entry_ctls.val & msr.vmx_ctls.allowed_ones)!=entry_ctls.val ) {
-		printk("[*]  unsupported bit set\n\n");
-		return -EINVAL; }
-	EC_VMWRITE(entry_ctls.val, ENTRY_CTLS, lhf, error_code);
-	
-	//vmx_misc preemption timer
-	
-	printk("[*]  initialization complete\n\n");
+		printk("[%02d] vm entry controls:\t\t\t0x%08x\t[unsupported bit set]\n", core, entry_ctls.val);
+		errors[core]=-EINVAL;
+		return; }
+	printk("[%02d] vm entry controls:\t\t\t0x%08x\t[okay]\n", core, entry_ctls.val);
+	ec_vmwrite(entry_ctls.val, ENTRY_CTLS, lhf, error_code);
 	
 	//////////////////////////
 	//////////////////////////
-	
-	printk("[*]  initializing vmcs registers\n");
-	unsigned long reg;
+	unsigned long reg, reg2, reg3;
 	
 	__asm__ __volatile__("mov %%cr0, %0":"=r"(reg)::"memory");
-	printk("[**] cr0:\t0x%lx\n", reg);
 	READ_MSR(msr, IA32_VMX_CR0_FIXED0);
 	if( (reg | msr.val)!=reg ) {
-		printk("[*]  unsupported bit clear\n");
-		return -EOPNOTSUPP; }
+		printk("[%02d] cr0:\t0x%lx\t[unsupported bit clear]\n", core, reg);
+		errors[core]=-EINVAL;
+		return; }
 	READ_MSR(msr, IA32_VMX_CR0_FIXED1);
 	if( (reg & msr.val)!=reg ) {
-		printk("[*]  unsupported bit set\n");
-		return -EINVAL; }
-	EC_VMWRITE(reg, GUEST_CR0, lhf, error_code);
-	EC_VMWRITE(reg, HOST_CR0, lhf, error_code);
-	
-	__asm__ __volatile__("mov %%cr3, %0":"=r"(reg)::"memory");
-	printk("[**] cr3:\t0x%lx\n", reg);
-	EC_VMWRITE(reg, GUEST_CR3, lhf, error_code);
-	EC_VMWRITE(reg, HOST_CR3, lhf, error_code);
+		printk("[%02d] cr0:\t0x%lx\t[unsupported bit set]\n", core, reg);
+		errors[core]=-EINVAL;
+		return; }
+	printk("[%02d] cr0:\t0x%lx\t[okay]\n", core, reg);
+	ec_vmwrite(reg, GUEST_CR0, lhf, error_code);
+	ec_vmwrite(reg, HOST_CR0, lhf, error_code);
 	
 	__asm__ __volatile__("mov %%cr4, %0":"=r"(reg)::"memory");
-	printk("[**] cr4:\t0x%lx\n", reg);
 	READ_MSR(msr, IA32_VMX_CR4_FIXED0);
 	if( (reg | msr.val)!=reg ) {
-		printk("[*]  unsupported bit clear\n");
-		return -EINVAL; }
+		printk("[%02d] cr4:\t0x%lx\t[unsupported bit clear]\n", core, reg);
+		errors[core]=-EINVAL;
+		return; }
 	READ_MSR(msr, IA32_VMX_CR4_FIXED1);
 	if( (reg & msr.val)!=reg ) {
-		printk("[*]  unsupported bit set\n");
-		return -EINVAL; }
-	EC_VMWRITE(reg, GUEST_CR4, lhf, error_code);
-	EC_VMWRITE(reg, HOST_CR4, lhf, error_code);
+		printk("[%02d] cr4:\t0x%lx\t[unsupported bit set]\n", core, reg);
+		errors[core]=-EINVAL;
+		return; }
+	printk("[%02d] cr4:\t0x%lx\t[okay]\n", core, reg);
+	ec_vmwrite(reg, GUEST_CR4, lhf, error_code);
+	ec_vmwrite(reg, HOST_CR4, lhf, error_code);
 	
-	__asm__ __volatile__("mov %%dr7, %0":"=r"(reg)::"memory");
-	printk("[**] dr7:\t0x%lx\n", reg);
-	EC_VMWRITE(reg, GUEST_DR7, lhf, error_code);
+	__asm__ __volatile__("mov %%cr3, %0":"=r"(reg)::"memory");
+	ec_vmwrite(reg, GUEST_CR3, lhf, error_code);
+	ec_vmwrite(reg, HOST_CR3, lhf, error_code);
+	__asm__ __volatile__("mov %%dr7, %0":"=r"(reg2)::"memory");
+	ec_vmwrite(reg2, GUEST_DR7, lhf, error_code);
+	__asm__ __volatile__("pushf; pop %0":"=r"(reg3)::"memory");
+	ec_vmwrite(reg3, GUEST_RFLAGS, lhf, error_code);
+	printk("[%02d] cr3: 0x%lx\t\tdr7: 0x%lx\t\trflags: 0x%lx\n", core, reg, reg2, reg3);
 	
 	/*__asm__ __volatile__("mov %%rsp, %0":"=r"(reg)::"memory");
 	printk("[**] rsp:\t0x%lx\n", reg);
@@ -1195,36 +827,32 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	EC_VMWRITE(reg, GUEST_RIP, lhf, error_code);
 	//////EXIT HANDLER*/
 	
-	printk("[**] guest rip:\t0x%lx\n", guest_rip);
-	EC_VMWRITE(guest_rip, GUEST_RIP, lhf, error_code);
-	printk("[**] host rip:\t0x%lx\n", host_rip);
-	EC_VMWRITE(host_rip, HOST_RIP, lhf, error_code);
-	printk("[**] guest rsp:\t0x%lx\n", guest_rsp);
-	EC_VMWRITE(guest_rsp, GUEST_RSP, lhf, error_code);
-	printk("[**] host rsp:\t0x%lx\n", host_rsp);
-	EC_VMWRITE(host_rsp, HOST_RSP, lhf, error_code);
+	reg=(unsigned long)&host_stub;
+	reg2=state[core].vmm_stack_top;
+	ec_vmwrite(reg, HOST_RIP, lhf, error_code);
+	ec_vmwrite(reg2, HOST_RSP, lhf, error_code);
+	printk("[%02d] host rip:  0x%lx\thost rsp:  0x%lx\n", core, reg, reg2);
 	
-	
-	__asm__ __volatile__("pushf; pop %0":"=r"(reg)::"memory");
-	printk("[**] rflags:\t0x%lx\n", reg);
-	EC_VMWRITE(reg, GUEST_RFLAGS, lhf, error_code);
-	
+	reg=(unsigned long)&guest_stub;
+	reg2=state[core].vmm_stack_top;
+	ec_vmwrite(reg, GUEST_RIP, lhf, error_code);
+	ec_vmwrite(reg2, GUEST_RSP, lhf, error_code);
+	printk("[%02d] guest rip: 0x%lx\tguest rsp: 0x%lx\n", core, reg, reg2);
+
 	
 	dtr_t dtr;
 	
 	__asm__ __volatile__("sidt %0"::"m"(dtr):"memory");
-	printk("[**] idtr:\t0x%016lx\n", dtr.base);
-	printk("[**]\tlim:\t0x%x\n", dtr.lim_val);
-	EC_VMWRITE(dtr.lim_val, GUEST_IDTR_LIMIT, lhf, error_code);
-	EC_VMWRITE(dtr.base, GUEST_IDTR_BASE, lhf, error_code);
-	EC_VMWRITE(dtr.base, HOST_IDTR_BASE, lhf, error_code);
+	ec_vmwrite(dtr.lim_val, GUEST_IDTR_LIMIT, lhf, error_code);
+	ec_vmwrite(dtr.base, GUEST_IDTR_BASE, lhf, error_code);
+	ec_vmwrite(dtr.base, HOST_IDTR_BASE, lhf, error_code);
+	printk("[%02d] idtr: 0x%lx\tlim: 0x%x\n", core, dtr.base, dtr.lim_val);
 	
 	__asm__ __volatile__("sgdt %0"::"m"(dtr):"memory");
-	printk("[**] gdtr:\t0x%016lx\n", dtr.base);
-	printk("[**]\tlim:\t0x%x\n", dtr.lim_val);
-	EC_VMWRITE(dtr.lim_val, GUEST_GDTR_LIMIT, lhf, error_code);
-	EC_VMWRITE(dtr.base, GUEST_GDTR_BASE, lhf, error_code);
-	EC_VMWRITE(dtr.base, HOST_GDTR_BASE, lhf, error_code);
+	ec_vmwrite(dtr.lim_val, GUEST_GDTR_LIMIT, lhf, error_code);
+	ec_vmwrite(dtr.base, GUEST_GDTR_BASE, lhf, error_code);
+	ec_vmwrite(dtr.base, HOST_GDTR_BASE, lhf, error_code);
+	printk("[%02d] gdtr: 0x%lx\tlim: 0x%x\n", core, dtr.base, dtr.lim_val);
 	
 	unsigned long base;
 	unsigned int lim;
@@ -1233,8 +861,8 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	unsigned short tr=0;
 	__asm__ __volatile__("str %0"::"m"(tr):"memory");
 	printk("[**] tr:\t0x%04x\n", tr);
-	EC_VMWRITE(tr, GUEST_TR_SELECTOR, lhf, error_code);
-	EC_VMWRITE(tr, HOST_TR_SELECTOR, lhf, error_code);
+	ec_vmwrite(tr, GUEST_TR_SELECTOR, lhf, error_code);
+	ec_vmwrite(tr, HOST_TR_SELECTOR, lhf, error_code);
 	/*access_rights=(access_rights_t) {{
 		.segment_type=((tssd_t *)(dtr.base+tr))->type,
 		.dpl=((tssd_t *)(dtr.base+tr))->dpl,
@@ -1242,123 +870,135 @@ printk("[**]\tbase:\t0x%lx\n", base)
 		.avl=((tssd_t *)(dtr.base+tr))->avl,
 		.g=((tssd_t *)(dtr.base+tr))->granularity }};
 	printk("[**]\trights:\t0x%x\n", access_rights.val);*/
-	GET_ACCESS_RIGHTS(access_rights, tr, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_TR_ACCESS_RIGHTS, lhf, error_code);
+	get_access_rights(access_rights, tr, dtr.base);
+	ec_vmwrite(access_rights.val, GUEST_TR_ACCESS_RIGHTS, lhf, error_code);
 	/*lim=0
 		| ((int)(((tssd_t *)(dtr.base+tr))->seg_lim_0_15))
 		| ((int)(((tssd_t *)(dtr.base+tr))->seg_lim_16_19)<<16);
 	lim=((tssd_t *)(dtr.base+tr))->granularity ? ((lim<<12)|0xfff):lim;
 	printk("[**]\tlim:\t0x%x\n", lim);*/
-	GET_LIM_VAL(lim, tr, dtr.base);
-	EC_VMWRITE(lim, GUEST_TR_LIMIT, lhf, error_code);
+	get_lim_val(lim, tr, dtr.base);
+	ec_vmwrite(lim, GUEST_TR_LIMIT, lhf, error_code);
 	base=0
 		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_0_15))
 		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_16_23)<<16)
 		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_24_31)<<24)
 		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_32_63)<<32);
 	printk("[**]\tbase:\t0x%lx\n", base);
-	EC_VMWRITE(base, GUEST_TR_BASE, lhf, error_code);
-	EC_VMWRITE(base, HOST_TR_BASE, lhf, error_code);
-
+	ec_vmwrite(base, GUEST_TR_BASE, lhf, error_code);
+	ec_vmwrite(base, HOST_TR_BASE, lhf, error_code);
+	printk("[%02d] tr:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       tr, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("sldt %0"::"m"(tr):"memory");
-	printk("[**] ldtr:\t0x%04x\n", tr);
-	EC_VMWRITE(tr, GUEST_LDTR_SELECTOR, lhf, error_code);
-	GET_ACCESS_RIGHTS(access_rights, tr, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_LDTR_ACCESS_RIGHTS, lhf, error_code);
-	GET_LIM_VAL(lim, tr, dtr.base);
-	EC_VMWRITE(lim, GUEST_LDTR_LIMIT, lhf, error_code);
-	GET_BASE(base, tr, dtr.base);
-	EC_VMWRITE(base, GUEST_LDTR_BASE, lhf, error_code);
+	ec_vmwrite(tr, GUEST_LDTR_SELECTOR, lhf, error_code);
+	get_access_rights(access_rights, tr, dtr.base);
+	ec_vmwrite(access_rights.val, GUEST_LDTR_ACCESS_RIGHTS, lhf, error_code);
+	get_lim_val(lim, tr, dtr.base);
+	ec_vmwrite(lim, GUEST_LDTR_LIMIT, lhf, error_code);
+	get_base(base, tr, dtr.base);
+	ec_vmwrite(base, GUEST_LDTR_BASE, lhf, error_code);
+	printk("[%02d] ldtr: 0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       tr, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%cs, %0":"=r"(reg)::"memory");
-	printk("[**] cs:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_CS_SELECTOR, lhf, error_code);
-	EC_VMWRITE(reg, HOST_CS_SELECTOR, lhf, error_code);
-	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_CS_ACCESS_RIGHTS, lhf, error_code);
-	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_CS_LIMIT, lhf, error_code);
-	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(base, GUEST_CS_BASE, lhf, error_code);
+	ec_vmwrite(reg, GUEST_CS_SELECTOR, lhf, error_code);
+	ec_vmwrite(reg, HOST_CS_SELECTOR, lhf, error_code);
+	get_access_rights(access_rights, reg, dtr.base);
+	ec_vmwrite(access_rights.val, GUEST_CS_ACCESS_RIGHTS, lhf, error_code);
+	get_lim_val(lim, reg, dtr.base);
+	ec_vmwrite(lim, GUEST_CS_LIMIT, lhf, error_code);
+	get_base(base, reg, dtr.base);
+	ec_vmwrite(base, GUEST_CS_BASE, lhf, error_code);
+	printk("[%02d] cs:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%ss, %0":"=r"(reg)::"memory");
 	printk("[**] ss:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_SS_SELECTOR, lhf, error_code);
-	EC_VMWRITE(reg, HOST_SS_SELECTOR, lhf, error_code);
-	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_SS_ACCESS_RIGHTS, lhf, error_code);
-	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_SS_LIMIT, lhf, error_code);
-	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(base, GUEST_SS_BASE, lhf, error_code);
+	ec_vmwrite(reg, GUEST_SS_SELECTOR, lhf, error_code);
+	ec_vmwrite(reg, HOST_SS_SELECTOR, lhf, error_code);
+	get_access_rights(access_rights, reg, dtr.base);
+	ec_vmwrite(access_rights.val, GUEST_SS_ACCESS_RIGHTS, lhf, error_code);
+	get_lim_val(lim, reg, dtr.base);
+	ec_vmwrite(lim, GUEST_SS_LIMIT, lhf, error_code);
+	get_base(base, reg, dtr.base);
+	ec_vmwrite(base, GUEST_SS_BASE, lhf, error_code);
+	printk("[%02d] ss:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%ds, %0":"=r"(reg)::"memory");
 	printk("[**] ds:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_DS_SELECTOR, lhf, error_code);
-	EC_VMWRITE(reg, HOST_DS_SELECTOR, lhf, error_code);
-	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_DS_ACCESS_RIGHTS, lhf, error_code);
-	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_DS_LIMIT, lhf, error_code);
-	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(base, GUEST_DS_BASE, lhf, error_code);
+	ec_vmwrite(reg, GUEST_DS_SELECTOR, lhf, error_code);
+	ec_vmwrite(reg, HOST_DS_SELECTOR, lhf, error_code);
+	get_access_rights(access_rights, reg, dtr.base);
+	ec_vmwrite(access_rights.val, GUEST_DS_ACCESS_RIGHTS, lhf, error_code);
+	get_lim_val(lim, reg, dtr.base);
+	ec_vmwrite(lim, GUEST_DS_LIMIT, lhf, error_code);
+	get_base(base, reg, dtr.base);
+	ec_vmwrite(base, GUEST_DS_BASE, lhf, error_code);
+	printk("[%02d] ds:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%es, %0":"=r"(reg)::"memory");
 	printk("[**] es:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_ES_SELECTOR, lhf, error_code);
-	EC_VMWRITE(reg, HOST_ES_SELECTOR, lhf, error_code);
-	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_ES_ACCESS_RIGHTS, lhf, error_code);
-	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_ES_LIMIT, lhf, error_code);
-	GET_BASE(base, reg, dtr.base);
-	EC_VMWRITE(base, GUEST_ES_BASE, lhf, error_code);
+	ec_vmwrite(reg, GUEST_ES_SELECTOR, lhf, error_code);
+	ec_vmwrite(reg, HOST_ES_SELECTOR, lhf, error_code);
+	get_access_rights(access_rights, reg, dtr.base);
+	ec_vmwrite(access_rights.val, GUEST_ES_ACCESS_RIGHTS, lhf, error_code);
+	get_lim_val(lim, reg, dtr.base);
+	ec_vmwrite(lim, GUEST_ES_LIMIT, lhf, error_code);
+	get_base(base, reg, dtr.base);
+	ec_vmwrite(base, GUEST_ES_BASE, lhf, error_code);
+	printk("[%02d] es:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%fs, %0":"=r"(reg)::"memory");
 	printk("[**] fs:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_FS_SELECTOR, lhf, error_code);
-	EC_VMWRITE(reg, HOST_FS_SELECTOR, lhf, error_code);
-	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_FS_ACCESS_RIGHTS, lhf, error_code);
-	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_FS_LIMIT, lhf, error_code);
+	ec_vmwrite(reg, GUEST_FS_SELECTOR, lhf, error_code);
+	ec_vmwrite(reg, HOST_FS_SELECTOR, lhf, error_code);
+	get_access_rights(access_rights, reg, dtr.base);
+	ec_vmwrite(access_rights.val, GUEST_FS_ACCESS_RIGHTS, lhf, error_code);
+	get_lim_val(lim, reg, dtr.base);
+	ec_vmwrite(lim, GUEST_FS_LIMIT, lhf, error_code);
 	READ_MSR(msr, IA32_FS_BASE);
 	base=msr.val;
 	printk("[**]\tbase:\t0x%lx\n", base);
-	EC_VMWRITE(base, GUEST_FS_BASE, lhf, error_code);
-	EC_VMWRITE(base, HOST_FS_BASE, lhf, error_code);
+	ec_vmwrite(base, GUEST_FS_BASE, lhf, error_code);
+	ec_vmwrite(base, HOST_FS_BASE, lhf, error_code);
+	printk("[%02d] fs:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%gs, %0":"=r"(reg)::"memory");
 	printk("[**] gs:\t0x%02lx\n", reg);
-	EC_VMWRITE(reg, GUEST_GS_SELECTOR, lhf, error_code);
-	EC_VMWRITE(reg, HOST_GS_SELECTOR, lhf, error_code);
-	GET_ACCESS_RIGHTS(access_rights, reg, dtr.base);
-	EC_VMWRITE(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf, error_code);
-	GET_LIM_VAL(lim, reg, dtr.base);
-	EC_VMWRITE(lim, GUEST_GS_LIMIT, lhf, error_code);
+	ec_vmwrite(reg, GUEST_GS_SELECTOR, lhf, error_code);
+	ec_vmwrite(reg, HOST_GS_SELECTOR, lhf, error_code);
+	get_access_rights(access_rights, reg, dtr.base);
+	ec_vmwrite(access_rights.val, GUEST_GS_ACCESS_RIGHTS, lhf, error_code);
+	get_lim_val(lim, reg, dtr.base);
+	ec_vmwrite(lim, GUEST_GS_LIMIT, lhf, error_code);
 	READ_MSR(msr, IA32_GS_BASE);
 	base=msr.val;
 	printk("[**]\tbase:\t0x%lx\n", base);
-	EC_VMWRITE(base, GUEST_GS_BASE, lhf, error_code);
-	EC_VMWRITE(base, HOST_GS_BASE, lhf, error_code);
+	ec_vmwrite(base, GUEST_GS_BASE, lhf, error_code);
+	ec_vmwrite(base, HOST_GS_BASE, lhf, error_code);
+	printk("[%02d] gs:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       reg, access_rights.val, lim, base);
 	
 	
 	/*READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
-	printk("[**] eptp:\t0x%lx\n", eptp_p->val);
+	printk("[**] eptp:\t0x%lx\n", state[core].ept_data.eptp.val);
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
 		printk("[**] accessed/dirty ept bits not supported\n");
 		//return -EOPNOTSUPP; }
 		eptp_p->accessed_dirty_control=0; }
 	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);*/
 	
-	printk("[**] vmcs link:\t0x%lx", 0xffffffffffffffff);
-	EC_VMWRITE(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
+	printk("[%02d] vmcs link:\t0x%lx", core, 0xffffffffffffffff);
+	ec_vmwrite(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
 
-	printk("[**] msrs:\n");
+
 	READ_MSR(msr, IA32_DEBUGCTL);
-	printk("[**]\tdbgctl:\t0x%lx\n", msr.val);
-	EC_VMWRITE(msr.val, GUEST_IA32_DEBUGCTL_F, lhf, error_code);
+	ec_vmwrite(msr.val, GUEST_IA32_DEBUGCTL_F, lhf, error_code);
 	/*READ_MSR(msr, IA32_PERF_GLOBAL_CTRL);
 	printk("[**]\tpgc:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_PERF_GLOBAL_CTRL_F, lhf, error_code);
@@ -1367,10 +1007,11 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**]\tpat:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_PAT_F, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_PAT_F, lhf, error_code);*/
-	READ_MSR(msr, IA32_EFER);
-	printk("[**]\tefer:\t0x%lx\n", msr.val);
-	EC_VMWRITE(msr.val, GUEST_IA32_EFER_F, lhf, error_code);
-	EC_VMWRITE(msr.val, HOST_IA32_EFER_F, lhf, error_code);
+	READ_MSR(msr2, IA32_EFER);
+	ec_vmwrite(msr2.val, GUEST_IA32_EFER_F, lhf, error_code);
+	ec_vmwrite(msr2.val, HOST_IA32_EFER_F, lhf, error_code);
+	printk("[%02d] ia32_debugctl: 0x%lx\t\tia32_efer: 0x%lx\n",
+	       core, msr.val, msr2.val);
 	/*READ_MSR(msr, IA32_BNDCFGS);
 	EC_VMWRITE(msr.val, GUEST_IA32_BNDCFGS_F, lhf, error_code);*/
 	/*READ_MSR(msr, IA32_RTIT_CTL);
@@ -1386,140 +1027,19 @@ printk("[**]\tbase:\t0x%lx\n", base)
 	printk("[**]\tpkrs:\t0x%lx\n", msr.val);
 	EC_VMWRITE(msr.val, GUEST_IA32_PKRS_F, lhf, error_code);
 	EC_VMWRITE(msr.val, HOST_IA32_PKRS_F, lhf, error_code);*/
-	printk("[**] sysenter msrs:\n");
 	READ_MSR(msr, IA32_SYSENTER_CS);
-	printk("[**]\tcs:\t0x%lx\n", msr.val);
-	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_CS, lhf, error_code);
-	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_CS, lhf, error_code);
-	READ_MSR(msr, IA32_SYSENTER_ESP);
-	printk("[**]\tesp:\t0x%lx\n", msr.val);
-	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_ESP, lhf, error_code);
-	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_ESP, lhf, error_code);
-	READ_MSR(msr, IA32_SYSENTER_EIP);
-	printk("[**]\teip:\t0x%lx\n", msr.val);
-	EC_VMWRITE(msr.val, GUEST_IA32_SYSENTER_EIP, lhf, error_code);
-	EC_VMWRITE(msr.val, HOST_IA32_SYSENTER_EIP, lhf, error_code);
-	
-	printk("[*]  initialization complete\n\n");
-	
-	
-	//unsigned long field;
-/*#define DO(x) \
-VMREAD(field, x, lhf); \
-printk("[debug] %s:\t0x%lx\n", #x, field)*/
-/*#define DO(x) \
-VMREAD(field, x, lhf); \
-printk("[debug] %s:\t0x%x\n", #x, x)*/
-	/*DO(GUEST_ES_SELECTOR);
-	DO(GUEST_CS_SELECTOR);
-	DO(GUEST_SS_SELECTOR);
-	DO(GUEST_DS_SELECTOR);
-	DO(GUEST_FS_SELECTOR);
-	DO(GUEST_GS_SELECTOR);
-	DO(GUEST_LDTR_SELECTOR);
-	DO(GUEST_TR_SELECTOR);
-	DO(GUEST_IA32_DEBUGCTL_F);
-	DO(GUEST_IA32_PAT_F);
-	DO(GUEST_IA32_EFER_F);
-	DO(GUEST_ES_LIMIT);
-	DO(GUEST_CS_LIMIT);
-	DO(GUEST_SS_LIMIT);
-	DO(GUEST_DS_LIMIT);
-	DO(GUEST_FS_LIMIT);
-	DO(GUEST_GS_LIMIT);
-	DO(GUEST_LDTR_LIMIT);
-	DO(GUEST_TR_LIMIT);
-	DO(GUEST_GDTR_LIMIT);
-	DO(GUEST_IDTR_LIMIT);
-	DO(GUEST_ES_ACCESS_RIGHTS);
-	DO(GUEST_CS_ACCESS_RIGHTS);
-	DO(GUEST_SS_ACCESS_RIGHTS);
-	DO(GUEST_DS_ACCESS_RIGHTS);
-	DO(GUEST_FS_ACCESS_RIGHTS);
-	DO(GUEST_GS_ACCESS_RIGHTS);
-	DO(GUEST_LDTR_ACCESS_RIGHTS);
-	DO(GUEST_TR_ACCESS_RIGHTS);
-	DO(GUEST_INTERRUPTIBILITY_STATE);
-	DO(GUEST_IA32_SYSENTER_CS);
-	DO(GUEST_CR0);
-	DO(GUEST_CR3);
-	DO(GUEST_CR4);
-	DO(GUEST_ES_BASE);
-	DO(GUEST_CS_BASE);
-	DO(GUEST_SS_BASE);
-	DO(GUEST_DS_BASE);
-	DO(GUEST_FS_BASE);
-	DO(GUEST_GS_BASE);
-	DO(GUEST_LDTR_BASE);
-	DO(GUEST_TR_BASE);
-	DO(GUEST_GDTR_BASE);
-	DO(GUEST_IDTR_BASE);
-	DO(GUEST_DR7);
-	DO(GUEST_RSP);
-	DO(GUEST_RIP);
-	DO(GUEST_RFLAGS);
-	DO(GUEST_PENDING_DBG_EXCEPTIONS);
-	DO(GUEST_IA32_SYSENTER_ESP);
-	DO(GUEST_IA32_SYSENTER_EIP);
-	printk("\n");*/
-	
+	ec_vmwrite(msr.val, GUEST_IA32_SYSENTER_CS, lhf, error_code);
+	ec_vmwrite(msr.val, HOST_IA32_SYSENTER_CS, lhf, error_code);
+	READ_MSR(msr2, IA32_SYSENTER_ESP);
+	ec_vmwrite(msr2.val, GUEST_IA32_SYSENTER_ESP, lhf, error_code);
+	ec_vmwrite(msr2.val, HOST_IA32_SYSENTER_ESP, lhf, error_code);
+	READ_MSR(msr3, IA32_SYSENTER_EIP);
+	ec_vmwrite(msr3.val, GUEST_IA32_SYSENTER_EIP, lhf, error_code);
+	ec_vmwrite(msr3.val, HOST_IA32_SYSENTER_EIP, lhf, error_code);
+	printk("[%02d] sysenter_cs: 0x%lx\tsysenter_esp: 0x%lx\tsysenter_eip: 0x%lx\n",
+	       core, msr.val, msr2.val, msr3.val);
+
 	return 0; }
 	//////////////////////////
-	
-	
-	/*access_rights_t;
-	interruptibility_state_t;
-	pending_dbg_exceptions_t;
-	guest_interrupt_status_t;
-	
-	exception_bitmap_t;
-	
-	//////////////////////
-	//checks on vmx ctls
-	PIN_BASED_X_CTLS;	//2 MSRS
-	PRIMARY_CPU_BASED_X_CTLS;	//2 MSRS
-	if(primarycpuctls allow secondary) {
-		SECONDARY_CPU_BASED_X_CTLS; }	//1 MSR, reserved bits cleared
-	CR3_TARGET_COUNT<=4;	//ia32_vmx_misc
-	if(use_io_bitmaps) {
-		IO_BMP_A_F, IO_BMP_B_F page aligned; }
-	if(use_msr_bitmaps) {
-		MSR_BMP_ADDR_F page aligned; }
-	if(!use_tpr_shadow) {
-		!virtualize_x2apic_mode, !apic_register_virtualization, !virtual_interrupt_delivery; }
-	if(enable_ept) {
-		...;
-		check ia32_vmc_ept_vpid_cap before setting accessed_dirty!; }
-	
-	EXIT_CTLS;	//2 msrs?
-	if(!activate_vmx_preemption_timer) {
-		!save_vmx_preemption_timer_value; }
-	if(msr_store_count) {
-		//? ia32_lstar
-		must have !(msr_str_addr&0xffff); }
-	VMWRITE(0x50, HOST_CR0, lhf);
-	
-	ENTRY_CTLS;	//2 msrs?
-	interruption information field;
-	exception error code;
-	entry instruction length;
-	if(valid bit) { ...; }
-	if(msr_load_count) {
-		//?ia32_lstar
-		must have !(msr_ld_addr&0xffff); }
-	
-	HOST_CR0, HOST_CR4;	//vmx_cr_fixed_bits
-	HOST_CR3;	//bits beyond physical address width must be 0
-	IA32_SYSENTER_ESP, IA32_SYSENTER_EIP;	//canonical address
-	segment selectors;
-	segment base: ia32_gs_base, ia32_kernel_gs_base, ia32_fs_base;
-	
-	address space size checks;
-	
-	GUEST_CR0, GUEST_CR4;	//vmx_cr_fixed_bits
-	
-	
-	return 0; }*/
-////////////////////////////////////////////////////////
 
 #endif
