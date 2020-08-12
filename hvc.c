@@ -23,6 +23,7 @@
 //	save/restore caching type
 //check error code in vmfailvalid
 //	check which instruction can vmfailvalid
+//is there a way to force a vm exit from inside non-root operation?
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -71,7 +72,20 @@ static struct file_operations fops = {
 /////////////////////////////////////////
 
 /////////////////////////////////////////
+int ncores;
+
+int *errors=NULL;	//every entry should be non-positive
+#define parse_errors(i) ({ for(i=0;i<ncores;i++) { if(errors[i]) break; } (i==ncores) ? 0:errors[i]; })
+
 typedef struct {
+	cr4_t old_cr4;
+	int vmxon_flag;
+
+	unsigned long vmm_stack_base;
+	#define VMM_STACK_ORDER 1
+	int vmm_stack_order;
+	unsigned long vmm_stack_top;
+	
 	unsigned long vmxon_region;
 	unsigned long vmxon_paddr;
 	
@@ -83,94 +97,81 @@ typedef struct {
 	
 	ept_data_t ept_data;
 	int active_flag;
-} guest_state_t;
-guest_state_t guest_state;
-/////////////////////////////////////////
-typedef struct {
-	cr4_t old_cr4;
-	int vmxon_flag;
-#define VMM_STACK_ORDER 1
-	unsigned long vmm_stack_base;
-	int vmm_stack_order;
-	unsigned long vmm_stack_top;
-	//linked list of active guest_states?
-} host_state_t;
-host_state_t host_state;
+} state_t;
+state_t *state=NULL;
 /////////////////////////////////////////
 
-void cleanup(guest_state_t *vm_state, host_state_t *vmm_state) {
-	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+void cleanup_core(void *info) {
+	int core=smp_processor_id();
+	errors[core]=0;
+	
+	int success_flag;
 	
 	lhf_t lhf;
-	if(vm_state->active_flag && vm_state->vmcs_paddr) {
-		printk("[*]  clearing vmcs\n");
-		printk("[**] vmcs addr:\t0x%lx\n", vm_state->vmcs_paddr);
-		VMCLEAR(vm_state->vmcs_paddr, lhf);
-		printk("[**] lhf:\t0x%02x\n", lhf.val);
-		if(!VMsucceed(lhf)) {
-			if(VMfailValid(lhf)) {
-				//should get error field from current vmcs
-				printk("[*]  vmclear failed with valid region\n"); }
-			else if(VMfailInvalid(lhf)) {
-				printk("[*]  vmclear failed with invalid region\n"); }}
-		else {
-			vm_state->active_flag=0;
-			printk("[*]  vmclear succeeded\n\n"); }}
+	if(state[core].active_flag && state[core].vmcs_paddr) {
+		VMCLEAR(state[core].vmcs_paddr, lhf);
+		success_flag=VMsucceed(lhf) ? 1:0;
+		state[core].active_flag=1-success_flag; }
+	printk("[%02d] cleared vmcs @ 0x%lx\t%s", core, state[core].vmcs_paddr, success_flag ? "[done]":"[failed]");
 		
-	if(vmm_state->vmxon_flag) {
-		printk("[*]  exiting vmx mode\n\n");
+	if(state[core].vmxon_flag) {
 		VMXOFF;
-		vmm_state->vmxon_flag=0; }
+		printk("[%02d] exited vmx mode\n", core);
+		state[core].vmxon_flag=0; }
 	
 	cr4_t cr4;
-	if(vmm_state->old_cr4.val) {
-		printk("[*]  restoring initial cr4\n");
+	if(state[core].old_cr4.val) {
 		__asm__ __volatile__("mov %%cr4, %0":"=r"(cr4.val));
-		printk("[**] cr4:\t0x%lx\n", cr4.val);
-		cr4.val=vmm_state->old_cr4.val;
-		__asm__ __volatile__("mov %0, %%cr4"::"r"(cr4.val));
-		printk("[**] new cr4:\t0x%lx\n", cr4.val);
-		printk("[*]  restored\n\n");
-		vmm_state->old_cr4.val=0; }
+		__asm__ __volatile__("mov %0, %%cr4"::"r"(state[core].old_cr4.val));
+		printk("[%02d] restored cr4:\t0x%lx => 0x%lx", core, cr4.val, state[core].old_cr4.val);
+		state[core].old_cr4.val=0; }
 	
-	printk("[*]  freeing pages\n");
-	free_ept(&(vm_state->ept_data));
-	if(vm_state->vmxon_region) {
-		printk("[**] vmxon region:\t0x%lx\n", vm_state->vmxon_region); 
-		free_page(vm_state->vmxon_region);
-		vm_state->vmxon_region=0; }
-	if(vm_state->vmcs_region) {
-		printk("[**] vmcs region:\t0x%lx\n", vm_state->vmcs_region);
-		free_page(vm_state->vmcs_region);
-		vm_state->vmcs_region=0; }
-	if(vmm_state->vmm_stack_base) {
-		printk("[**] vmm stack:\t\t0x%lx (%d pages)\n",
-		       vmm_state->vmm_stack_base, 1<<(vmm_state->vmm_stack_order));
-		free_pages(vmm_state->vmm_stack_base, vmm_state->vmm_stack_order);
-		vmm_state->vmm_stack_base=0; }
-	if(vm_state->msr_bitmap) {
-		printk("[**] msr bitmap:\t0x%lx\n", vm_state->msr_bitmap);
-		free_page(vm_state->msr_bitmap);
-		vm_state->msr_bitmap=0; }
-	printk("[*]  all freed\n\n"); }
+
+	free_ept(&(state[core].ept_data));	//printk??
+	if(state[core].vmxon_region) {
+		free_page(state[core].vmxon_region);
+		printk("[%02d] freed vmxon region:\t0x%lx\n", state[core].vmxon_region);
+		state[core].vmxon_region=0; }
+	if(state[core].vmcs_region) {
+		free_page(state[core].vmcs_region);
+		printk("[%02d] freed vmcs region:\t0x%lx\n", state[core].vmcs_region);
+		state[core].vmcs_region=0; }
+	if(state[core].vmm_stack_base) {
+		free_pages(state[core].vmm_stack_base, state[core].vmm_stack_order);
+		printk("[%02d] freed vmm stack:\t0x%lx (%d pages)\n",
+		       state[core].vmm_stack_base, 1<<state[core].vmm_stack_order);
+		state[core].vmm_stack_base=0; }
+	if(state[core].msr_bitmap) {
+		free_page(state[core].msr_bitmap);
+		printk("[%02d] freed msr bitmap:\t0x%lx\n", state[core].msr_bitmap);
+		state[core].msr_bitmap=0; }
+	
+	return; }
+
+void cleanup(void) {
+	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+	printk("[  ] cleaning up cores\n");
+	on_each_cpu(cleanup_core, NULL, 1);
+	printk("[  ] all clean\n\n");
+	
+	if(errors!=NULL) {
+		kfree(errors);
+		printk("[  ] freed 'errors':\t0x%px\n", errors);
+		errors=NULL; }
+	
+	if(state!=NULL) {
+		kfree(state);
+		printk("[  ] freed 'state':\t0x%px\n", state);
+		state=NULL; }
+	
+	return; }
 
 
 __attribute__((__used__))
 static void hook(void) {
-	/*lhf_t lhf;
-	unsigned long exit_reason=0xdeadbeef, exit_qual=0xdeadbeef;
-	VMREAD(exit_reason, EXIT_REASON, lhf);
-	VMREAD(exit_qual, EXIT_QUALIFICATION, lhf);
-	__asm__ __volatile__("vmxoff");
-	guest_state.active_flag=0;
-	host_state.vmxon_flag=0;
-	printk("[*]  in the hook!\n");
-	printk("[**] exited vmx operation\n");
-	printk("[**] exit reason:\t0x%lx\n", exit_reason);
-	printk("[**] exit qual:\t\t0x%lx\n", exit_qual);*/
 	lhf_t lhf;
 	unsigned long reason=0xdeadbeef;
-	printk("[*]  in the hook!\n");
+	printk("[%02d] in the hook!\n", core);
 	VMREAD(reason, EXIT_REASON, lhf);
 	printk("[**] exit reason:\t0x%lx\n", reason);
 	VMREAD(reason, EXIT_QUALIFICATION, lhf);
@@ -209,107 +210,45 @@ __asm__(
 extern void guest_stub(void);
 
 
-//	https://stackoverflow.com/questions/6146059/how-can-i-detect-the-number-of-cores-in-x86-assembly
-//	https://wiki.osdev.org/Detecting_CPU_Topology_(80x86)
-static void per_cpu_print(void *info) {
-	cpuid_t cpuid;
-	unsigned int ia32_tsc_aux;
-	__asm__ __volatile__("rdtscp":"=c"(ia32_tsc_aux));
-	CPUID(cpuid, 0x0b);
-	printk("linux id: %d\t\tapic id: %d\t\ttsc_aux: %d\n", smp_processor_id(), cpuid.edx, ia32_tsc_aux); }
-
-static int __init hvc_init(void) {
-	printk("num_online_cpus: %d\n", num_online_cpus());
-	on_each_cpu(per_cpu_print, NULL, 1);
-	int cpu_id;
-	if(param_cpu_id!=0) {
-		printk("[*] unable to load module without cpu parameter 0\n");
-		return -EINVAL; }
-	cpu_id=get_cpu();
-	printk("[*]  called on cpu: %d\n\n", cpu_id);
-	//all of this should run only on a single processor
-	
-	guest_state=(guest_state_t) {0};
-	host_state=(host_state_t) {0};
-	
-	cpuid_t cpuid;
-	printk("[*]  verifying vt-x support\n");
-	CPUID(cpuid.leaf_0, 0);
-	printk("[**] vendor id: '%.12s'\n", cpuid.leaf_0.vendor_id);
-	if(strncmp(cpuid.leaf_0.vendor_id, "GenuineIntel", 12)) {
-		printk("[*]  not intel, aborting\n");
-		return -EOPNOTSUPP; }
-	CPUID(cpuid, 1);
-	printk("[**] cpuid.1:ecx.vmx[bit 5]: %d\n", cpuid.leaf_1.vmx);
-	if(!(cpuid.leaf_1.vmx)) {
-		printk("[*] vt-x not supported, aborting\n");
-		return -EOPNOTSUPP; }
-	printk("[*]  vt-x support confirmed\n\n");
+static void initialize_core(void *) {
+	int core=smp_processor_id();
+	state[core]=(state_t) {0};
+	errors[core]=0;
 	
 	cr4_t cr4;
-	printk("[*]  setting cr4.vmxe[bit 13]\n");
 	__asm__ __volatile__("mov %%cr4, %0":"=r"(cr4.val));
-	printk("[**] cr4:\t0x%lx\n", cr4.val);
-	host_state.old_cr4.val=cr4.val;
+	state[core].old_cr4.val=cr4.val;
 	cr4.vmxe=1;
 	__asm__ __volatile__("mov %0, %%cr4"::"r"(cr4.val));
-	printk("[**] new cr4:\t0x%lx\n", cr4.val);
-	printk("[*]  vmx enabled\n\n");
-	
-	msr_t msr;
-	printk("[*]  parsing ia32_feature_control\n");
-	READ_MSR(msr, IA32_FEATURE_CONTROL);
-	printk("[**] current value:\t0x%lx\n", msr.val);
-	if(msr.feature_control.lock) {
-		printk("[**] vmx locked in bios\n");
-		//should check if current processor state is smx
-		if(!msr.feature_control.non_smx_vmxe) {
-			printk("[*] non-smx vmx disabled\n");
-			cleanup(&guest_state, &host_state);
-			return -EOPNOTSUPP; }
-		printk("[**] non-smx vmx enabled\n"); }
-	else {
-		printk("[**] enabling non-smx vmx\n");
-		msr.feature_control.non_smx_vmxe=1;
-		printk("[**] locking feature control\n");
-		msr.feature_control.lock=1;
-		printk("[**] writing value:\t0x%lx\n", msr.val);
-		WRITE_MSR(msr, IA32_FEATURE_CONTROL); }
-	printk("[*]  parse complete\n\n");
-	
-	printk("[*]  parsing page attribute table\n");
-	READ_MSR(msr, IA32_PAT);
-	printk("[**] pat entries: 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n",
-	       msr.pat.entries[0], msr.pat.entries[1], msr.pat.entries[2], msr.pat.entries[3], 
-	       msr.pat.entries[4], msr.pat.entries[5], msr.pat.entries[6], msr.pat.entries[7]);
-	if(msr.pat.entries[0]!=PAT_WB && msr.pat.entries[4]!=PAT_WB) {
-		printk("[*]  writeback caching not available\n\n");
-		cleanup(&guest_state, &host_state);
-		return -EOPNOTSUPP; }
-	printk("[*]  writeback caching available\n\n");
-	
-	int ret=0;
-	if(( ret=alloc_wb_page("vmxon region", &(guest_state.vmxon_region), &(guest_state.vmxon_paddr)) )) {
-		cleanup(&guest_state, &host_state);
-		return ret; }
+	printk("[%02d] set cr4.vmxe[bit 13]:\t0x%lx => 0x%lx\n", core, state[core].old_cr4.val, cr4.val);
 
-	if(( ret=alloc_wb_page("vmcs region", &(guest_state.vmcs_region), &(guest_state.vmcs_paddr)) )) {
-		cleanup(&guest_state, &host_state);
-		return ret; }
+	int ret=0;
+
+	if(( ret=alloc_wb_page(&(state[core].vmxon_region), &(state[core].vmxon_paddr)) )) {
+		printk("[%02d] failed to allocate wb-cacheable vmxon region\n", core);
+		errors[core]=ret;
+		return; }
+	printk("[%02d] vmxon region:\t0x%lx\n", state[core].vmxon_region);
+
+	if(( ret=alloc_wb_page(&(state[core].vmcs_region), &(state[core].vmcs_paddr)) )) {
+		printk("[%02d] failed to allocate wb-cacheable vmcs region\n", core);
+		errors[core]=ret;
+		return; }
+	printk("[%02d] vmcs region:\t0x%lx\n", state[core].vmxon_region);
 	
-	if(( ret=initialize_ept(&guest_state.ept_data, MAX_ORD_GUEST_PAGES) )) {
-		cleanup(&guest_state, &host_state);
-		return ret; }
+	if(( ret=initialize_ept(&state[core].ept_data, MAX_ORD_GUEST_PAGES) )) {
+		printk("[%02d] failed to initialize ept\n", core);
+		errors[core]=ret;
+		return; }
 	
-	printk("[*]  allocating vmm stack\n");
-	host_state.vmm_stack_order=VMM_STACK_ORDER;
-	if( !(host_state.vmm_stack_base=__get_free_pages(__GFP_ZERO, host_state.vmm_stack_order)) ) {
-		printk("[*]  no free page available\n");
-		return -ENOMEM; }
-	printk("[**] stack base:\t0x%lx (%d pages)\n", host_state.vmm_stack_base, 1<<(host_state.vmm_stack_order));
-	host_state.vmm_stack_top=host_state.vmm_stack_base+((1<<12)<<(host_state.vmm_stack_order));
-	printk("[**] stack top:\t\t0x%lx\n", host_state.vmm_stack_top);
-	printk("[*]  allocated successfully\n\n");
+	state[core].vmm_stack_order=VMM_STACK_ORDER;
+	if( !(state[core].vmm_stack_base=__get_free_pages(__GFP_ZERO, state[core].vmm_stack_order)) ) {
+		printk("[%02d] failed to allocate vmm stack\n", core);
+		errors[core]=-ENOMEM;
+		return; }
+	printk("[%02d] stack base:\t0x%lx (%d pages)\n",
+	       core, state[core].vmm_stack_base, 1<<(state[core].vmm_stack_order));
+	state[core].vmm_stack_top=state[core].vmm_stack_base+((1<<12)<<(state[core].vmm_stack_order));
 	
 	
 	printk("[*]  entering vmx operation\n");
@@ -382,7 +321,90 @@ static int __init hvc_init(void) {
 	         &guest_state.ept_data.eptp, (unsigned long)&guest_stub, (unsigned long)&host_stub, host_state.vmm_stack_top, host_state.vmm_stack_top)) ) {
 		cleanup(&guest_state, &host_state);
 		return ret; }
-	//error check vmxon
+	
+	return; }
+
+
+static void __init check_vmx_support(void *info) {
+	int core=smp_processor_id();
+	errors[core]=0;
+	
+	cpuid_t cpuid;
+	CPUID(cpuid.leaf_0, 0);
+	if(strncmp(cpuid.leaf_0.vendor_id, "GenuineIntel", 12)) {
+		printk("[%02d] vendor id: '%.12s'\t[not intel]\n", core, cpuid.leaf_0.vendor_id);
+		errors[core]=-EOPNOTSUPP;
+		return; }
+	printk("[%02d] vendor id: '%.12s'\t[okay]\n", core, cpuid.leaf_0.vendor_id);
+	
+	CPUID(cpuid, 1);
+	if(!(cpuid.leaf_1.vmx)) {
+		printk("[%02d] cpuid.1:ecx.vmx[bit 5]: %d\t[not supported]\n", core, cpuid.leaf_1.vmx);
+		errors[core]=-EOPNOTSUPP;
+		return; }
+	printk("[%02d] cpuid.1:ecx.vmx[bit 5]: %d\t[okay]\n", core, cpuid.leaf_1.vmx);
+	
+	msr_t new_msr, msr;
+	READ_MSR(msr, IA32_FEATURE_CONTROL);
+	if(msr.feature_control.lock) {
+		//should check if current processor state is smx
+		if(!msr.feature_control.non_smx_vmxe) {
+			printk("[%02d] ia32_feature_control:\t0x%lx\t[non-smx vt-x disabled]\n", core, msr.val);
+			errors[core]=-EOPNOTSUPP;
+			return; }
+		printk("[%02d] ia32_feature_control:\t0x%lx\t[okay]\n", core, msr.val); }
+	else {
+		new_msr.val=msr.val;
+		new_msr.feature_control.non_smx_vmxe=1;
+		new_msr.feature_control.lock=1;
+		WRITE_MSR(new_msr, IA32_FEATURE_CONTROL);
+		printk("[%02d] ia32_feature_control:\t0x%lx => 0x%lx\t[locked]\n", core, msr.val, new_msr.val); }
+	
+	READ_MSR(msr, IA32_PAT);
+	if(msr.pat.entries[0]!=PAT_WB && msr.pat.entries[4]!=PAT_WB) {
+		printk("[%02d] pat entries:\t0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\t[wb caching unavailable]\n",
+		       core, msr.pat.entries[0], msr.pat.entries[1], msr.pat.entries[2], msr.pat.entries[3], 
+		       msr.pat.entries[4], msr.pat.entries[5], msr.pat.entries[6], msr.pat.entries[7]);
+		vmx_support_flag=0;
+		return; }
+	printk("[%02d] pat entries:\t0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\t[wb caching available]\n",
+	       core, msr.pat.entries[0], msr.pat.entries[1], msr.pat.entries[2], msr.pat.entries[3], 
+	       msr.pat.entries[4], msr.pat.entries[5], msr.pat.entries[6], msr.pat.entries[7]);
+	
+	return; }
+
+static int __init hvc_init(void) {
+	int i, ret=0;
+
+	ncores=num_online_cpus();
+	printk("[  ] number of online cores: %d\n", ncores);
+	
+	state=NULL;
+	state=kmalloc(ncores*sizeof(state_t), __GFP_ZERO);
+	if(state==NULL) {
+		printk("[  ] failed to allocate 'state' memory\n");
+		cleanup();
+		return -ENOMEM; }
+	printk("[  ] allocated %d bytes for 'state'\n\n", ncores*sizeof(state_t));
+
+	errors=NULL;
+	errors=kmalloc(ncores*sizeof(int), __GFP_ZERO);
+	if(errors==NULL) {
+		printk("[  ] failed to allocate 'errors' memory\n");
+		cleanup();
+		return -ENOMEM; }
+	printk("[  ] allocated %d bytes for 'errors'\n\n", ncores*sizeof(int));
+
+	printk("[  ] confirming vmx support\n");
+	on_each_cpu(check_vmx_support, NULL, 1);
+	if( (ret=parse_errors(i)) ) {
+		printk("[  ] vmx unsupported, aborting\n");
+		cleanup();
+		return ret; }
+	printk("[  ] vmx support confirmed\n\n");
+	
+
+	//////////////////////////////////////////////////
 
 	__asm__ __volatile__(
 		"mov %%rsp, %0;"
