@@ -246,81 +246,40 @@ static void initialize_core(void *) {
 		printk("[%02d] failed to allocate vmm stack\n", core);
 		errors[core]=-ENOMEM;
 		return; }
-	printk("[%02d] stack base:\t0x%lx (%d pages)\n",
+	printk("[%02d] vmm stack :\t0x%lx (%d pages)\n",
 	       core, state[core].vmm_stack_base, 1<<(state[core].vmm_stack_order));
 	state[core].vmm_stack_top=state[core].vmm_stack_base+((1<<12)<<(state[core].vmm_stack_order));
 	
 	
-	printk("[*]  entering vmx operation\n");
 	READ_MSR(msr, IA32_VMX_BASIC);
-	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
-	*(unsigned int *)(guest_state.vmxon_region)=msr.vmx_basic.revision_id;
+	printk("[%02d] revision id:\t0x%x\n", core, msr.vmx_basic.revision_id);
+	*(unsigned int *)(state[core].vmxon_region)=msr.vmx_basic.revision_id;
 	lhf_t lhf;
-		//__asm__ __volatile__(
-		//	"vmxon %1;"
-		//	"jbe vmxon_fail;"
-		//
-		//"vmxon_success:;"
-		//	"jmp vmxon_finish;"
-		//"vmxon_fail:;"
-		//	"jmp vmxon_finish;"
-		//
-		//"vmxon_finish:;"
-		//	"pushf;"
-		//	"popq %0;"
-		//
-		//	:"=r"(rflags.val)
-		//	:"m"(guest_state.vmxon_paddr)
-		//	:"memory");
-	VMXON(guest_state.vmxon_paddr, lhf);
-	printk("[**] lhf:\t0x%02x\n", lhf.val);
+	VMXON(state[core].vmxon_paddr, lhf);
 	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			//should get error field from current vmcs
-			printk("[*]  vmxon failed with valid region\n"); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmxon failed with invalid region\n"); }
-		cleanup(&guest_state, &host_state);
-		return -EINVAL; }
-	host_state.vmxon_flag=1;
-	printk("[*]  vmx operation entered\n\n"); 
+		printk("[%02d] vmxon failed\n", core);
+		errors[core]=-EINVAL;
+		return; }
+	printk("[%02d] vmxon succeeded\n", core);
+	state[core].vmxon_flag=1;
 	
 
-	printk("[*]  activating vmcs region\n");
 	READ_MSR(msr, IA32_VMX_BASIC);
-	printk("[**] rev id:\t0x%x\n", msr.vmx_basic.revision_id);
-	*(unsigned int *)(guest_state.vmcs_region)=msr.vmx_basic.revision_id;
-	*(unsigned int *)(guest_state.vmcs_region)&=0x7fffffff;	//not a shadow vmcs
-	printk("[**] clearing vmcs @ 0x%lx\n", guest_state.vmcs_paddr);
-	VMCLEAR(guest_state.vmcs_paddr, lhf);
-	printk("[**] lhf:\t0x%02x\n", lhf.val);
+	*(unsigned int *)(state[core].vmcs_region)=msr.vmx_basic.revision_id;
+	*(unsigned int *)(state[core].vmcs_region)&=0x7fffffff;	//not a shadow vmcs
+	VMCLEAR(state[core].vmcs_paddr, lhf);
 	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			//should get error field from current vmcs
-			printk("[*]  vmclear failed with valid region\n"); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmclear failed with invalid region\n"); }
-		cleanup(&guest_state, &host_state);
-		return -EINVAL; }
-	printk("[**] vmclear successful\n"); 
-	printk("[**] calling vmptrld\n");
-	VMPTRLD(guest_state.vmcs_paddr, lhf);
-	printk("[**] lhf:\t0x%02x\n", lhf.val);
+		printk("[%02d] vmclear failed\n", core);
+		errors[core]=-EINVAL;
+		return; }
+	printk("[%02d] cleared vmcs:\t0x%lx\n", core, state[core].vmcs_paddr);
+	VMPTRLD(state[core].vmcs_paddr, lhf);
 	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			//should get error field from current vmcs
-			printk("[*]  vmptrld failed with valid region\n"); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmptrld failed with invalid region\n"); }
-		cleanup(&guest_state, &host_state);
-		return -EINVAL; }
-	guest_state.active_flag=1;
-	printk("[*]  vmcs region activated\n\n"); 
-	
-	if( (ret=initialize_vmcs(\
-	         &guest_state.ept_data.eptp, (unsigned long)&guest_stub, (unsigned long)&host_stub, host_state.vmm_stack_top, host_state.vmm_stack_top)) ) {
-		cleanup(&guest_state, &host_state);
-		return ret; }
+		printk("[%02d] vmptrld failed\n", core);
+		errors[core]=-EINVAL;
+		return; }
+	state[core].active_flag=1;
+	printk("[%02d] vmcs region activated:\t0x%lx\n", core, state[core].vmcs_paddr);
 	
 	return; }
 
@@ -402,6 +361,21 @@ static int __init hvc_init(void) {
 		cleanup();
 		return ret; }
 	printk("[  ] vmx support confirmed\n\n");
+	
+	
+	printk("[  ] entering vmx operation\n");
+	on_each_cpu(initialize_core, NULL, 1);
+	if( (ret=parse_errors(i)) ) {
+		printk("[  ] failed to enter, aborting\n");
+		cleanup();
+		return ret; }
+	printk("[  ] vmx operation entered\n\n");
+	
+	printk("[  ] initializing 
+	if( (ret=initialize_vmcs(\
+	         &guest_state.ept_data.eptp, (unsigned long)&guest_stub, (unsigned long)&host_stub, host_state.vmm_stack_top, host_state.vmm_stack_top)) ) {
+		cleanup(&guest_state, &host_state);
+		return ret; }
 	
 
 	//////////////////////////////////////////////////
