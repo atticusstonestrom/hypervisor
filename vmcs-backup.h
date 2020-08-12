@@ -1037,6 +1037,7 @@ if(!VMsucceed(lhf)) { \
 	
 	READ_MSR(msr, IA32_VMX_BASIC);
 	printk("[**] ia32_vmx_basic:\t\t\t0x%lx\n", msr.val);
+	printk("[**] preemption timer tick:tsc tick:\t%d\n", 1<<msr.vmx_misc.vpt_tsc_relationship);
 	int true_flag=msr.vmx_basic.vmx_controls_clear;
 	printk("[**] %susing TRUE ctl msrs\n", true_flag ? "":"not ");
 	
