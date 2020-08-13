@@ -8,13 +8,12 @@
 #ifndef MEM_MANAGE
 #define MEM_MANAGE
 
-static int alloc_wb_page(char *name, unsigned long *vaddr, unsigned long *paddr) {
+static int alloc_wb_page(unsigned long *vaddr, unsigned long *paddr) {
 	msr_t msr;
 	READ_MSR(msr, IA32_PAT);
 	
 	vtp_t vtp_s=(vtp_t){0};
 	int ret=0;
-	//printk("[*]  allocating %s\n", name);
 	*vaddr=get_zeroed_page(GFP_KERNEL);
 	if(!(*vaddr)) {
 		//printk("[*]  no free page available\n");
