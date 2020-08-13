@@ -76,8 +76,8 @@ static struct file_operations fops = {
 /////////////////////////////////////////
 int ncores;
 
-unsigned int *ret_rsp;
-unsigned int *ret_rbp;
+unsigned long *ret_rsp;
+unsigned long *ret_rbp;
 
 int *errors=NULL;	//every entry should be non-positive
 #define parse_errors(i) ({ for(i=0;i<ncores;i++) { if(errors[i]) break; } (i==ncores) ? 0:errors[i]; })
@@ -404,23 +404,23 @@ static int __init hvc_init(void) {
 		printk("[  ] failed to allocate 'errors' memory\n");
 		cleanup();
 		return -ENOMEM; }
-	printk("[  ] got %ld bytes for 'errors':\t0x%px\n\n", ncores*sizeof(int), errors);
+	printk("[  ] got %ld bytes for 'errors':\t0x%px\n", ncores*sizeof(int), errors);
 	
 	ret_rsp=NULL;
-	ret_rsp=kmalloc(ncores*sizeof(int), __GFP_ZERO);
+	ret_rsp=kmalloc(ncores*sizeof(long), __GFP_ZERO);
 	if(ret_rsp==NULL) {
 		printk("[  ] failed to allocate 'ret_rsp' memory\n");
 		cleanup();
 		return -ENOMEM; }
-	printk("[  ] got %ld bytes for 'ret_rsp':\t0x%px\n\n", ncores*sizeof(int), ret_rsp);
+	printk("[  ] got %ld bytes for 'ret_rsp':\t0x%px\n", ncores*sizeof(long), ret_rsp);
 
 	ret_rbp=NULL;
-	ret_rbp=kmalloc(ncores*sizeof(int), __GFP_ZERO);
+	ret_rbp=kmalloc(ncores*sizeof(long), __GFP_ZERO);
 	if(ret_rbp==NULL) {
 		printk("[  ] failed to allocate 'ret_rbp' memory\n");
 		cleanup();
 		return -ENOMEM; }
-	printk("[  ] got %ld bytes for 'ret_rbp':\t0x%px\n\n", ncores*sizeof(int), ret_rbp);
+	printk("[  ] got %ld bytes for 'ret_rbp':\t0x%px\n\n", ncores*sizeof(long), ret_rbp);
 
 	printk("[  ] confirming vmx support\n");
 	on_each_cpu(check_vmx_support, NULL, 1);
