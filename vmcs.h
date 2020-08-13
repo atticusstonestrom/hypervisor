@@ -703,7 +703,8 @@ static void fill_core_vmcs(void *info) {
 	//pin_x_ctls.preemption_timer_active=1;
 	
 	pri_cpu_x_ctls.val=0;
-	pri_cpu_x_ctls.rdtsc_exiting=1;
+	if(core % 2) {
+		pri_cpu_x_ctls.rdtsc_exiting=1; }
 	pri_cpu_x_ctls.hlt_exiting=1;
 	//pri_cpu_x_ctls.use_msr_bitmaps=1;
 	//pri_cpu_x_ctls.activate_secondary_controls=1;
