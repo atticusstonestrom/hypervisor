@@ -4,6 +4,7 @@
 #include <asm/io.h>
 #include "vtx-utilities.h"
 #include "x64-utilities.h"
+#include "hvc.h"
 
 #ifndef __VMCS
 #define __VMCS
@@ -678,7 +679,7 @@ extern void host_stub(void);
 extern void guest_stub(void);
 
 //assumes vmcs already current
-int fill_core_vmcs(void *info) {
+static void fill_core_vmcs(void *info) {
 	int core=smp_processor_id();
 	errors[core]=0;
 	
@@ -888,7 +889,7 @@ int fill_core_vmcs(void *info) {
 	ec_vmwrite(base, GUEST_TR_BASE, lhf, error_code);
 	ec_vmwrite(base, HOST_TR_BASE, lhf, error_code);
 	printk("[%02d] tr:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
-	       tr, access_rights.val, lim, base);
+	       core, tr, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("sldt %0"::"m"(tr):"memory");
 	ec_vmwrite(tr, GUEST_LDTR_SELECTOR, lhf, error_code);
@@ -899,7 +900,7 @@ int fill_core_vmcs(void *info) {
 	get_base(base, tr, dtr.base);
 	ec_vmwrite(base, GUEST_LDTR_BASE, lhf, error_code);
 	printk("[%02d] ldtr: 0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
-	       tr, access_rights.val, lim, base);
+	       core, tr, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%cs, %0":"=r"(reg)::"memory");
 	ec_vmwrite(reg, GUEST_CS_SELECTOR, lhf, error_code);
@@ -910,11 +911,10 @@ int fill_core_vmcs(void *info) {
 	ec_vmwrite(lim, GUEST_CS_LIMIT, lhf, error_code);
 	get_base(base, reg, dtr.base);
 	ec_vmwrite(base, GUEST_CS_BASE, lhf, error_code);
-	printk("[%02d] cs:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
-	       reg, access_rights.val, lim, base);
+	printk("[%02d] cs:   0x%04lx\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       core, reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%ss, %0":"=r"(reg)::"memory");
-	printk("[**] ss:\t0x%02lx\n", reg);
 	ec_vmwrite(reg, GUEST_SS_SELECTOR, lhf, error_code);
 	ec_vmwrite(reg, HOST_SS_SELECTOR, lhf, error_code);
 	get_access_rights(access_rights, reg, dtr.base);
@@ -923,11 +923,10 @@ int fill_core_vmcs(void *info) {
 	ec_vmwrite(lim, GUEST_SS_LIMIT, lhf, error_code);
 	get_base(base, reg, dtr.base);
 	ec_vmwrite(base, GUEST_SS_BASE, lhf, error_code);
-	printk("[%02d] ss:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
-	       reg, access_rights.val, lim, base);
+	printk("[%02d] ss:   0x%04lx\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       core, reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%ds, %0":"=r"(reg)::"memory");
-	printk("[**] ds:\t0x%02lx\n", reg);
 	ec_vmwrite(reg, GUEST_DS_SELECTOR, lhf, error_code);
 	ec_vmwrite(reg, HOST_DS_SELECTOR, lhf, error_code);
 	get_access_rights(access_rights, reg, dtr.base);
@@ -936,11 +935,10 @@ int fill_core_vmcs(void *info) {
 	ec_vmwrite(lim, GUEST_DS_LIMIT, lhf, error_code);
 	get_base(base, reg, dtr.base);
 	ec_vmwrite(base, GUEST_DS_BASE, lhf, error_code);
-	printk("[%02d] ds:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
-	       reg, access_rights.val, lim, base);
+	printk("[%02d] ds:   0x%04lx\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       core, reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%es, %0":"=r"(reg)::"memory");
-	printk("[**] es:\t0x%02lx\n", reg);
 	ec_vmwrite(reg, GUEST_ES_SELECTOR, lhf, error_code);
 	ec_vmwrite(reg, HOST_ES_SELECTOR, lhf, error_code);
 	get_access_rights(access_rights, reg, dtr.base);
@@ -949,11 +947,10 @@ int fill_core_vmcs(void *info) {
 	ec_vmwrite(lim, GUEST_ES_LIMIT, lhf, error_code);
 	get_base(base, reg, dtr.base);
 	ec_vmwrite(base, GUEST_ES_BASE, lhf, error_code);
-	printk("[%02d] es:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
-	       reg, access_rights.val, lim, base);
+	printk("[%02d] es:   0x%04lx\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       core, reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%fs, %0":"=r"(reg)::"memory");
-	printk("[**] fs:\t0x%02lx\n", reg);
 	ec_vmwrite(reg, GUEST_FS_SELECTOR, lhf, error_code);
 	ec_vmwrite(reg, HOST_FS_SELECTOR, lhf, error_code);
 	get_access_rights(access_rights, reg, dtr.base);
@@ -962,14 +959,12 @@ int fill_core_vmcs(void *info) {
 	ec_vmwrite(lim, GUEST_FS_LIMIT, lhf, error_code);
 	READ_MSR(msr, IA32_FS_BASE);
 	base=msr.val;
-	printk("[**]\tbase:\t0x%lx\n", base);
 	ec_vmwrite(base, GUEST_FS_BASE, lhf, error_code);
 	ec_vmwrite(base, HOST_FS_BASE, lhf, error_code);
-	printk("[%02d] fs:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
-	       reg, access_rights.val, lim, base);
+	printk("[%02d] fs:   0x%04lx\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       core, reg, access_rights.val, lim, base);
 	
 	__asm__ __volatile__("mov %%gs, %0":"=r"(reg)::"memory");
-	printk("[**] gs:\t0x%02lx\n", reg);
 	ec_vmwrite(reg, GUEST_GS_SELECTOR, lhf, error_code);
 	ec_vmwrite(reg, HOST_GS_SELECTOR, lhf, error_code);
 	get_access_rights(access_rights, reg, dtr.base);
@@ -978,11 +973,10 @@ int fill_core_vmcs(void *info) {
 	ec_vmwrite(lim, GUEST_GS_LIMIT, lhf, error_code);
 	READ_MSR(msr, IA32_GS_BASE);
 	base=msr.val;
-	printk("[**]\tbase:\t0x%lx\n", base);
 	ec_vmwrite(base, GUEST_GS_BASE, lhf, error_code);
 	ec_vmwrite(base, HOST_GS_BASE, lhf, error_code);
-	printk("[%02d] gs:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
-	       reg, access_rights.val, lim, base);
+	printk("[%02d] gs:   0x%04lx\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
+	       core, reg, access_rights.val, lim, base);
 	
 	
 	/*READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
