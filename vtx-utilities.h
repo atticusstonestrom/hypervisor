@@ -51,13 +51,13 @@ __asm__ __volatile__(		\
 
 #define VMREAD(dst, code, lhf)	\
 __asm__ __volatile__(		\
-	"vmread %1, %2;"	\
+	"vmread %2, %1;"	\
 	"lahf;"			\
 	"shr $8, %%rax;"	\
 	"movb %%al, %0;"	\
-	:"=r"(lhf.val)		\
-	:"r"((long)(code)),	\
-	 "r"((long)(dst))	\
+	:"=r"(lhf.val),		\
+	 "=r"(dst)		\
+	:"r"((long)(code))	\
 	:"rax", "memory")
 
 #define VMLAUNCH(lhf)		\
