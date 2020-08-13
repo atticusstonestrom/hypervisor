@@ -76,6 +76,9 @@ static struct file_operations fops = {
 /////////////////////////////////////////
 int ncores;
 
+unsigned int *ret_rsp;
+unsigned int *ret_rbp;
+
 int *errors=NULL;	//every entry should be non-positive
 #define parse_errors(i) ({ for(i=0;i<ncores;i++) { if(errors[i]) break; } (i==ncores) ? 0:errors[i]; })
 
@@ -139,6 +142,16 @@ void cleanup(void) {
 	on_each_cpu(cleanup_core, NULL, 1);
 	printk("[  ] all clean\n\n");
 	
+	if(ret_rbp!=NULL) {
+		kfree(ret_rbp);
+		printk("[  ] freed 'ret_rbp':\t\t0x%px\n", ret_rbp);
+		ret_rbp=NULL; }
+	
+	if(ret_rsp!=NULL) {
+		kfree(ret_rsp);
+		printk("[  ] freed 'ret_rbp':\t\t0x%px\n", ret_rsp);
+		ret_rsp=NULL; }
+	
 	if(errors!=NULL) {
 		kfree(errors);
 		printk("[  ] freed 'errors':\t\t0x%px\n", errors);
@@ -177,8 +190,6 @@ static void hook(void) {
 	printk("[*]  leaving hook\n\n");*/
 	return; }
 
-unsigned long return_rsp;
-unsigned long return_rbp;
 __asm__(
 	".text;"
 	".global host_stub;"
@@ -326,11 +337,19 @@ void launch(void *info) {
 	int core=smp_processor_id();
 	errors[core]=0;
 	
-	__asm__ __volatile__(
+	/*__asm__ __volatile__(
 		"mov %%rsp, %0;"
 		"mov %%rbp, %1;"
-		:"=r"(return_rsp), "=r"(return_rbp)
-		::"memory");
+		:"=r"(state[core].return_rsp), "=r"(state[core].return_rbp)
+		::"memory");*/
+	__asm__ __volatile__(
+		"mov $0x0b, %%eax;"
+		"cpuid;"
+		"movq (ret_rsp), %%rax;"
+		"mov %%rsp, (%%rax, %%rdx, 8);"
+		"movq (ret_rbp), %%rax;"
+		"mov %%rbp, (%%rax, %%rdx, 8);"
+		:::"eax", "ebx", "ecx", "edx", "memory");
 
 	lhf_t lhf;
 	unsigned long error_code;
@@ -345,9 +364,22 @@ void launch(void *info) {
 		return; }
 	
 	__asm__ __volatile__(
+	"return_from_exit:;"
+		"mov $0x0b, %%eax;"
+		"cpuid;"
+		"movq (ret_rsp), %%rax;"
+		"movq (%%rax, %%rdx, 8), %%rsp;"
+		"movq (ret_rbp), %%rax;"
+		"movq (%%rax, %%rdx, 8), %%rbp;"
+		:::"eax", "ebx", "ecx", "edx", "memory");
+	
+	/*__asm__ __volatile__(
 	"return_from_exit:"
-		"movq (return_rsp), %rsp;"
-		"movq (return_rbp), %rbp;");
+		"movq %0, %%rsp;"
+		"movq (%%rsp), %%rsp;"
+		"movq %1, %%rbp;"
+		"movq (%%rbp), %%rbp;"
+		::"m"(state[core].return_rsp), "m"(state[core].return_rbp));*/
 	
 	return; }
 
@@ -373,6 +405,22 @@ static int __init hvc_init(void) {
 		cleanup();
 		return -ENOMEM; }
 	printk("[  ] got %ld bytes for 'errors':\t0x%px\n\n", ncores*sizeof(int), errors);
+	
+	ret_rsp=NULL;
+	ret_rsp=kmalloc(ncores*sizeof(int), __GFP_ZERO);
+	if(ret_rsp==NULL) {
+		printk("[  ] failed to allocate 'ret_rsp' memory\n");
+		cleanup();
+		return -ENOMEM; }
+	printk("[  ] got %ld bytes for 'ret_rsp':\t0x%px\n\n", ncores*sizeof(int), ret_rsp);
+
+	ret_rbp=NULL;
+	ret_rbp=kmalloc(ncores*sizeof(int), __GFP_ZERO);
+	if(ret_rbp==NULL) {
+		printk("[  ] failed to allocate 'ret_rbp' memory\n");
+		cleanup();
+		return -ENOMEM; }
+	printk("[  ] got %ld bytes for 'ret_rbp':\t0x%px\n\n", ncores*sizeof(int), ret_rbp);
 
 	printk("[  ] confirming vmx support\n");
 	on_each_cpu(check_vmx_support, NULL, 1);
