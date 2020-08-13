@@ -1039,7 +1039,7 @@ int fill_core_vmcs(void *) {
 	printk("[%02d] sysenter_cs: 0x%lx\tsysenter_esp: 0x%lx\tsysenter_eip: 0x%lx\n",
 	       core, msr.val, msr2.val, msr3.val);
 
-	return 0; }
+	return; }
 	//////////////////////////
 
 #endif
