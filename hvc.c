@@ -307,7 +307,7 @@ static void __init check_vmx_support(void *info) {
 	if(msr.feature_control.lock) {
 		//should check if current processor state is smx
 		if(!msr.feature_control.non_smx_vmxe) {
-			printk("[%02d] ia32_feature_control: 0x%lx\t\t[non-smx vt-x disabled]\n", core, msr.val);
+			cprint("ia32_feature_control: 0x%lx\t\t[non-smx vt-x disabled]", msr.val);
 			errors[core]=-EOPNOTSUPP;
 			return; }
 		cprint("ia32_feature_control: 0x%lx\t\t[okay]", msr.val); }
@@ -415,7 +415,7 @@ static int __init hvc_init(void) {
 	ret_rbp=NULL;
 	ret_rbp=kmalloc(ncores*sizeof(long), __GFP_ZERO);
 	if(ret_rbp==NULL) {
-		printk("[  ] failed to allocate 'ret_rbp' memory\n");
+		gprint("failed to allocate 'ret_rbp' memory");
 		cleanup();
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'ret_rbp':\t0x%px\n", ncores*sizeof(long), ret_rbp);
