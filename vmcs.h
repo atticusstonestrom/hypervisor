@@ -733,46 +733,46 @@ static void fill_core_vmcs(void *info) {
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PINBASED_CTLS:IA32_VMX_PINBASED_CTLS);
 	pin_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
 	if( (pin_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pin_x_ctls.val ) {
-		printk("[%02d] pinbased controls:\t\t\t0x%08x\t[unsupported bit set]\n", core, pin_x_ctls.val);
+		printk("[%02d] pinbased controls:\t\t\t0x%08x\t\t[unsupported bit set]\n", core, pin_x_ctls.val);
 		errors[core]=-EINVAL;
 		return; }
-	printk("[%02d] pinbased controls:\t\t\t0x%08x\t[okay]\n", core, pin_x_ctls.val);
+	printk("[%02d] pinbased controls:\t\t\t0x%08x\t\t[okay]\n", core, pin_x_ctls.val);
 	ec_vmwrite(pin_x_ctls.val, PIN_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_PROCBASED_CTLS:IA32_VMX_PROCBASED_CTLS);
 	pri_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;
 	if( (pri_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=pri_cpu_x_ctls.val ) {
-		printk("[%02d] primary cpu based controls:\t0x%08x\t[unsupported bit set]\n", core, pri_cpu_x_ctls.val);
+		printk("[%02d] primary cpu based controls:\t0x%08x\t\t[unsupported bit set]\n", core, pri_cpu_x_ctls.val);
 		errors[core]=-EINVAL;
 		return; }
-	printk("[%02d] primary cpu based controls:\t0x%08x\t[okay]\n", core, pri_cpu_x_ctls.val);
+	printk("[%02d] primary cpu based controls:\t0x%08x\t\t[okay]\n", core, pri_cpu_x_ctls.val);
 	ec_vmwrite(pri_cpu_x_ctls.val, PRIMARY_CPU_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, IA32_VMX_PROCBASED_CTLS2);
 	sec_cpu_x_ctls.val|=msr.vmx_ctls.allowed_zeroes;	//uneccessary
 	if( (sec_cpu_x_ctls.val & msr.vmx_ctls.allowed_ones)!=sec_cpu_x_ctls.val ) {
-		printk("[%02d] secondary cpu based controls:\t0x%08x\t[unsupported bit set]\n", core, sec_cpu_x_ctls.val);
+		printk("[%02d] secondary cpu based controls:\t0x%08x\t\t[unsupported bit set]\n", core, sec_cpu_x_ctls.val);
 		errors[core]=-EINVAL;
 		return; }
-	printk("[%02d] secondary cpu based controls:\t0x%08x\t[okay]\n", core, sec_cpu_x_ctls.val);
+	printk("[%02d] secondary cpu based controls:\t0x%08x\t\t[okay]\n", core, sec_cpu_x_ctls.val);
 	ec_vmwrite(sec_cpu_x_ctls.val, SECONDARY_CPU_BASED_X_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_EXIT_CTLS:IA32_VMX_EXIT_CTLS);
 	exit_ctls.val|=msr.vmx_ctls.allowed_zeroes;
 	if( (exit_ctls.val & msr.vmx_ctls.allowed_ones)!=exit_ctls.val ) {
-		printk("[%02d] vm exit controls:\t\t\t0x%08x\t[unsupported bit set]\n", core, exit_ctls.val);
+		printk("[%02d] vm exit controls:\t\t\t0x%08x\t\t[unsupported bit set]\n", core, exit_ctls.val);
 		errors[core]=-EINVAL;
 		return; }
-	printk("[%02d] vm exit controls:\t\t\t0x%08x\t[okay]\n", core, exit_ctls.val);
+	printk("[%02d] vm exit controls:\t\t\t0x%08x\t\t[okay]\n", core, exit_ctls.val);
 	ec_vmwrite(exit_ctls.val, EXIT_CTLS, lhf, error_code);
 	
 	READ_MSR(msr, true_flag ? IA32_VMX_TRUE_ENTRY_CTLS:IA32_VMX_ENTRY_CTLS);
 	entry_ctls.val|=msr.vmx_ctls.allowed_zeroes;
 	if( (entry_ctls.val & msr.vmx_ctls.allowed_ones)!=entry_ctls.val ) {
-		printk("[%02d] vm entry controls:\t\t\t0x%08x\t[unsupported bit set]\n", core, entry_ctls.val);
+		printk("[%02d] vm entry controls:\t\t\t0x%08x\t\t[unsupported bit set]\n", core, entry_ctls.val);
 		errors[core]=-EINVAL;
 		return; }
-	printk("[%02d] vm entry controls:\t\t\t0x%08x\t[okay]\n", core, entry_ctls.val);
+	printk("[%02d] vm entry controls:\t\t\t0x%08x\t\t[okay]\n", core, entry_ctls.val);
 	ec_vmwrite(entry_ctls.val, ENTRY_CTLS, lhf, error_code);
 	
 	//////////////////////////
@@ -861,7 +861,6 @@ static void fill_core_vmcs(void *info) {
 	
 	unsigned short tr=0;
 	__asm__ __volatile__("str %0"::"m"(tr):"memory");
-	printk("[**] tr:\t0x%04x\n", tr);
 	ec_vmwrite(tr, GUEST_TR_SELECTOR, lhf, error_code);
 	ec_vmwrite(tr, HOST_TR_SELECTOR, lhf, error_code);
 	/*access_rights=(access_rights_t) {{
@@ -885,7 +884,6 @@ static void fill_core_vmcs(void *info) {
 		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_16_23)<<16)
 		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_24_31)<<24)
 		| ((long)(((tssd_t *)(dtr.base+tr))->base_addr_32_63)<<32);
-	printk("[**]\tbase:\t0x%lx\n", base);
 	ec_vmwrite(base, GUEST_TR_BASE, lhf, error_code);
 	ec_vmwrite(base, HOST_TR_BASE, lhf, error_code);
 	printk("[%02d] tr:   0x%04x\trights: 0x%x\tlim: 0x%x\tbase: 0x%016lx\n",
@@ -1030,7 +1028,7 @@ static void fill_core_vmcs(void *info) {
 	READ_MSR(msr3, IA32_SYSENTER_EIP);
 	ec_vmwrite(msr3.val, GUEST_IA32_SYSENTER_EIP, lhf, error_code);
 	ec_vmwrite(msr3.val, HOST_IA32_SYSENTER_EIP, lhf, error_code);
-	printk("[%02d] sysenter_cs: 0x%lx\tsysenter_esp: 0x%lx\tsysenter_eip: 0x%lx\n",
+	printk("[%02d] sysenter_cs: 0x%lx\t\tsysenter_esp: 0x%lx\tsysenter_eip: 0x%lx\n",
 	       core, msr.val, msr2.val, msr3.val);
 
 	return; }
