@@ -33,10 +33,12 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/string.h>
+#include <linux/slab.h>
 #include "x64-utilities.h"
 #include "vtx-utilities.h"
 #include "vmcs.h"
 #include "mm.h"
+#include "hvc.h"
 
 static int param_cpu_id;
 module_param(param_cpu_id, int, (S_IRUSR|S_IRGRP|S_IROTH));
@@ -77,27 +79,6 @@ int ncores;
 int *errors=NULL;	//every entry should be non-positive
 #define parse_errors(i) ({ for(i=0;i<ncores;i++) { if(errors[i]) break; } (i==ncores) ? 0:errors[i]; })
 
-typedef struct {
-	cr4_t old_cr4;
-	int vmxon_flag;
-
-	unsigned long vmm_stack_base;
-	#define VMM_STACK_ORDER 1
-	int vmm_stack_order;
-	unsigned long vmm_stack_top;
-	
-	unsigned long vmxon_region;
-	unsigned long vmxon_paddr;
-	
-	unsigned long vmcs_region;
-	unsigned long vmcs_paddr;
-
-	unsigned long msr_bitmap;
-	unsigned long msr_paddr;
-	
-	ept_data_t ept_data;
-	int active_flag;
-} state_t;
 state_t *state=NULL;
 /////////////////////////////////////////
 
@@ -130,20 +111,20 @@ void cleanup_core(void *info) {
 	free_ept(&(state[core].ept_data));	//printk??
 	if(state[core].vmxon_region) {
 		free_page(state[core].vmxon_region);
-		printk("[%02d] freed vmxon region:\t0x%lx\n", state[core].vmxon_region);
+		printk("[%02d] freed vmxon region:\t0x%lx\n", core, state[core].vmxon_region);
 		state[core].vmxon_region=0; }
 	if(state[core].vmcs_region) {
 		free_page(state[core].vmcs_region);
-		printk("[%02d] freed vmcs region:\t0x%lx\n", state[core].vmcs_region);
+		printk("[%02d] freed vmcs region:\t0x%lx\n", core, state[core].vmcs_region);
 		state[core].vmcs_region=0; }
 	if(state[core].vmm_stack_base) {
 		free_pages(state[core].vmm_stack_base, state[core].vmm_stack_order);
-		printk("[%02d] freed vmm stack:\t0x%lx (%d pages)\n",
+		printk("[%02d] freed vmm stack:\t0x%lx (%d pages)\n", core,
 		       state[core].vmm_stack_base, 1<<state[core].vmm_stack_order);
 		state[core].vmm_stack_base=0; }
 	if(state[core].msr_bitmap) {
 		free_page(state[core].msr_bitmap);
-		printk("[%02d] freed msr bitmap:\t0x%lx\n", state[core].msr_bitmap);
+		printk("[%02d] freed msr bitmap:\t0x%lx\n", core, state[core].msr_bitmap);
 		state[core].msr_bitmap=0; }
 	
 	return; }
@@ -169,14 +150,16 @@ void cleanup(void) {
 
 __attribute__((__used__))
 static void hook(void) {
+	int core=smp_processor_id();
+	
 	lhf_t lhf;
-	unsigned long reason=0xdeadbeef;
-	printk("[%02d] in the hook!\n", core);
+	unsigned long reason=0xdeadbeef, qual=0xdeadbeef;
+	
 	VMREAD(reason, EXIT_REASON, lhf);
-	printk("[**] exit reason:\t0x%lx\n", reason);
-	VMREAD(reason, EXIT_QUALIFICATION, lhf);
-	printk("[**] exit qual:\t\t0x%lx\n", reason);
-	VMREAD(reason, EXIT_INSTRUCTION_LENGTH, lhf);
+	VMREAD(qual, EXIT_QUALIFICATION, lhf);
+	
+	printk("[%02d] exit reason: 0x%lx\t\texit qual: 0x%lx\n", core, reason, qual);
+	/*VMREAD(reason, EXIT_INSTRUCTION_LENGTH, lhf);
 	printk("[**] instruction len:\t%ld\n", reason);
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
@@ -184,7 +167,7 @@ static void hook(void) {
 			printk("[*]  vmread failed with error code %ld\n\n", reason); }
 		else if(VMfailInvalid(lhf)) {
 			printk("[*]  vmread failed with invalid region\n\n"); }}
-	printk("[*]  leaving hook\n\n");
+	printk("[*]  leaving hook\n\n");*/
 	return; }
 
 unsigned long return_rsp;
@@ -198,7 +181,7 @@ __asm__(
 	"call hook;"
 	//"swapgs;"
 	POPA
-	"jmp return_from_init;");
+	"jmp return_from_exit;");
 extern void host_stub(void);
 
 __asm__(
@@ -210,7 +193,7 @@ __asm__(
 extern void guest_stub(void);
 
 
-static void initialize_core(void *) {
+static void initialize_core(void *info) {
 	int core=smp_processor_id();
 	state[core]=(state_t) {0};
 	errors[core]=0;
@@ -228,13 +211,13 @@ static void initialize_core(void *) {
 		printk("[%02d] failed to allocate wb-cacheable vmxon region\n", core);
 		errors[core]=ret;
 		return; }
-	printk("[%02d] vmxon region:\t0x%lx\n", state[core].vmxon_region);
+	printk("[%02d] vmxon region:\t0x%lx\n", core, state[core].vmxon_region);
 
 	if(( ret=alloc_wb_page(&(state[core].vmcs_region), &(state[core].vmcs_paddr)) )) {
 		printk("[%02d] failed to allocate wb-cacheable vmcs region\n", core);
 		errors[core]=ret;
 		return; }
-	printk("[%02d] vmcs region:\t0x%lx\n", state[core].vmxon_region);
+	printk("[%02d] vmcs region:\t0x%lx\n", core, state[core].vmcs_region);
 	
 	if(( ret=initialize_ept(&state[core].ept_data, MAX_ORD_GUEST_PAGES) )) {
 		printk("[%02d] failed to initialize ept\n", core);
@@ -246,11 +229,11 @@ static void initialize_core(void *) {
 		printk("[%02d] failed to allocate vmm stack\n", core);
 		errors[core]=-ENOMEM;
 		return; }
-	printk("[%02d] vmm stack :\t0x%lx (%d pages)\n",
-	       core, state[core].vmm_stack_base, 1<<(state[core].vmm_stack_order));
+	printk("[%02d] vmm stack :\t0x%lx (%d pages)\n", core,
+	       state[core].vmm_stack_base, 1<<(state[core].vmm_stack_order));
 	state[core].vmm_stack_top=state[core].vmm_stack_base+((1<<12)<<(state[core].vmm_stack_order));
 	
-	
+	msr_t msr;
 	READ_MSR(msr, IA32_VMX_BASIC);
 	printk("[%02d] revision id:\t0x%x\n", core, msr.vmx_basic.revision_id);
 	*(unsigned int *)(state[core].vmxon_region)=msr.vmx_basic.revision_id;
@@ -324,11 +307,40 @@ static void __init check_vmx_support(void *info) {
 		printk("[%02d] pat entries:\t0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\t[wb caching unavailable]\n",
 		       core, msr.pat.entries[0], msr.pat.entries[1], msr.pat.entries[2], msr.pat.entries[3], 
 		       msr.pat.entries[4], msr.pat.entries[5], msr.pat.entries[6], msr.pat.entries[7]);
-		vmx_support_flag=0;
+		errors[core]=-EOPNOTSUPP;
 		return; }
 	printk("[%02d] pat entries:\t0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\t[wb caching available]\n",
 	       core, msr.pat.entries[0], msr.pat.entries[1], msr.pat.entries[2], msr.pat.entries[3], 
 	       msr.pat.entries[4], msr.pat.entries[5], msr.pat.entries[6], msr.pat.entries[7]);
+	
+	return; }
+
+void launch(void *info) {
+	int core=smp_processor_id();
+	errors[core]=0;
+	
+	__asm__ __volatile__(
+		"mov %%rsp, %0;"
+		"mov %%rbp, %1;"
+		:"=r"(return_rsp), "=r"(return_rbp)
+		::"memory");
+
+	lhf_t lhf;
+	unsigned long error_code;
+	VMLAUNCH(lhf);
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
+			VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
+			printk("[%02d] vmlaunch failed with error code %ld\n", core, error_code); }
+		else if(VMfailInvalid(lhf)) {
+			printk("[%02d] vmlaunch failed with invalid region\n", core); }
+		errors[core]=-EINVAL;
+		return; }
+	
+	__asm__ __volatile__(
+	"return_from_exit:"
+		"movq (return_rsp), %rsp;"
+		"movq (return_rbp), %rbp;");
 	
 	return; }
 
@@ -344,7 +356,7 @@ static int __init hvc_init(void) {
 		printk("[  ] failed to allocate 'state' memory\n");
 		cleanup();
 		return -ENOMEM; }
-	printk("[  ] allocated %d bytes for 'state'\n\n", ncores*sizeof(state_t));
+	printk("[  ] allocated %ld bytes for 'state'\n", ncores*sizeof(state_t));
 
 	errors=NULL;
 	errors=kmalloc(ncores*sizeof(int), __GFP_ZERO);
@@ -352,9 +364,9 @@ static int __init hvc_init(void) {
 		printk("[  ] failed to allocate 'errors' memory\n");
 		cleanup();
 		return -ENOMEM; }
-	printk("[  ] allocated %d bytes for 'errors'\n\n", ncores*sizeof(int));
+	printk("[  ] allocated %ld bytes for 'errors'\n\n", ncores*sizeof(int));
 
-	printk("[  ] confirming vmx support\n");
+	/*printk("[  ] confirming vmx support\n");
 	on_each_cpu(check_vmx_support, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
 		printk("[  ] vmx unsupported, aborting\n");
@@ -371,36 +383,25 @@ static int __init hvc_init(void) {
 		return ret; }
 	printk("[  ] vmx operation entered\n\n");
 	
-	printk("[  ] initializing 
-	if( (ret=initialize_vmcs(\
-	         &guest_state.ept_data.eptp, (unsigned long)&guest_stub, (unsigned long)&host_stub, host_state.vmm_stack_top, host_state.vmm_stack_top)) ) {
-		cleanup(&guest_state, &host_state);
+	printk("[  ] initializing vmcss\n");
+	on_each_cpu(fill_core_vmcs, NULL, 1);
+	if( (ret=parse_errors(i)) ) {
+		printk("[  ] failed to initialize vmcs, aborting\n");
+		cleanup();
 		return ret; }
+	printk("[  ] initialized\n");*/
 	
 
 	//////////////////////////////////////////////////
 
-	__asm__ __volatile__(
-		"mov %%rsp, %0;"
-		"mov %%rbp, %1;"
-		:"=r"(return_rsp), "=r"(return_rbp)
-		::"memory");
-
-	VMLAUNCH(lhf);
-	unsigned long error_code;
-	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			//VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
-			printk("[*]  vmlaunch failed with error code %ld\n\n", error_code); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmlaunch failed with invalid region\n\n"); }
-		cleanup(&guest_state, &host_state);
-		return -EINVAL; }
-	__asm__ __volatile__(
-	"return_from_init:"
-		"movq (return_rsp), %rsp;"
-		"movq (return_rbp), %rbp;");
-	cleanup(&guest_state, &host_state);
+	/*printk("[  ] entering guest state\n");
+	on_each_cpu(launch, NULL, 1);
+	if( (ret=parse_errors(i)) ) {
+		printk("[  ] vm entry failed, aborting\n");
+		cleanup();
+		return ret; }
+	printk("[  ] vm entry succeeded\n");*/
+	cleanup();
 		
 	
 	
@@ -425,7 +426,6 @@ static int __init hvc_init(void) {
 		return PTR_ERR(hvc_device); }
 	//printk("[*] device class created correctly\n");
 
-	put_cpu();
 	return 0; }
 
 static void __exit hvc_exit(void) {
@@ -436,7 +436,7 @@ static void __exit hvc_exit(void) {
 	VMREAD(reason, EXIT_QUALIFICATION, lhf);
 	printk("[*]  exit qual:\t\t0x%lx\n\n", reason);*/
 	
-	cleanup(&guest_state, &host_state);
+	cleanup();
 	
 	device_destroy(hvc_class, MKDEV(major_num, 0));
 	class_unregister(hvc_class);
