@@ -170,9 +170,8 @@ __attribute__((__used__))
 static void hook(void) {
 	int core=smp_processor_id();
 	
-	printk("[%02d] in hook!\n", core);
-	
 	lhf_t lhf;
+	
 	unsigned long reason=0xdeadbeef, qual=0xfeed;
 	
 	VMREAD(reason, EXIT_REASON, lhf);
@@ -456,16 +455,9 @@ static int __init hvc_init(void) {
 		printk("[  ] vm entry failed, aborting\n");
 		cleanup();
 		return ret; }
-	printk("[  ] vm entry succeeded\n");
+	printk("[  ] vm entry succeeded\n\n");
 	
-	unsigned long reason, qual;
-	lhf_t lhf;
-	VMREAD(reason, EXIT_REASON, lhf);
-	VMREAD(qual, EXIT_QUALIFICATION, lhf);
-	
-	printk("[  ] exit reason: 0x%lx\t\texit qual: 0x%lx\n", reason, qual);
 	cleanup();
-		
 	
 	
 	//printk("[*] initializing the hvchar lkm\n");
