@@ -166,6 +166,8 @@ void cleanup(void) {
 	return; }
 
 
+//static void hook(struct guest_regs *regs_p);
+//push regs, mov %rsp, first arg (rax?)
 __attribute__((__used__))
 static void hook(void) {
 	int core=smp_processor_id();
