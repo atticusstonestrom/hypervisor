@@ -176,6 +176,9 @@ static void hook(void) {
 	
 	VMREAD(reason, EXIT_REASON, lhf);
 	VMREAD(qual, EXIT_QUALIFICATION, lhf);
+	unsigned long rip;
+	VMREAD(rip, GUEST_RIP, lhf);
+	cprint("rip: 0x%lx", rip);
 	
 	cprint("exit reason: 0x%lx\t\texit qual: 0x%lx", reason, qual);
 	/*VMREAD(reason, EXIT_INSTRUCTION_LENGTH, lhf);
