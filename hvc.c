@@ -168,8 +168,9 @@ void cleanup(void) {
 
 //static void hook(struct guest_regs *regs_p);
 //push regs, mov %rsp, first arg (rax?)
+//specify calling convention? gcc
 __attribute__((__used__))
-static void hook(void) {
+static void hook(regs_t *regs_p) {
 	int core=smp_processor_id();
 	
 	lhf_t lhf;
@@ -178,10 +179,8 @@ static void hook(void) {
 	
 	VMREAD(reason, EXIT_REASON, lhf);
 	VMREAD(qual, EXIT_QUALIFICATION, lhf);
-	unsigned long rip;
-	VMREAD(rip, GUEST_RIP, lhf);
-	cprint("rip: 0x%lx", rip);
 	
+	cprint("rax: 0x%lx\t\tr8: 0x%lx", regs_p->rax, regs_p->r8);
 	cprint("exit reason: 0x%lx\t\texit qual: 0x%lx", reason, qual);
 	/*VMREAD(reason, EXIT_INSTRUCTION_LENGTH, lhf);
 	printk("[**] instruction len:\t%ld\n", reason);
@@ -200,6 +199,7 @@ __asm__(
 "host_stub:;"
 	PUSHA
 	//"swapgs;"
+	"mov %rsp, %rdi;"
 	"call hook;"
 	//"swapgs;"
 	POPA
@@ -211,6 +211,9 @@ __asm__(
 	".global guest_stub;"
 "guest_stub:;"
 	"rdtsc;"
+	"mov $0xdeadbeef, %eax;"
+	"mov $0xfeeddeaf, %r8;"
+	"push %rax;"
 	"hlt;");
 extern void guest_stub(void);
 
