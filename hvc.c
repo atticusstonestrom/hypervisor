@@ -466,8 +466,8 @@ static int __init global_init(void) {
 	state=NULL;
 	state=kmalloc(ncores*sizeof(state_t), __GFP_ZERO);
 	if(state==NULL) {
-		gprint("failed to allocate 'state' memory");
-		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		gprint("failed to allocate 'state' memory\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_exit();
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'state':\t0x%px", ncores*sizeof(state_t), state);
@@ -475,8 +475,8 @@ static int __init global_init(void) {
 	errors=NULL;
 	errors=kmalloc(ncores*sizeof(int), __GFP_ZERO);
 	if(errors==NULL) {
-		gprint("failed to allocate 'errors' memory");
-		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		gprint("failed to allocate 'errors' memory\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_exit();
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'errors':\t0x%px", ncores*sizeof(int), errors);
@@ -484,8 +484,8 @@ static int __init global_init(void) {
 	ret_rsp=NULL;
 	ret_rsp=kmalloc(ncores*sizeof(long), __GFP_ZERO);
 	if(ret_rsp==NULL) {
-		gprint("failed to allocate 'ret_rsp' memory");
-		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		gprint("failed to allocate 'ret_rsp' memory\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_exit();
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'ret_rsp':\t0x%px", ncores*sizeof(long), ret_rsp);
@@ -493,8 +493,8 @@ static int __init global_init(void) {
 	ret_rbp=NULL;
 	ret_rbp=kmalloc(ncores*sizeof(long), __GFP_ZERO);
 	if(ret_rbp==NULL) {
-		gprint("failed to allocate 'ret_rbp' memory");
-		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		gprint("failed to allocate 'ret_rbp' memory\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_exit();
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'ret_rbp':\t0x%px\n", ncores*sizeof(long), ret_rbp);
@@ -502,23 +502,23 @@ static int __init global_init(void) {
 	gprint("confirming vmx support");
 	on_each_cpu(core_check_vmx_support, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
-		gprint("vmx unsupported, aborting");
-		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		gprint("vmx unsupported, aborting\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_exit();
 		return ret; }
-	gprint("vmx support confirmed");
+	gprint("vmx support confirmed\n");
 	
 	
 	gprint("allocating vmm memory");
 	on_each_cpu(core_init, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
-		gprint("failed to enter, aborting");
-		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		gprint("failed to enter, aborting\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_exit();
 		return ret; }
-	gprint("all allocated");
+	gprint("all allocated\n");
 	
-	printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	
 	
 	//printk("[*] initializing the hvchar lkm\n");
