@@ -679,7 +679,7 @@ extern void host_stub(void);
 extern void guest_stub(void);
 
 //assumes vmcs already current
-static void fill_core_vmcs(void *info) {
+static void core_fill_vmcs(void *info) {
 	int core=smp_processor_id();
 	errors[core]=0;
 	
