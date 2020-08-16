@@ -233,7 +233,7 @@ static int global_close(struct inode *inodep, struct file *filep) {
 	gprint("exiting vmx operation");
 	on_each_cpu(core_close, NULL, 1);
 	gprint("exited\n");
-	printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	return 0; }
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -344,31 +344,31 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	gprint("entering vmx operation");
 	on_each_cpu(core_open, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
-		gprint("failed to enter, aborting");
-		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		gprint("failed to enter, aborting\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_close(inodep, filep);
 		return ret; }
-	gprint("vmx operation entered");
+	gprint("vmx operation entered\n");
 	
 	gprint("initializing vmcss");
 	on_each_cpu(core_fill_vmcs, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
-		gprint("failed to initialize vmcs, aborting");
-		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		gprint("failed to initialize vmcs, aborting\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_close(inodep, filep);
 		return ret; }
-	gprint("initialized");
+	gprint("initialized\n");
 
 	gprint("entering guest state");
 	on_each_cpu(core_launch, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
-		gprint("vm entry failed, aborting");
-		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		gprint("vm entry failed, aborting\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_close(inodep, filep);
 		return ret; }
-	gprint("vm entry succeeded");
+	gprint("vm entry succeeded\n");
 	
-	printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 
 	return 0; }
 //////////////////////////////////////////////////////////////////////////////////
