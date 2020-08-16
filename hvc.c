@@ -136,6 +136,108 @@ extern void guest_stub(void);
 //////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////
+static void core_exit(void *info) {
+	int core=smp_processor_id();
+	errors[core]=0;
+	
+	free_ept(&(state[core].ept_data));	//printk??
+	if(state[core].vmxon_region) {
+		free_page(state[core].vmxon_region);
+		cprint("freed vmxon region:\t0x%lx", state[core].vmxon_region);
+		state[core].vmxon_region=0; }
+	if(state[core].vmcs_region) {
+		free_page(state[core].vmcs_region);
+		cprint("freed vmcs region:\t\t0x%lx", state[core].vmcs_region);
+		state[core].vmcs_region=0; }
+	if(state[core].vmm_stack_base) {
+		free_pages(state[core].vmm_stack_base, state[core].vmm_stack_order);
+		cprint("freed vmm stack:\t\t0x%lx (%d pages)",
+		       state[core].vmm_stack_base, 1<<state[core].vmm_stack_order);
+		state[core].vmm_stack_base=0; }
+	if(state[core].msr_bitmap) {
+		free_page(state[core].msr_bitmap);
+		cprint("freed msr bitmap:\t\t0x%lx", state[core].msr_bitmap);
+		state[core].msr_bitmap=0; }
+	
+	return; }
+
+static void global_exit(void) {
+	if(state==NULL) {
+		return; }
+	
+	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+	gprint("cleaning up cores");
+	on_each_cpu(core_exit, NULL, 1);
+	gprint("all clean\n");
+	
+	if(ret_rbp!=NULL) {
+		kfree(ret_rbp);
+		gprint("freed 'ret_rbp':\t\t0x%px", ret_rbp);
+		ret_rbp=NULL; }
+	
+	if(ret_rsp!=NULL) {
+		kfree(ret_rsp);
+		gprint("freed 'ret_rbp':\t\t0x%px", ret_rsp);
+		ret_rsp=NULL; }
+	
+	if(errors!=NULL) {
+		kfree(errors);
+		gprint("freed 'errors':\t\t0x%px", errors);
+		errors=NULL; }
+	
+	if(state!=NULL) {
+		kfree(state);
+		gprint("freed 'state':\t\t0x%px", state);
+		state=NULL; }
+	
+	printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+	
+	device_destroy(hvc_class, MKDEV(major_num, 0));
+	class_unregister(hvc_class);
+	class_destroy(hvc_class);
+	unregister_chrdev(major_num, DEVICE_NAME);
+	
+	return; }
+//////////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////
+static void core_close(void *info) {
+	int core=smp_processor_id();
+	errors[core]=0;
+	
+	int success_flag;
+	
+	lhf_t lhf;
+	if(state[core].active_flag && state[core].vmcs_paddr) {
+		VMCLEAR(state[core].vmcs_paddr, lhf);
+		success_flag=VMsucceed(lhf) ? 1:0;
+		state[core].active_flag=1-success_flag;
+		cprint("cleared vmcs:\t\t0x%lx\t%s", state[core].vmcs_paddr, success_flag ? "[done]":"[failed]"); }
+		
+	if(state[core].vmxon_flag) {
+		VMXOFF;
+		cprint("exited vmx mode");
+		state[core].vmxon_flag=0; }
+	
+	cr4_t cr4;
+	if(state[core].old_cr4.val) {
+		__asm__ __volatile__("mov %%cr4, %0":"=r"(cr4.val));
+		__asm__ __volatile__("mov %0, %%cr4"::"r"(state[core].old_cr4.val));
+		cprint("restored cr4:\t\t0x%lx => 0x%lx", cr4.val, state[core].old_cr4.val);
+		state[core].old_cr4.val=0; }
+	
+	return; }
+
+static int global_close(struct inode *inodep, struct file *filep) {
+	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+	gprint("exiting vmx operation");
+	on_each_cpu(core_close, NULL, 1);
+	gprint("exited\n");
+	printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+	return 0; }
+//////////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////
 void core_launch(void *info) {
 	int core=smp_processor_id();
 	errors[core]=0;
@@ -243,7 +345,8 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	on_each_cpu(core_open, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
 		gprint("failed to enter, aborting");
-		cleanup();
+		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_close(inodep, filep);
 		return ret; }
 	gprint("vmx operation entered");
 	
@@ -251,7 +354,8 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	on_each_cpu(core_fill_vmcs, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
 		gprint("failed to initialize vmcs, aborting");
-		cleanup();
+		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_close(inodep, filep);
 		return ret; }
 	gprint("initialized");
 
@@ -259,7 +363,8 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	on_each_cpu(core_launch, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
 		gprint("vm entry failed, aborting");
-		cleanup();
+		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_close(inodep, filep);
 		return ret; }
 	gprint("vm entry succeeded");
 	
@@ -362,7 +467,8 @@ static int __init global_init(void) {
 	state=kmalloc(ncores*sizeof(state_t), __GFP_ZERO);
 	if(state==NULL) {
 		gprint("failed to allocate 'state' memory");
-		cleanup();
+		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_exit();
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'state':\t0x%px", ncores*sizeof(state_t), state);
 
@@ -370,7 +476,8 @@ static int __init global_init(void) {
 	errors=kmalloc(ncores*sizeof(int), __GFP_ZERO);
 	if(errors==NULL) {
 		gprint("failed to allocate 'errors' memory");
-		cleanup();
+		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_exit();
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'errors':\t0x%px", ncores*sizeof(int), errors);
 	
@@ -378,7 +485,8 @@ static int __init global_init(void) {
 	ret_rsp=kmalloc(ncores*sizeof(long), __GFP_ZERO);
 	if(ret_rsp==NULL) {
 		gprint("failed to allocate 'ret_rsp' memory");
-		cleanup();
+		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_exit();
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'ret_rsp':\t0x%px", ncores*sizeof(long), ret_rsp);
 
@@ -386,7 +494,8 @@ static int __init global_init(void) {
 	ret_rbp=kmalloc(ncores*sizeof(long), __GFP_ZERO);
 	if(ret_rbp==NULL) {
 		gprint("failed to allocate 'ret_rbp' memory");
-		cleanup();
+		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_exit();
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'ret_rbp':\t0x%px\n", ncores*sizeof(long), ret_rbp);
 
@@ -394,7 +503,8 @@ static int __init global_init(void) {
 	on_each_cpu(core_check_vmx_support, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
 		gprint("vmx unsupported, aborting");
-		cleanup();
+		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_exit();
 		return ret; }
 	gprint("vmx support confirmed");
 	
@@ -403,7 +513,8 @@ static int __init global_init(void) {
 	on_each_cpu(core_init, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
 		gprint("failed to enter, aborting");
-		cleanup();
+		printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_exit();
 		return ret; }
 	gprint("all allocated");
 	
@@ -431,105 +542,6 @@ static int __init global_init(void) {
 		return PTR_ERR(hvc_device); }
 	//printk("[*] device class created correctly\n");
 
-	return 0; }
-//////////////////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////////////////
-static void __exit core_exit(void *info) {
-	int core=smp_processor_id();
-	errors[core]=0;
-	
-	free_ept(&(state[core].ept_data));	//printk??
-	if(state[core].vmxon_region) {
-		free_page(state[core].vmxon_region);
-		cprint("freed vmxon region:\t0x%lx", state[core].vmxon_region);
-		state[core].vmxon_region=0; }
-	if(state[core].vmcs_region) {
-		free_page(state[core].vmcs_region);
-		cprint("freed vmcs region:\t\t0x%lx", state[core].vmcs_region);
-		state[core].vmcs_region=0; }
-	if(state[core].vmm_stack_base) {
-		free_pages(state[core].vmm_stack_base, state[core].vmm_stack_order);
-		cprint("freed vmm stack:\t\t0x%lx (%d pages)",
-		       state[core].vmm_stack_base, 1<<state[core].vmm_stack_order);
-		state[core].vmm_stack_base=0; }
-	if(state[core].msr_bitmap) {
-		free_page(state[core].msr_bitmap);
-		cprint("freed msr bitmap:\t\t0x%lx", state[core].msr_bitmap);
-		state[core].msr_bitmap=0; }
-	
-	return; }
-
-static void __exit global_exit(void) {
-	if(state==NULL) {
-		return; }
-	
-	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
-	gprint("cleaning up cores");
-	on_each_cpu(core_exit, NULL, 1);
-	gprint("all clean\n");
-	
-	if(ret_rbp!=NULL) {
-		kfree(ret_rbp);
-		gprint("freed 'ret_rbp':\t\t0x%px", ret_rbp);
-		ret_rbp=NULL; }
-	
-	if(ret_rsp!=NULL) {
-		kfree(ret_rsp);
-		gprint("freed 'ret_rbp':\t\t0x%px", ret_rsp);
-		ret_rsp=NULL; }
-	
-	if(errors!=NULL) {
-		kfree(errors);
-		gprint("freed 'errors':\t\t0x%px", errors);
-		errors=NULL; }
-	
-	if(state!=NULL) {
-		kfree(state);
-		gprint("freed 'state':\t\t0x%px", state);
-		state=NULL; }
-	
-	printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
-	
-	device_destroy(hvc_class, MKDEV(major_num, 0));
-	class_unregister(hvc_class);
-	class_destroy(hvc_class);
-	unregister_chrdev(major_num, DEVICE_NAME);
-	
-	return; }
-//////////////////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////////////////
-static void core_close(void *info) {
-	int success_flag;
-	
-	lhf_t lhf;
-	if(state[core].active_flag && state[core].vmcs_paddr) {
-		VMCLEAR(state[core].vmcs_paddr, lhf);
-		success_flag=VMsucceed(lhf) ? 1:0;
-		state[core].active_flag=1-success_flag;
-		cprint("cleared vmcs:\t\t0x%lx\t%s", state[core].vmcs_paddr, success_flag ? "[done]":"[failed]"); }
-		
-	if(state[core].vmxon_flag) {
-		VMXOFF;
-		cprint("exited vmx mode");
-		state[core].vmxon_flag=0; }
-	
-	cr4_t cr4;
-	if(state[core].old_cr4.val) {
-		__asm__ __volatile__("mov %%cr4, %0":"=r"(cr4.val));
-		__asm__ __volatile__("mov %0, %%cr4"::"r"(state[core].old_cr4.val));
-		cprint("restored cr4:\t\t0x%lx => 0x%lx", cr4.val, state[core].old_cr4.val);
-		state[core].old_cr4.val=0; }
-	
-	return; }
-
-static int global_close(struct inode *inodep, struct file *filep) {
-	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
-	gprint("exiting vmx operation");
-	on_each_cpu(core_close, NULL, 1);
-	gprint("exited\n");
-	printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	return 0; }
 //////////////////////////////////////////////////////////////////////////////////
 
