@@ -48,4 +48,8 @@ typedef struct __attribute__((packed)) {
 	unsigned long rflags;
 } regs_t;
 
+#define EXIT_ROOT_RAX 0xdeadbeef
+#define EXIT_ROOT_RCX 0xdeaffeed
+#define EXIT_ROOT __asm__ __volatile__("cpuid"::"a"(EXIT_ROOT_RAX), "c"(EXIT_ROOT_RCX))
+
 #endif
