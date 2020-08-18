@@ -83,6 +83,17 @@ typedef struct __attribute__((packed)) {
 	unsigned char write_high[1024]; //0xc0000000 to 0xc0001fff
 } msr_bitmap_t;
 unsigned long msr_bitmap;
+#define set_rdmsr_bmp(val) \
+if(val<=0x1fff) { \
+	((msr_bitmap_t *)msr_bitmap)->read_low[(val)>>3]|=1<<((val)&0x07); } \
+else if(val>=0xc0000000 && val<=0xc0001fff) { \
+	((msr_bitmap_t *)msr_bitmap)->read_high[(val)>>3]|=1<<((val)&0x07); }
+#define set_wrmsr_bmp(val) \
+if(val<=0x1fff) { \
+	((msr_bitmap_t *)msr_bitmap)->write_low[(val)>>3]|=1<<((val)&0x07); } \
+else if(val>=0xc0000000 && val<=0xc0001fff) { \
+	((msr_bitmap_t *)msr_bitmap)->write_high[(val)>>3]|=1<<((val)&0x07); }
+//((msr_bitmap_t *)msr_bitmap)->read_low[0x277>>3]|=1<<(0x277&0x07);
 
 int *errors=NULL;	//every entry should be non-positive
 #define parse_errors(i) ({ for(i=0;i<ncores;i++) { if(errors[i]) break; } (i==ncores) ? 0:errors[i]; })
@@ -151,6 +162,8 @@ __asm__(
 	".text;"
 	".global guest_stub;"
 "guest_stub:;"
+	"mov $0x277, %rcx;"
+	"rdmsr;"
 	"rdtsc;"
 	"mov $0xdeadbeef, %eax;"
 	"mov $0xfeeddeaf, %r8;"
@@ -372,6 +385,8 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	
 	(void)memset((void *)msr_bitmap, 0, 4096);
 	gprint("zeroed msr bitmap:\t0x%lx\n", msr_bitmap);
+	//set_rdmsr_bmp(0x277);
+	//((msr_bitmap_t *)msr_bitmap)->read_low[0x277>>3]|=1<<(0x277&0x07);
 	//TODO must handle appropriately here
 	
 	gprint("entering vmx operation");
