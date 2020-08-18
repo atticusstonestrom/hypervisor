@@ -76,6 +76,14 @@ int ncores;
 unsigned long *ret_rsp;
 unsigned long *ret_rbp;
 
+typedef struct __attribute__((packed)) {
+	unsigned char read_low[1024];	//0x00000000 to 0x00001fff
+	unsigned char read_high[1024];	//0xc0000000 to 0xc0001fff
+	unsigned char write_low[1024];	//0x00000000 to 0x00001fff
+	unsigned char write_high[1024]; //0xc0000000 to 0xc0001fff
+} msr_bitmap_t;
+unsigned long msr_bitmap;
+
 int *errors=NULL;	//every entry should be non-positive
 #define parse_errors(i) ({ for(i=0;i<ncores;i++) { if(errors[i]) break; } (i==ncores) ? 0:errors[i]; })
 
@@ -93,21 +101,37 @@ static void hook(regs_t *regs_p) {
 	lhf_t lhf;
 	
 	unsigned long reason=0xdeadbeef, qual=0xfeed;
+	unsigned long cpl;
+	
+	VMREAD(cpl, GUEST_CS_SELECTOR, lhf);
+	cpl &= 0x03;
 	
 	VMREAD(reason, EXIT_REASON, lhf);
 	VMREAD(qual, EXIT_QUALIFICATION, lhf);
+	cprint("exit reason: 0x%lx\t\texit qual: 0x%lx", reason, qual);
+	cprint("cpl: %ld", cpl);
 	
 	cprint("rax: 0x%lx\t\tr8: 0x%lx", regs_p->rax, regs_p->r8);
-	cprint("exit reason: 0x%lx\t\texit qual: 0x%lx", reason, qual);
-	/*VMREAD(reason, EXIT_INSTRUCTION_LENGTH, lhf);
-	printk("[**] instruction len:\t%ld\n", reason);
-	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			VMREAD(reason, VM_INSTRUCTION_ERROR, lhf);
-			printk("[*]  vmread failed with error code %ld\n\n", reason); }
-		else if(VMfailInvalid(lhf)) {
-			printk("[*]  vmread failed with invalid region\n\n"); }}
-	printk("[*]  leaving hook\n\n");*/
+	
+	/*switch (reason) {
+	case ER_CPUID:
+		if(regs->rax==EXIT_ROOT_RAX && regs->rcx==EXIT_ROOT_RCX) {
+			cprint("vmx exit requested"); }
+		if(cpl>0) {
+			cprint("cpl non-zero"); }
+		cprint("exit from cpuid");
+		break;
+	case ER_RDMSR:
+	default:
+		cprint("cannot handle");
+		break; };
+	
+	unsigned long rip, length;
+	VMREAD(rip, GUEST_RIP, lhf);
+	VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
+	rip+=length;
+	VMWRITE(rip, GUEST_RIP, lhf);*/
+	
 	return; }
 
 __asm__(
@@ -169,6 +193,11 @@ static void global_exit(void) {
 	gprint("cleaning up cores");
 	on_each_cpu(core_exit, NULL, 1);
 	gprint("all clean\n");
+	
+	if(msr_bitmap) {
+		free_page(msr_bitmap);
+		gprint("freed 'msr_bitmap':\t0x%lx", msr_bitmap);
+		msr_bitmap=0; }
 	
 	if(ret_rbp!=NULL) {
 		kfree(ret_rbp);
@@ -341,6 +370,10 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	int ret=0, i=0;
 	
+	(void)memset((void *)msr_bitmap, 0, 4096);
+	gprint("zeroed msr bitmap:\t0x%lx\n", msr_bitmap);
+	//TODO must handle appropriately here
+	
 	gprint("entering vmx operation");
 	on_each_cpu(core_open, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
@@ -428,6 +461,9 @@ static void __init core_init(void *info) {
 	errors[core]=0;
 	
 	int ret=0;
+	
+	state[core].msr_bitmap=msr_bitmap;
+	state[core].msr_paddr=virt_to_phys((void *)msr_bitmap);
 
 	if(( ret=alloc_wb_page(&(state[core].vmxon_region), &(state[core].vmxon_paddr)) )) {
 		cprint("failed to allocate wb-cacheable vmxon region");
@@ -497,7 +533,16 @@ static int __init global_init(void) {
 		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_exit();
 		return -ENOMEM; }
-	gprint("got %ld bytes for 'ret_rbp':\t0x%px\n", ncores*sizeof(long), ret_rbp);
+	gprint("got %ld bytes for 'ret_rbp':\t0x%px", ncores*sizeof(long), ret_rbp);
+	
+	msr_bitmap=0;
+	msr_bitmap=get_zeroed_page(GFP_KERNEL);
+	if(!msr_bitmap) {
+		gprint("failed to allocate 'msr_bitmap' page\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_exit();
+		return -ENOMEM; }
+	gprint("got page for msr bitmap:\t\t0x%lx\n", msr_bitmap);
 
 	gprint("confirming vmx support");
 	on_each_cpu(core_check_vmx_support, NULL, 1);
