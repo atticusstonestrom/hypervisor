@@ -708,11 +708,14 @@ static void core_fill_vmcs(void *info) {
 		pri_cpu_x_ctls.rdtsc_exiting=1; }
 	pri_cpu_x_ctls.hlt_exiting=1;
 	//pri_cpu_x_ctls.use_msr_bitmaps=1;
-	//pri_cpu_x_ctls.activate_secondary_controls=1;
+	pri_cpu_x_ctls.activate_secondary_controls=1;
 	
 	sec_cpu_x_ctls.val=0;
 	//sec_cpu_x_ctls.enable_ept=1;	//[DEBUG]
 	//sec_cpu_x_ctls.unrestricted_guest=1;
+	sec_cpu_x_ctls.enable_rdtscp=1;
+	sec_cpu_x_ctls.enable_invpcid=1;
+	//sec_cpu_x_ctls.enable_pml=1;		//useful!!!!!
 	
 	exit_ctls.val=0;
 	//exit_ctls.save_dbg_controls=1;
