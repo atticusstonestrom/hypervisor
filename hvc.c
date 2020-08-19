@@ -151,7 +151,7 @@ typedef union __attribute__((packed)) {
 //specify calling convention? gcc
 __attribute__((__used__))
 static void hook(regs_t *regs_p) {
-	int core=smp_processor_id();
+	int core=get_cpu();
 	
 	lhf_t lhf;
 	
@@ -170,7 +170,7 @@ static void hook(regs_t *regs_p) {
 	
 	cpuid_t cpuid;
 	msr_t msr;
-	unsigned long reg;
+	unsigned long reg, reg2;
 	
 	switch (reason) {
 
@@ -204,7 +204,8 @@ static void hook(regs_t *regs_p) {
 	case ER_RDMSR:
 		cprint("rdmsr exit:\tid: 0x%lx", regs_p->rcx);
 
-		if(cpl>0) {
+		if(cpl>0 || (signed)(regs_p->rcx)>0x00001fff && (signed)(regs_p->rcx)<0xc0000000
+		   || (signed)(regs_p->rcx)>0xc0001fff) {
 			cprint("cpl non-zero");
 			//reflect back #GP(0)
 			break; }
@@ -222,53 +223,102 @@ static void hook(regs_t *regs_p) {
 			cprint("cpl non-zero");
 			//reflect back #GP(0)
 			break; }
-			
+		
+		#define MOV_CR8 0xdeadbeef
 		switch (qual.cr_access.cr_num) {
 			case(0): reg=GUEST_CR0; break;
 			case(3): reg=GUEST_CR3; break;
 			case(4): reg=GUEST_CR4; break;
-			case(8): reg=GUEST_CR8; break; };
-
-		//switch case? clts lmsw
-		if(qual.cr_access.access_type==MOV_TO) {
+			case(8): reg=MOV_CR8; break; };
+			
+		switch(qual.cr_access.access_type) {
+		case(MOV_TO):
 			switch(qual.cr_access.mov_cr_reg) {
-			case(MOV_CR_RAX): VMWRITE(reg, regs_p->rax, lhf); break;
-			case(MOV_CR_RCX): VMWRITE(reg, regs_p->rcx, lhf); break;
-			case(MOV_CR_RDX): VMWRITE(reg, regs_p->rax, lhf); break;
-			case(MOV_CR_RBX): VMWRITE(reg, regs_p->rax, lhf); break;
-			case(MOV_CR_RSP): VMREAD(reg, GUEST_RSP, lhf); VMWRITE(reg, reg, lhf); break;
-			case(MOV_CR_RBP): VMWRITE(reg, regs_p->rax, lhf); break;
-			case(MOV_CR_RSI): VMWRITE(reg, regs_p->rax, lhf); break;
-			case(MOV_CR_RDI): VMWRITE(reg, regs_p->rax, lhf); break;
-			case(MOV_CR_R8):  VMWRITE(reg, regs_p->r8, lhf);  break;
-			case(MOV_CR_R9):  VMWRITE(reg, regs_p->r9, lhf);  break;
-			case(MOV_CR_R10): VMWRITE(reg, regs_p->r10, lhf); break;
-			case(MOV_CR_R11): VMWRITE(reg, regs_p->r11, lhf); break;
-			case(MOV_CR_R12): VMWRITE(reg, regs_p->r12, lhf); break;
-			case(MOV_CR_R13): VMWRITE(reg, regs_p->r13, lhf); break;
-			case(MOV_CR_R14): VMWRITE(reg, regs_p->r14, lhf); break;
-			case(MOV_CR_R15): VMWRITE(reg, regs_p->r15, lhf); break; };
-			default: break; }
-		if(qual.cr_access.access_type=MOV_FROM) {
-			VMREAD(reg, reg, lhf);
-			switch(qual.cr_access_mov_cr_reg) {
-			case(MOV_CR_RAX): regs_p->rax=reg; break;
-			case(MOV_CR_RCX): regs_p->rcx=reg; break;
-			case(MOV_CR_RDX): regs_p->rdx=reg; break;
-			case(MOV_CR_RBX): regs_p->rbx=reg; break;
-			case(MOV_CR_RSP): VMWRITE(reg, GUEST_RSP, lhf); break;
-			case(MOV_CR_RBP): regs_p->rbp=reg; break;
-			case(MOV_CR_RSI): regs_p->rsi=reg; break;
-			case(MOV_CR_RDI): regs_p->rdi=reg; break;
-			case(MOV_CR_R8):  regs_p->r8=reg;  break;
-			case(MOV_CR_R9):  regs_p->r9=reg;  break;
-			case(MOV_CR_R10): regs_p->r10=reg; break;
-			case(MOV_CR_R11): regs_p->r11=reg; break;
-			case(MOV_CR_R12): regs_p->r12=reg; break;
-			case(MOV_CR_R13): regs_p->r13=reg; break;
-			case(MOV_CR_R14): regs_p->r14=reg; break;
-			case(MOV_CR_R15): regs_p->r15=reg; break; };
-			default: break; }
+				case(MOV_CR_RAX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rax; }
+					          else { VMWRITE(reg, regs_p->rax, lhf); }
+					          break;
+				case(MOV_CR_RCX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rcx; }
+					          else { VMWRITE(reg, regs_p->rcx, lhf); }
+					          break;
+				case(MOV_CR_RDX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rdx; }
+					          else { VMWRITE(reg, regs_p->rdx, lhf); }
+					          break;
+				case(MOV_CR_RBX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rbx; }
+					          else { VMWRITE(reg, regs_p->rbx, lhf); }
+					          break;
+				case(MOV_CR_RSP): VMREAD(reg2, GUEST_RSP, lhf);
+					          if(reg==MOV_CR8) { regs_p->cr8=reg2; }
+					          else { VMWRITE(reg2, reg, lhf); }
+					          break;
+				case(MOV_CR_RBP): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rbp; }
+					          else { VMWRITE(reg, regs_p->rbp, lhf); }
+					          break;
+				case(MOV_CR_RSI): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rsi; }
+					          else { VMWRITE(reg, regs_p->rsi, lhf); }
+					          break;
+				case(MOV_CR_RDI): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rdi; }
+					          else { VMWRITE(reg, regs_p->rdi, lhf); }
+					          break;
+				case(MOV_CR_R8):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r8; }
+					          else { VMWRITE(reg, regs_p->r8, lhf); }
+					          break;
+				case(MOV_CR_R9):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r9; }
+					          else { VMWRITE(reg, regs_p->r9, lhf); }
+					          break;
+				case(MOV_CR_R10):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r10; }
+					          else { VMWRITE(reg, regs_p->r10, lhf); }
+					          break;
+				case(MOV_CR_R11): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r11; }
+					          else { VMWRITE(reg, regs_p->r11, lhf); }
+					          break;
+				case(MOV_CR_R12): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r12; }
+					          else { VMWRITE(reg, regs_p->r12, lhf); }
+					          break;
+				case(MOV_CR_R13): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r13; }
+					          else { VMWRITE(reg, regs_p->r13, lhf); }
+					          break;
+				case(MOV_CR_R14): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r14; }
+					          else { VMWRITE(reg, regs_p->r14, lhf); }
+					          break;
+				case(MOV_CR_R15): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r15; }
+					          else { VMWRITE(reg, regs_p->r15, lhf); }
+					          break;
+				default: break; };
+			break;
+		case(MOV_FROM):
+			if(reg==MOV_CR8) { reg=regs_p->cr8; }
+			else { VMREAD(reg, reg, lhf); }
+			switch(qual.cr_access.mov_cr_reg) {
+				case(MOV_CR_RAX): regs_p->rax=reg; break;
+				case(MOV_CR_RCX): regs_p->rcx=reg; break;
+				case(MOV_CR_RDX): regs_p->rdx=reg; break;
+				case(MOV_CR_RBX): regs_p->rbx=reg; break;
+				case(MOV_CR_RSP): VMWRITE(reg, GUEST_RSP, lhf); break;
+				case(MOV_CR_RBP): regs_p->rbp=reg; break;
+				case(MOV_CR_RSI): regs_p->rsi=reg; break;
+				case(MOV_CR_RDI): regs_p->rdi=reg; break;
+				case(MOV_CR_R8):  regs_p->r8=reg;  break;
+				case(MOV_CR_R9):  regs_p->r9=reg;  break;
+				case(MOV_CR_R10): regs_p->r10=reg; break;
+				case(MOV_CR_R11): regs_p->r11=reg; break;
+				case(MOV_CR_R12): regs_p->r12=reg; break;
+				case(MOV_CR_R13): regs_p->r13=reg; break;
+				case(MOV_CR_R14): regs_p->r14=reg; break;
+				case(MOV_CR_R15): regs_p->r15=reg; break; 
+				default: break; };
+			break;
+		case(CLTS):
+			VMREAD(reg, GUEST_CR0, lhf);
+			reg &= ~(((cr0_t){ .ts=1 }).val);
+			VMWRITE(reg, GUEST_CR0, lhf);
+			break;
+		case(LMSW):
+			//page fault???
+			VMREAD(reg, GUEST_CR0, lhf);
+			reg &= 0xffffffffffff0000;
+			reg |= qual.cr_access.lmsw_src_data;
+			break;
+		default: break; };
 		//check for error with lhf
 		//cr4 vmxe, shadow/mask. how to handle?
 		break;
@@ -283,6 +333,7 @@ static void hook(regs_t *regs_p) {
 	rip+=length;
 	VMWRITE(rip, GUEST_RIP, lhf);
 
+	put_cpu();
 	return; }
 
 __asm__(
@@ -290,10 +341,12 @@ __asm__(
 	".global host_stub;"
 "host_stub:;"
 	PUSHA
-	//"swapgs;"
+	"mov %cr8, %rax;"
+	"push %rax;"
 	"mov %rsp, %rdi;"
 	"call hook;"
-	//"swapgs;"
+	"pop %rax;"
+	"mov %rax, %cr8;"
 	POPA
 	"jmp return_from_exit;");
 extern void host_stub(void);
