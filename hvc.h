@@ -30,6 +30,7 @@ typedef struct {
 } state_t;
 
 typedef struct __attribute__((packed)) {
+	unsigned long cr8;
 	unsigned long rax;
 	unsigned long rbx;
 	unsigned long rcx;
@@ -46,7 +47,6 @@ typedef struct __attribute__((packed)) {
 	unsigned long r14;
 	unsigned long r15;
 	unsigned long rflags;
-	unsigned long cr8;
 } regs_t;
 
 #define EXIT_ROOT_RAX 0xdeadbeef
