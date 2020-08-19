@@ -296,11 +296,21 @@ typedef union __attribute__((packed)) {
 		leaf_1;
 } cpuid_t;
 	
-#define CPUID(dst, leaf) 							\
+#define CPUID2(dst, leaf) 							\
 __asm__ __volatile__(								\
 	"cpuid;"								\
 	:"=a"((dst).eax), "=b"((dst).ebx), "=c"((dst).ecx), "=d"((dst).edx)	\
 	:"a"(leaf):"memory")
+
+#define CPUID3(dst, leaf, arg) 							\
+__asm__ __volatile__(								\
+	"cpuid;"								\
+	:"=a"((dst).eax), "=b"((dst).ebx), "=c"((dst).ecx), "=d"((dst).edx)	\
+	:"a"(leaf), "c"(arg)							\
+	:"memory")
+
+#define GET_CPUID_ARGS(_1,_2,_3,NAME,...) NAME
+#define CPUID(...) GET_CPUID_ARGS(__VA_ARGS__, CPUID3, CPUID2)(__VA_ARGS__)
 /////////////////////////////////////////////////////
 
 
