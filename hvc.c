@@ -125,12 +125,21 @@ static void hook(regs_t *regs_p) {
 	cprint("rax: 0x%lx\t\tr8: 0x%lx", regs_p->rax, regs_p->r8);
 	
 	cpuid_t cpuid;
-	/*switch (reason) {
+	switch (reason) {
 	case ER_CPUID:
+		CPUID(cpuid, regs->rax, regs->rcx);
 		if(regs->rax==EXIT_ROOT_RAX && regs->rcx==EXIT_ROOT_RCX) {
 			cprint("vmx exit requested"); }
 		if(cpl>0) {
 			cprint("cpl non-zero"); }
+		if(regs->rax==1) {
+			cpuid.leaf_1.hypervisor_present=1; }
+		//https://lwn.net/Articles/301888/
+		//works in all cases except leaf 0
+		regs->rax=cpuid.rax;
+		regs->rbx=cpuid.rbx;
+		regs->rcx=cpuid.rcx;
+		regs->rdx=cpuid.rdx;
 		cprint("exit from cpuid");
 		break;
 	case ER_RDMSR:
@@ -142,7 +151,7 @@ static void hook(regs_t *regs_p) {
 	VMREAD(rip, GUEST_RIP, lhf);
 	VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
 	rip+=length;
-	VMWRITE(rip, GUEST_RIP, lhf);*/
+	VMWRITE(rip, GUEST_RIP, lhf);
 	
 	return; }
 
