@@ -157,6 +157,8 @@ __asm__(
 	POPA
 	"jmp return_from_exit;");
 extern void host_stub(void);
+//try vmlaunch here
+//if fails then "call vmfail"
 
 __asm__(
 	".text;"
