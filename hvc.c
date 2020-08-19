@@ -24,6 +24,9 @@
 //check error code in vmfailvalid
 //	check which instruction can vmfailvalid
 //is there a way to force a vm exit from inside non-root operation?
+//how does software check the amount of available ram
+//	physical address width?
+//	check virtualbox sliding ram
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -83,22 +86,63 @@ typedef struct __attribute__((packed)) {
 	unsigned char write_high[1024]; //0xc0000000 to 0xc0001fff
 } msr_bitmap_t;
 unsigned long msr_bitmap;
-#define set_rdmsr_bmp(val) \
-if(val<=0x1fff) { \
-	((msr_bitmap_t *)msr_bitmap)->read_low[(val)>>3]|=1<<((val)&0x07); } \
-else if(val>=0xc0000000 && val<=0xc0001fff) { \
-	((msr_bitmap_t *)msr_bitmap)->read_high[(val)>>3]|=1<<((val)&0x07); }
-#define set_wrmsr_bmp(val) \
-if(val<=0x1fff) { \
-	((msr_bitmap_t *)msr_bitmap)->write_low[(val)>>3]|=1<<((val)&0x07); } \
-else if(val>=0xc0000000 && val<=0xc0001fff) { \
-	((msr_bitmap_t *)msr_bitmap)->write_high[(val)>>3]|=1<<((val)&0x07); }
+
+#define set_rdmsr_bmp(val)									\
+if((signed)val<=0x1fff) {									\
+	((msr_bitmap_t *)msr_bitmap)->read_low[(val)>>3]|=1<<((val)&0x07); }			\
+else if((signed)val>=0xc0000000 && (signed)val<=0xc0001fff) {					\
+	((msr_bitmap_t *)msr_bitmap)->read_high[((val)-0xc0000000)>>3]|=1<<((val)&0x07); }
+
+#define set_wrmsr_bmp(val)									\
+if((signed)val<=0x1fff) {									\
+	((msr_bitmap_t *)msr_bitmap)->write_low[(val)>>3]|=1<<((val)&0x07); }			\
+else if((signed)val>=0xc0000000 && (signed)val<=0xc0001fff) {					\
+	((msr_bitmap_t *)msr_bitmap)->write_high[((val)-0xc0000000)>>3]|=1<<((val)&0x07); }
 //((msr_bitmap_t *)msr_bitmap)->read_low[0x277>>3]|=1<<(0x277&0x07);
 
 int *errors=NULL;	//every entry should be non-positive
 #define parse_errors(i) ({ for(i=0;i<ncores;i++) { if(errors[i]) break; } (i==ncores) ? 0:errors[i]; })
 
 state_t *state=NULL;
+//////////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////
+enum cr_access_type {
+	MOV_TO=0,
+	MOV_FROM=1,
+	CLTS=2,
+	LMSW=3 };
+enum mov_cr_registers {
+	MOV_CR_RAX=0,
+	MOV_CR_RCX=1,
+	MOV_CR_RDX=2,
+	MOV_CR_RBX=3,
+	MOV_CR_RSP=4,
+	MOV_CR_RBP=5,
+	MOV_CR_RSI=6,
+	MOV_CR_RDI=7,
+	MOV_CR_R8=8,
+	MOV_CR_R9=9,
+	MOV_CR_R10=10,
+	MOV_CR_R11=11,
+	MOV_CR_R12=12,
+	MOV_CR_R13=13,
+	MOV_CR_R14=14,
+	MOV_CR_R15=15 };
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned long cr_num:4;
+		unsigned long access_type:2;
+		unsigned long lmsw_operand_type:1;	//0=register, 1=memory
+		unsigned long rsv_7:1;
+		unsigned long mov_cr_reg:4;
+		unsigned long rsv_12_15:4;
+		unsigned long lmsw_src_data:16;
+		unsigned long rsv_32_63:32; }
+		cr_access;
+	
+	unsigned long val;
+} exit_qualification_t;
 //////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -111,38 +155,124 @@ static void hook(regs_t *regs_p) {
 	
 	lhf_t lhf;
 	
-	unsigned long reason=0xdeadbeef, qual=0xfeed;
+	unsigned long reason=0xdeadbeef;
+	exit_qualification_t qual;
 	unsigned long cpl;
 	
 	VMREAD(cpl, GUEST_CS_SELECTOR, lhf);
 	cpl &= 0x03;
 	
 	VMREAD(reason, EXIT_REASON, lhf);
-	VMREAD(qual, EXIT_QUALIFICATION, lhf);
-	cprint("exit reason: 0x%lx\t\texit qual: 0x%lx", reason, qual);
-	cprint("cpl: %ld", cpl);
+	VMREAD(qual.val, EXIT_QUALIFICATION, lhf);
+	cprint("exit reason: 0x%lx\t\texit qual: 0x%lx\t\tcpl: %ld", reason, qual.val, cpl);
 	
 	cprint("rax: 0x%lx\t\tr8: 0x%lx", regs_p->rax, regs_p->r8);
 	
 	cpuid_t cpuid;
+	msr_t msr;
+	unsigned long reg;
+	
 	switch (reason) {
+
 	case ER_CPUID:
-		CPUID(cpuid, regs->rax, regs->rcx);
-		if(regs->rax==EXIT_ROOT_RAX && regs->rcx==EXIT_ROOT_RCX) {
-			cprint("vmx exit requested"); }
-		if(cpl>0) {
-			cprint("cpl non-zero"); }
-		if(regs->rax==1) {
+		cprint("cpuid exit:\tleaf: 0x%lx\t\targ: 0x%lx", regs_p->rax, regs_p->rcx);
+
+		if(regs_p->rax==EXIT_ROOT_RAX && regs_p->rcx==EXIT_ROOT_RCX) {
+			cprint("vmx exit requested");
+			//if(cpl>0) {
+				//cprint("cpl non-zero");
+				//break; }
+			break; }
+		CPUID(cpuid, regs_p->rax, regs_p->rcx);
+		if(regs_p->rax==0) {
+			//cpuid.leaf_0.vendor_id={'K', 'e', 'r', 'n', 'e', 'l', 'F', 'u', 'z', 'z', 'e', 'r'};
+			memcpy(cpuid.leaf_0.vendor_id, "KernelFuzzer", 12);
+			reg=cpuid.leaf_0.ecx;
+			cpuid.edx=cpuid.leaf_0.edx;
+			cpuid.ecx=reg; }
+		if(regs_p->rax==1) {
+			cpuid.leaf_1.vmx=0;
 			cpuid.leaf_1.hypervisor_present=1; }
 		//https://lwn.net/Articles/301888/
-		//works in all cases except leaf 0
-		regs->rax=cpuid.rax;
-		regs->rbx=cpuid.rbx;
-		regs->rcx=cpuid.rcx;
-		regs->rdx=cpuid.rdx;
-		cprint("exit from cpuid");
+
+		regs_p->rax=cpuid.eax;
+		regs_p->rbx=cpuid.ebx;
+		regs_p->rcx=cpuid.ecx;
+		regs_p->rdx=cpuid.edx;
 		break;
+
 	case ER_RDMSR:
+		cprint("rdmsr exit:\tid: 0x%lx", regs_p->rcx);
+
+		if(cpl>0) {
+			cprint("cpl non-zero");
+			//reflect back #GP(0)
+			break; }
+		//check if arg is valid
+		READ_MSR(msr, regs_p->rcx);	//first check TRUE ctls
+		if(regs_p->rcx==IA32_VMX_BASIC) {
+			msr=(msr_t) {0}; }
+			
+		regs_p->rax=msr.eax;
+		regs_p->rdx=msr.edx;
+		break;
+	
+	case ER_CR_ACCESS:
+		if(cpl>0) {
+			cprint("cpl non-zero");
+			//reflect back #GP(0)
+			break; }
+			
+		switch (qual.cr_access.cr_num) {
+			case(0): reg=GUEST_CR0; break;
+			case(3): reg=GUEST_CR3; break;
+			case(4): reg=GUEST_CR4; break;
+			case(8): reg=GUEST_CR8; break; };
+
+		//switch case? clts lmsw
+		if(qual.cr_access.access_type==MOV_TO) {
+			switch(qual.cr_access.mov_cr_reg) {
+			case(MOV_CR_RAX): VMWRITE(reg, regs_p->rax, lhf); break;
+			case(MOV_CR_RCX): VMWRITE(reg, regs_p->rcx, lhf); break;
+			case(MOV_CR_RDX): VMWRITE(reg, regs_p->rax, lhf); break;
+			case(MOV_CR_RBX): VMWRITE(reg, regs_p->rax, lhf); break;
+			case(MOV_CR_RSP): VMREAD(reg, GUEST_RSP, lhf); VMWRITE(reg, reg, lhf); break;
+			case(MOV_CR_RBP): VMWRITE(reg, regs_p->rax, lhf); break;
+			case(MOV_CR_RSI): VMWRITE(reg, regs_p->rax, lhf); break;
+			case(MOV_CR_RDI): VMWRITE(reg, regs_p->rax, lhf); break;
+			case(MOV_CR_R8):  VMWRITE(reg, regs_p->r8, lhf);  break;
+			case(MOV_CR_R9):  VMWRITE(reg, regs_p->r9, lhf);  break;
+			case(MOV_CR_R10): VMWRITE(reg, regs_p->r10, lhf); break;
+			case(MOV_CR_R11): VMWRITE(reg, regs_p->r11, lhf); break;
+			case(MOV_CR_R12): VMWRITE(reg, regs_p->r12, lhf); break;
+			case(MOV_CR_R13): VMWRITE(reg, regs_p->r13, lhf); break;
+			case(MOV_CR_R14): VMWRITE(reg, regs_p->r14, lhf); break;
+			case(MOV_CR_R15): VMWRITE(reg, regs_p->r15, lhf); break; };
+			default: break; }
+		if(qual.cr_access.access_type=MOV_FROM) {
+			VMREAD(reg, reg, lhf);
+			switch(qual.cr_access_mov_cr_reg) {
+			case(MOV_CR_RAX): regs_p->rax=reg; break;
+			case(MOV_CR_RCX): regs_p->rcx=reg; break;
+			case(MOV_CR_RDX): regs_p->rdx=reg; break;
+			case(MOV_CR_RBX): regs_p->rbx=reg; break;
+			case(MOV_CR_RSP): VMWRITE(reg, GUEST_RSP, lhf); break;
+			case(MOV_CR_RBP): regs_p->rbp=reg; break;
+			case(MOV_CR_RSI): regs_p->rsi=reg; break;
+			case(MOV_CR_RDI): regs_p->rdi=reg; break;
+			case(MOV_CR_R8):  regs_p->r8=reg;  break;
+			case(MOV_CR_R9):  regs_p->r9=reg;  break;
+			case(MOV_CR_R10): regs_p->r10=reg; break;
+			case(MOV_CR_R11): regs_p->r11=reg; break;
+			case(MOV_CR_R12): regs_p->r12=reg; break;
+			case(MOV_CR_R13): regs_p->r13=reg; break;
+			case(MOV_CR_R14): regs_p->r14=reg; break;
+			case(MOV_CR_R15): regs_p->r15=reg; break; };
+			default: break; }
+		//check for error with lhf
+		//cr4 vmxe, shadow/mask. how to handle?
+		break;
+
 	default:
 		cprint("cannot handle");
 		break; };
@@ -152,7 +282,7 @@ static void hook(regs_t *regs_p) {
 	VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
 	rip+=length;
 	VMWRITE(rip, GUEST_RIP, lhf);
-	
+
 	return; }
 
 __asm__(
@@ -170,11 +300,13 @@ extern void host_stub(void);
 //try vmlaunch here
 //if fails then "call vmfail"
 
+#define str2(x) #x
+#define str(x) str2(x)
 __asm__(
 	".text;"
 	".global guest_stub;"
 "guest_stub:;"
-	"mov $0x277, %rcx;"
+	"mov $"str(IA32_VMX_BASIC)", %rcx;"
 	"rdmsr;"
 	"rdtsc;"
 	"mov $0xdeadbeef, %eax;"
@@ -397,7 +529,7 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	
 	(void)memset((void *)msr_bitmap, 0, 4096);
 	gprint("zeroed msr bitmap:\t0x%lx\n", msr_bitmap);
-	//set_rdmsr_bmp(0x277);
+	set_rdmsr_bmp(IA32_VMX_BASIC);
 	//((msr_bitmap_t *)msr_bitmap)->read_low[0x277>>3]|=1<<(0x277&0x07);
 	//TODO must handle appropriately here
 	
