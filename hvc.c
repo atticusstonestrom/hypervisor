@@ -124,6 +124,7 @@ static void hook(regs_t *regs_p) {
 	
 	cprint("rax: 0x%lx\t\tr8: 0x%lx", regs_p->rax, regs_p->r8);
 	
+	cpuid_t cpuid;
 	/*switch (reason) {
 	case ER_CPUID:
 		if(regs->rax==EXIT_ROOT_RAX && regs->rcx==EXIT_ROOT_RCX) {
