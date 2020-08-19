@@ -27,6 +27,7 @@
 //how does software check the amount of available ram
 //	physical address width?
 //	check virtualbox sliding ram
+//save MSRs like ia32_lstar as part of guest_regs (at least writeable ones)
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -183,6 +184,7 @@ static void hook(regs_t *regs_p) {
 				//cprint("cpl non-zero");
 				//break; }
 			break; }
+
 		CPUID(cpuid, regs_p->rax, regs_p->rcx);
 		if(regs_p->rax==0) {
 			//cpuid.leaf_0.vendor_id={'K', 'e', 'r', 'n', 'e', 'l', 'F', 'u', 'z', 'z', 'e', 'r'};
@@ -204,18 +206,36 @@ static void hook(regs_t *regs_p) {
 	case ER_RDMSR:
 		cprint("rdmsr exit:\tid: 0x%lx", regs_p->rcx);
 
-		if(cpl>0 || (signed)(regs_p->rcx)>0x00001fff && (signed)(regs_p->rcx)<0xc0000000
-		   || (signed)(regs_p->rcx)>0xc0001fff) {
-			cprint("cpl non-zero");
+		if(((signed)(regs_p->rcx)>0x00001fff && (signed)(regs_p->rcx)<0xc0000000)
+		   || (signed)(regs_p->rcx)>0xc0001fff || cpl=0) {
+			cprint("cpl non-zero or msr invalid");
 			//reflect back #GP(0)
+			regs_p->rax=0;
+			regs_p->rdx=0;
 			break; }
-		//check if arg is valid
+
 		READ_MSR(msr, regs_p->rcx);	//first check TRUE ctls
 		if(regs_p->rcx==IA32_VMX_BASIC) {
 			msr=(msr_t) {0}; }
 			
 		regs_p->rax=msr.eax;
 		regs_p->rdx=msr.edx;
+		break;
+
+	case ER_WRMSR:
+		cprint("wrmsr exit:\tid: 0x%lx", regs_p->rcx);
+
+		if(((signed)(regs_p->rcx)>0x00001fff && (signed)(regs_p->rcx)<0xc0000000)
+		   || (signed)(regs_p->rcx)>0xc0001fff || cpl=0) {
+			cprint("cpl non-zero or msr invalid");
+			//reflect back #GP(0)
+			regs_p->rax=0;
+			regs_p->rdx=0;
+			break; }
+			
+		msr.eax=regs_p->rax;
+		msr.edx=regs_p->rdx;
+		WRITE_MSR(msr, regs_p->rcx);	//first check TRUE ctls
 		break;
 	
 	case ER_CR_ACCESS:
@@ -322,6 +342,26 @@ static void hook(regs_t *regs_p) {
 		//check for error with lhf
 		//cr4 vmxe, shadow/mask. how to handle?
 		break;
+			
+	case ER_VMCALL:
+	case ER_VMCLEAR:
+	case ER_VMLAUNCH:
+	case ER_VMPTRLD:
+	case ER_VMPTRST:
+	case ER_VMREAD:
+	case ER_VMRESUME:
+	case ER_VMWRITE:
+	case ER_VMXOFF:
+	case ER_VMXON:
+		regs_p->rflags=0;
+		break;
+	
+	case ER_INVEPT:
+	case ER_INVVPID:
+	
+	case ER_GETSEC:
+	case ER_INVD:
+	case ER_XSETBV:
 
 	default:
 		cprint("cannot handle");
