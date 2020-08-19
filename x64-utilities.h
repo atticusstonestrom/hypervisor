@@ -283,15 +283,16 @@ typedef union __attribute__((packed)) {
 		leaf_0;
 	
 	struct __attribute__((packed)) {
-		unsigned int version_info;
-		unsigned int brand_index:8;
+		unsigned int version_info;		//eax start/end
+		unsigned int brand_index:8;		//ebx start
 		unsigned int clflush_line_size:8;
 		unsigned int max_num_ids:8;
-		unsigned int apic_id:8;
-		unsigned int ecx_0_4:5;
+		unsigned int apic_id:8;			//ebx end
+		unsigned int ecx_0_4:5;			//ecx start
 		unsigned int vmx:1;
-		unsigned int ecx_6_31:26;
-		unsigned int edx; }
+		unsigned int ecx_6_30:25;
+		unsigned int hypervisor_present:1;	//ecx end
+		unsigned int edx; }			//edx start/end
 		leaf_1;
 } cpuid_t;
 	
