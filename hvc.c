@@ -290,69 +290,85 @@ static unsigned long hook(regs_t *regs_p) {
 		case(MOV_TO):
 			switch(qual.cr_access.mov_cr_reg) {
 				case(MOV_CR_RAX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rax; }
-					          else { VMWRITE(reg, regs_p->rax, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rax)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->rax, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rax)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rax)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_RCX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rcx; }
-					          else { VMWRITE(reg, regs_p->rcx, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rcx)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->rcx, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rcx)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rcx)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_RDX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rdx; }
-					          else { VMWRITE(reg, regs_p->rdx, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rdx)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->rdx, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rdx)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rdx)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_RBX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rbx; }
-					          else { VMWRITE(reg, regs_p->rbx, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rbx)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->rbx, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rbx)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rbx)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_RSP): VMREAD(reg2, GUEST_RSP, lhf);
 					          if(reg==MOV_CR8) { regs_p->cr8=reg2; }
 					          else { VMWRITE(reg2, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((reg2)|0x8000000000000000)), lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((reg2)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&reg2), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_RBP): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rbp; }
-					          else { VMWRITE(reg, regs_p->rbp, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rbp)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->rbp, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rbp)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rbp)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_RSI): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rsi; }
-					          else { VMWRITE(reg, regs_p->rsi, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rsi)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->rsi, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rsi)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rsi)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_RDI): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rdi; }
-					          else { VMWRITE(reg, regs_p->rdi, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rdi)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->rdi, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rdi)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rdi)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_R8):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r8; }
-					          else { VMWRITE(reg, regs_p->r8, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r8)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->r8, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r8)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r8)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_R9):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r9; }
-					          else { VMWRITE(reg, regs_p->r9, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r9)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->r9, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r9)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r9)), HOST_CR3, lhf); }
 					          break;
-				case(MOV_CR_R10):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r10; }
-					          else { VMWRITE(reg, regs_p->r10, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r10)|0x8000000000000000)), lhf); }
+				case(MOV_CR_R10): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r10; }
+					          else { VMWRITE(regs_p->r10, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r10)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r10)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_R11): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r11; }
-					          else { VMWRITE(reg, regs_p->r11, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r11)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->r11, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r11)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r11)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_R12): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r12; }
-					          else { VMWRITE(reg, regs_p->r12, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r12)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->r12, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r12)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r12)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_R13): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r13; }
-					          else { VMWRITE(reg, regs_p->r13, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r13)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->r13, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r13)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r13)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_R14): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r14; }
-					          else { VMWRITE(reg, regs_p->r14, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r14)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->r14, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r14)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r14)), HOST_CR3, lhf); }
 					          break;
 				case(MOV_CR_R15): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r15; }
-					          else { VMWRITE(reg, regs_p->r15, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r15)|0x8000000000000000)), lhf); }
+					          else { VMWRITE(regs_p->r15, reg, lhf); }
+						  //if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r15)|0x8000000000000000)), lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r15)), HOST_CR3, lhf); }
 					          break;
 				default: break; };
 			break;
@@ -388,6 +404,7 @@ static unsigned long hook(regs_t *regs_p) {
 			VMREAD(reg, GUEST_CR0, lhf);
 			reg &= 0xffffffffffff0000;
 			reg |= qual.cr_access.lmsw_src_data;
+			VMWRITE(reg, GUEST_CR0, lhf);
 			break;
 		default: break; };
 		//check for error with lhf
