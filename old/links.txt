@@ -25,3 +25,5 @@ https://hackaday.com/2020/08/12/degrees-of-freedom-booting-arm-processors/
 
 
 https://genode.org/documentation/articles/arm_virtualization
+
+https://hackaday.com/2015/07/20/designing-a-cpu-in-vhdl-for-fpgas-omg/ !!!!!
