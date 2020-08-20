@@ -27,6 +27,7 @@ typedef struct {
 	
 	ept_data_t ept_data;
 	int active_flag;
+	int guest_flag;
 } state_t;
 
 typedef struct __attribute__((packed)) {
