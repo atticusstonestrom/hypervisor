@@ -30,6 +30,7 @@
 //	https://wiki.osdev.org/Detecting_Memory_(x86)
 //save MSRs like ia32_lstar as part of guest_regs (at least writeable ones)
 //lock cpuid?
+//rflags should be found in guest state not regs_p!
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -66,13 +67,13 @@ static struct device *hvc_device=NULL;
 
 static int global_open(struct inode *, struct file *);
 static int global_close(struct inode *, struct file *);
-//static ssize_t dev_read(struct file *, char *, size_t, loff_t *);
-//static ssize_t dev_write(struct file *, const char *, size_t, loff_t *);
+static ssize_t dev_read(struct file *, char *, size_t, loff_t *);
+static ssize_t dev_write(struct file *, const char *, size_t, loff_t *);
 
 static struct file_operations fops = {
 	.open=global_open,
-//	.read=dev_read,
-//	.write=dev_write,
+	.read=dev_read,
+	.write=dev_write,
 	.release=global_close };
 /////////////////////////////////////////
 
@@ -589,7 +590,9 @@ static void core_close(void *info) {
 	int core=smp_processor_id();
 	errors[core]=0;
 	
-	EXIT_NON_ROOT;
+	if(state[core].guest_flag) {
+		EXIT_NON_ROOT;
+		state[core].guest_flag=0; }
 	
 	int success_flag;
 	
@@ -659,28 +662,44 @@ void core_launch(void *info) {
 		"movq (%%rax, %%rdx, 8), %%rbp;"
 		:::"eax", "ebx", "ecx", "edx", "memory");*/
 	
-	lhf_t lhf;
+	lhf_t lhf={0};
 	unsigned long error_code;
 	__asm__ __volatile__(
 		"lahf;"
 		"and $0xbe, %%ah;"
-		"sahf;"
-		"push %%rbx;"
-		"push %%rcx;"
+		"mov $"str(GUEST_CR3)", %%rbx;"
+		"mov %%cr3, %%rcx;"
+		"vmwrite %%rcx, %%rbx;"
 		"mov $"str(GUEST_RSP)", %%rbx;"
 		"vmwrite %%rsp, %%rbx;"
-		"lea vmx_entry_point(%%rip), %%rcx;"
+		
+		/*"push %%rax;"	//[debug]
+		"mov $0xdeadbeef, %%eax;"
+		"push %%rax;"
+		"add $8, %%rsp;"
+		"pop %%rax;"	//[debug]*/
+		
 		"mov $"str(GUEST_RIP)", %%rbx;"
+		"lea vmx_entry_point(%%rip), %%rcx;"
 		"vmwrite %%rcx, %%rbx;"
 		"vmlaunch;"
 		"lahf;"
 	"vmx_entry_point:;"
-		"pop %%rcx;"
-		"pop %%rbx;"
 		"shr $8, %%rax;"
 		"movb %%al, %0;"
 		:"=r"(lhf.val)
 		::"rax", "rbx", "rcx", "memory");
+	
+	/*unsigned long reg, reg2;
+	VMREAD(reg, GUEST_RIP, lhf);
+	VMREAD(reg2, GUEST_RSP, lhf);
+	cprint("[debug] rip: 0x%lx\tword: %02x %02x %02x %02x\trsp: 0x%lx\tword: 0x%lx",
+	       reg, *(unsigned char *)(reg), *(unsigned char *)(reg+1), *(unsigned char *)(reg+2),
+	       *(unsigned char *)(reg+3), reg2, *(unsigned long *)(reg2-16));
+	__asm__ __volatile__("mov %%cr3, %0":"=r"(reg));
+	VMREAD(reg2, GUEST_CR3, lhf);
+	cprint("[debug] guest_cr3: 0x%lx\tlive_cr3: 0x%lx", reg2, reg);*/
+	
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
 			VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
@@ -690,6 +709,12 @@ void core_launch(void *info) {
 		errors[core]=-EINVAL;
 		return; }
 	
+	/*else {
+		cprint("success"); }
+	errors[core]=-EINVAL;
+	return;*/
+	
+	state[core].guest_flag=1;
 	return; }
 
 static void core_open(void *info) {
@@ -966,6 +991,11 @@ static int __init global_init(void) {
 
 	return 0; }
 //////////////////////////////////////////////////////////////////////////////////
+
+static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset) {
+	return 0; }
+static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset) {
+	return 0; }
 
 
 module_init(global_init);
