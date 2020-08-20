@@ -21,6 +21,7 @@ vulnerabilities in vt-x
 system management mode, https://en.wikipedia.org/wiki/NSA_ANT_catalog
 http://www.cs.utah.edu/~aburtsev/lls-sem/index.php?n=Main.VMFUNCNotes
 http://www.c7zero.info/stuff/ANewClassOfVulnInSMIHandlers_csw2015.pdf
+https://hackaday.com/2020/08/12/degrees-of-freedom-booting-arm-processors/
 
 
 https://genode.org/documentation/articles/arm_virtualization
