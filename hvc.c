@@ -152,8 +152,9 @@ typedef union __attribute__((packed)) {
 //static void hook(struct guest_regs *regs_p);
 //push regs, mov %rsp, first arg (rax?)
 //specify calling convention? gcc
+//returns flag for vmxoff
 __attribute__((__used__))
-static void hook(regs_t *regs_p) {
+static unsigned long hook(regs_t *regs_p) {
 	int core=get_cpu();
 	
 	lhf_t lhf;
@@ -181,13 +182,13 @@ static void hook(regs_t *regs_p) {
 		//lock prefix? #UD
 		cprint("cpuid exit:\tleaf: 0x%lx\t\targ: 0x%lx", regs_p->rax, regs_p->rcx);
 
-		if(regs_p->rax==EXIT_ROOT_RAX && regs_p->rcx==EXIT_ROOT_RCX && !cpl) {
+		if(regs_p->rax==EXIT_NON_ROOT_RAX && regs_p->rcx==EXIT_NON_ROOT_RCX && !cpl) {
 			cprint("vmx exit requested");
 			/*VMREAD(rip, GUEST_RIP, lhf);
 			VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
 			rip+=length;*/
 			//vmread directly
-			VMREAD(reg, GUEST_RSP, lhf);
+			/*VMREAD(reg, GUEST_RSP, lhf);
 			VMREAD(reg2, GUEST_CR3, lhf);
 			put_cpu();
 			__asm__ __volatile__(
@@ -213,8 +214,9 @@ static void hook(regs_t *regs_p) {
 				"mov %rax, %cr3;"
 				"mov %0, %rsp;"
 				"jmp %1;"
-				POPA);
-			break; }
+				POPA);*/
+			put_cpu();
+			return 1; }
 
 		CPUID(cpuid, regs_p->rax, regs_p->rcx);
 		if(regs_p->rax==0) {
@@ -288,52 +290,68 @@ static void hook(regs_t *regs_p) {
 			switch(qual.cr_access.mov_cr_reg) {
 				case(MOV_CR_RAX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rax; }
 					          else { VMWRITE(reg, regs_p->rax, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rax)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_RCX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rcx; }
 					          else { VMWRITE(reg, regs_p->rcx, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rcx)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_RDX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rdx; }
 					          else { VMWRITE(reg, regs_p->rdx, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rdx)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_RBX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rbx; }
 					          else { VMWRITE(reg, regs_p->rbx, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rbx)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_RSP): VMREAD(reg2, GUEST_RSP, lhf);
 					          if(reg==MOV_CR8) { regs_p->cr8=reg2; }
 					          else { VMWRITE(reg2, reg, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((reg2)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_RBP): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rbp; }
 					          else { VMWRITE(reg, regs_p->rbp, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rbp)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_RSI): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rsi; }
 					          else { VMWRITE(reg, regs_p->rsi, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rsi)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_RDI): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rdi; }
 					          else { VMWRITE(reg, regs_p->rdi, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->rdi)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_R8):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r8; }
 					          else { VMWRITE(reg, regs_p->r8, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r8)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_R9):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r9; }
 					          else { VMWRITE(reg, regs_p->r9, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r9)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_R10):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r10; }
 					          else { VMWRITE(reg, regs_p->r10, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r10)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_R11): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r11; }
 					          else { VMWRITE(reg, regs_p->r11, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r11)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_R12): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r12; }
 					          else { VMWRITE(reg, regs_p->r12, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r12)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_R13): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r13; }
 					          else { VMWRITE(reg, regs_p->r13, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r13)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_R14): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r14; }
 					          else { VMWRITE(reg, regs_p->r14, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r14)|0x8000000000000000)), lhf); }
 					          break;
 				case(MOV_CR_R15): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r15; }
 					          else { VMWRITE(reg, regs_p->r15, lhf); }
+						  if(reg==GUEST_CR3) { VMWRITE(HOST_CR3, (0xffffffffffffe7ff&((regs_p->r15)|0x8000000000000000)), lhf); }
 					          break;
 				default: break; };
 			break;
@@ -423,29 +441,65 @@ static void hook(regs_t *regs_p) {
 	VMWRITE(rip, GUEST_RIP, lhf);
 
 	put_cpu();
-	return; }
+	return 0; }
 
+#define GUEST_CR3 0x00006802
+#define GUEST_RSP 0x0000681c
+#define GUEST_RIP 0x0000681e
+#define EXIT_INSTRUCTION_LENGTH 0x0000440c
 __asm__(
 	".text;"
 	".global host_stub;"
 "host_stub:;"
 	"cli;"
-	"sti;"
 	PUSHA
 	"mov %cr8, %rax;"
 	"push %rax;"
 	"mov %rsp, %rdi;"
 	"call hook;"
+	"test %rax, %rax;"
+	"jnz vmx_exit;"
+
+"vmx_resume:;"
 	"pop %rax;"
 	"mov %rax, %cr8;"
 	POPA
-	"jmp return_from_exit;");
+	"sti;"
+	"vmresume;"
+	"lahf;"
+	"shr $8, %rax;"
+	"movzbl %al, %edi;"
+	//call error_handler: real trouble!
+	//"jmp return_from_exit;"
+
+"vmx_exit:;"
+	"pop %rax;"
+	"mov %rax, %cr8;"
+	POPA
+	"push %rax;"
+	"push %rbx;"
+	"push %rcx;"
+	"mov %rsp, %rax;"
+	"mov $"str(GUEST_CR3)", %rbx;"
+	"vmread %rbx, %rbx;"
+	"mov %rbx, %cr3;"
+	"mov $"str(GUEST_RSP)", %rbx;"
+	"vmread %rbx, %rsp;"
+	"mov $"str(GUEST_RIP)", %rbx;"
+	"vmread %rbx, %rbx;"
+	"mov $"str(EXIT_INSTRUCTION_LENGTH)", %rcx;"
+	"vmread %rcx, %rcx;"
+	"add %rcx, %rbx;"
+	"push %rbx;"
+	"movq (%rax), %rcx;"
+	"movq 8(%rax), %rbx;"
+	"movq 16(%rax), %rax;"
+	"sti;"
+	"ret;" );
 extern void host_stub(void);
 //try vmlaunch here
 //if fails then "call vmfail"
 
-#define str2(x) #x
-#define str(x) str2(x)
 __asm__(
 	".text;"
 	".global guest_stub;"
@@ -535,6 +589,8 @@ static void core_close(void *info) {
 	int core=smp_processor_id();
 	errors[core]=0;
 	
+	EXIT_NON_ROOT;
+	
 	int success_flag;
 	
 	lhf_t lhf;
@@ -573,11 +629,6 @@ void core_launch(void *info) {
 	errors[core]=0;
 	
 	/*__asm__ __volatile__(
-		"mov %%rsp, %0;"
-		"mov %%rbp, %1;"
-		:"=r"(state[core].return_rsp), "=r"(state[core].return_rbp)
-		::"memory");*/
-	__asm__ __volatile__(
 		"mov $0x0b, %%eax;"
 		"cpuid;"
 		"movq (ret_rsp), %%rax;"
@@ -606,15 +657,38 @@ void core_launch(void *info) {
 		"movq (%%rax, %%rdx, 8), %%rsp;"
 		"movq (ret_rbp), %%rax;"
 		"movq (%%rax, %%rdx, 8), %%rbp;"
-		:::"eax", "ebx", "ecx", "edx", "memory");
+		:::"eax", "ebx", "ecx", "edx", "memory");*/
 	
-	/*__asm__ __volatile__(
-	"return_from_exit:"
-		"movq %0, %%rsp;"
-		"movq (%%rsp), %%rsp;"
-		"movq %1, %%rbp;"
-		"movq (%%rbp), %%rbp;"
-		::"m"(state[core].return_rsp), "m"(state[core].return_rbp));*/
+	lhf_t lhf;
+	unsigned long error_code;
+	__asm__ __volatile__(
+		"lahf;"
+		"and $0xbe, %%ah;"
+		"sahf;"
+		"push %%rbx;"
+		"push %%rcx;"
+		"mov $"str(GUEST_RSP)", %%rbx;"
+		"vmwrite %%rsp, %%rbx;"
+		"lea vmx_entry_point(%%rip), %%rcx;"
+		"mov $"str(GUEST_RIP)", %%rbx;"
+		"vmwrite %%rcx, %%rbx;"
+		"vmlaunch;"
+		"lahf;"
+	"vmx_entry_point:;"
+		"pop %%rcx;"
+		"pop %%rbx;"
+		"shr $8, %%rax;"
+		"movb %%al, %0;"
+		:"=r"(lhf.val)
+		::"rax", "rbx", "rcx", "memory");
+	if(!VMsucceed(lhf)) {
+		if(VMfailValid(lhf)) {
+			VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
+			cprint("vmlaunch failed with error code %ld", error_code); }
+		else if(VMfailInvalid(lhf)) {
+			cprint("vmlaunch failed with invalid region"); }
+		errors[core]=-EINVAL;
+		return; }
 	
 	return; }
 
