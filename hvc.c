@@ -31,6 +31,8 @@
 //save MSRs like ia32_lstar as part of guest_regs (at least writeable ones)
 //lock cpuid?
 //rflags should be found in guest state not regs_p!
+//big problem if entry failure in vmresume
+//sti could be problem in entry failure!
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -154,6 +156,9 @@ typedef union __attribute__((packed)) {
 //push regs, mov %rsp, first arg (rax?)
 //specify calling convention? gcc
 //returns flag for vmxoff
+#define EXIT_HANDLER_RESUME		0
+#define EXIT_HANDLER_ENTRY_FAILURE	1
+#define EXIT_HANDLER_EXIT		2
 __attribute__((__used__))
 static unsigned long hook(regs_t *regs_p) {
 	int core=get_cpu();
@@ -177,7 +182,18 @@ static unsigned long hook(regs_t *regs_p) {
 	msr_t msr;
 	unsigned long reg, reg2;
 	
-	switch (reason) {
+	if(((exit_reason_t)reason).vm_entry_failure) {
+		cprint("entry failure");
+		switch (((exit_reason_t)reason).basic_exit_reason) {
+		case ER_INVL_GUEST_STATE:
+		case ER_MSR_LOADING:
+		case ER_MACHINE_CHECK:
+		default:
+			break; };
+		return EXIT_HANDLER_ENTRY_FAILURE; }
+		
+	
+	switch (((exit_reason_t)reason).basic_exit_reason) {
 
 	case ER_CPUID:
 		//lock prefix? #UD
@@ -217,7 +233,7 @@ static unsigned long hook(regs_t *regs_p) {
 				"jmp %1;"
 				POPA);*/
 			put_cpu();
-			return 1; }
+			return EXIT_HANDLER_EXIT; }
 
 		CPUID(cpuid, regs_p->rax, regs_p->rcx);
 		if(regs_p->rax==0) {
@@ -459,7 +475,7 @@ static unsigned long hook(regs_t *regs_p) {
 	VMWRITE(rip, GUEST_RIP, lhf);
 
 	put_cpu();
-	return 0; }
+	return EXIT_HANDLER_RESUME; }
 
 #define HOST_CR3  0x00006c02
 #define GUEST_CR3 0x00006802
@@ -476,8 +492,13 @@ __asm__(
 	"push %rax;"
 	"mov %rsp, %rdi;"
 	"call hook;"
-	"test %rax, %rax;"
-	"jnz vmx_exit;"
+
+	"cmp %rax, $"str(EXIT_HANDLER_EXIT)";"
+	"je vmx_exit;"
+	"cmp %rax, $"str(EXIT_HANDLER_RESUME)";"
+	"je vmx_resume;"
+	"cmp %rax, $"str(EXIT_HANDLER_ENTRY_FAILURE)";"
+	"je vmx_entry_failure;"
 
 "vmx_resume:;"
 	"pop %rax;"
@@ -490,6 +511,13 @@ __asm__(
 	"movzbl %al, %edi;"
 	//call error_handler: real trouble!
 	//"jmp return_from_exit;"
+
+"vmx_entry_failure:;"
+	"pop %rax;"
+	"mov %rax, %cr8;"
+	POPA
+	"sti;"
+	"jmp return_from_entry_failure;"
 
 "vmx_exit:;"
 	"pop %rax;"
@@ -649,43 +677,9 @@ void core_launch(void *info) {
 	int core=smp_processor_id();
 	errors[core]=0;
 	
-	/*__asm__ __volatile__(
-		"mov $0x0b, %%eax;"
-		"cpuid;"
-		"movq (ret_rsp), %%rax;"
-		"mov %%rsp, (%%rax, %%rdx, 8);"
-		"movq (ret_rbp), %%rax;"
-		"mov %%rbp, (%%rax, %%rdx, 8);"
-		:::"eax", "ebx", "ecx", "edx", "memory");
-
-	lhf_t lhf;
-	unsigned long error_code;
-	VMLAUNCH(lhf);
-	if(!VMsucceed(lhf)) {
-		if(VMfailValid(lhf)) {
-			VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
-			cprint("vmlaunch failed with error code %ld", error_code); }
-		else if(VMfailInvalid(lhf)) {
-			cprint("vmlaunch failed with invalid region"); }
-		errors[core]=-EINVAL;
-		return; }
-	
-	__asm__ __volatile__(
-	"return_from_exit:;"
-		"mov $0x0b, %%eax;"
-		"cpuid;"
-		"movq (ret_rsp), %%rax;"
-		"movq (%%rax, %%rdx, 8), %%rsp;"
-		"movq (ret_rbp), %%rax;"
-		"movq (%%rax, %%rdx, 8), %%rbp;"
-		:::"eax", "ebx", "ecx", "edx", "memory");*/
-	
 	lhf_t lhf={0};
 	unsigned long error_code;
 	__asm__ __volatile__(
-		"lahf;"
-		"and $0xbe, %%ah;"
-		
 		"mov %%cr3, %%rcx;"
 		"mov $"str(GUEST_CR3)", %%rbx;"
 		"vmwrite %%rcx, %%rbx;"
@@ -695,16 +689,19 @@ void core_launch(void *info) {
 		"mov $"str(GUEST_RSP)", %%rbx;"
 		"vmwrite %%rsp, %%rbx;"
 		
-		/*"push %%rax;"	//[debug]
-		"mov $0xdeadbeef, %%eax;"
-		"push %%rax;"
-		"add $8, %%rsp;"
-		"pop %%rax;"	//[debug]*/
-		
 		"lea vmx_entry_point(%%rip), %%rcx;"
 		"mov $"str(GUEST_RIP)", %%rbx;"
 		"vmwrite %%rcx, %%rbx;"
 		
+		/*"mov $0x0b, %%eax;"
+		"cpuid;"
+		"movq (ret_rsp), %%rax;"
+		"mov %%rsp, (%%rax, %%rdx, 8);"
+		"movq (ret_rbp), %%rax;"
+		"mov %%rbp, (%%rax, %%rdx, 8);"*/
+		
+		"lahf;"
+		"and $0xbe, %%ah;"
 		"vmlaunch;"
 		"lahf;"
 		
@@ -712,17 +709,7 @@ void core_launch(void *info) {
 		"shr $8, %%rax;"
 		"movb %%al, %0;"
 		:"=r"(lhf.val)
-		::"rax", "rbx", "rcx", "memory");
-	
-	/*unsigned long reg, reg2;
-	VMREAD(reg, GUEST_RIP, lhf);
-	VMREAD(reg2, GUEST_RSP, lhf);
-	cprint("[debug] rip: 0x%lx\tword: %02x %02x %02x %02x\trsp: 0x%lx\tword: 0x%lx",
-	       reg, *(unsigned char *)(reg), *(unsigned char *)(reg+1), *(unsigned char *)(reg+2),
-	       *(unsigned char *)(reg+3), reg2, *(unsigned long *)(reg2-16));
-	__asm__ __volatile__("mov %%cr3, %0":"=r"(reg));
-	VMREAD(reg2, GUEST_CR3, lhf);
-	cprint("[debug] guest_cr3: 0x%lx\tlive_cr3: 0x%lx", reg2, reg);*/
+		::"rax", "rbx", "rcx", "rdx", "memory");
 	
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
@@ -732,13 +719,23 @@ void core_launch(void *info) {
 			cprint("vmlaunch failed with invalid region"); }
 		errors[core]=-EINVAL;
 		return; }
-	
-	/*else {
-		cprint("success"); }
-	errors[core]=-EINVAL;
-	return;*/
-	
 	state[core].guest_flag=1;
+	return;
+	
+	/*__asm__ __volatile__(
+	"return_from_exit:;"
+		"mov $0x0b, %%eax;"
+		"cpuid;"
+		"movq (ret_rsp), %%rax;"
+		"movq (%%rax, %%rdx, 8), %%rsp;"
+		"movq (ret_rbp), %%rax;"
+		"movq (%%rax, %%rdx, 8), %%rbp;"
+		:::"rax", "rbx", "rcx", "rdx", "memory");*/
+	__asm__ __volatile__(
+	"return_from_exit:;"
+		"mov $"str(GUEST_RSP)", %%rbx;"
+		"vmread %%rbx, %%rsp;"
+	errors[core]=-EINVAL;
 	return; }
 
 static void core_open(void *info) {
