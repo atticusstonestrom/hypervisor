@@ -27,6 +27,7 @@
 //how does software check the amount of available ram
 //	physical address width?
 //	check virtualbox sliding ram
+//	https://wiki.osdev.org/Detecting_Memory_(x86)
 //save MSRs like ia32_lstar as part of guest_regs (at least writeable ones)
 //lock cpuid?
 //////////////////////////////////////////////////////
