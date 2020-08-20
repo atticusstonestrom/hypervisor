@@ -207,7 +207,7 @@ static void hook(regs_t *regs_p) {
 		cprint("rdmsr exit:\tid: 0x%lx", regs_p->rcx);
 
 		if(((signed)(regs_p->rcx)>0x00001fff && (signed)(regs_p->rcx)<0xc0000000)
-		   || (signed)(regs_p->rcx)>0xc0001fff || cpl=0) {
+		   || (signed)(regs_p->rcx)>0xc0001fff || cpl==0) {
 			cprint("cpl non-zero or msr invalid");
 			//reflect back #GP(0)
 			regs_p->rax=0;
@@ -226,7 +226,7 @@ static void hook(regs_t *regs_p) {
 		cprint("wrmsr exit:\tid: 0x%lx", regs_p->rcx);
 
 		if(((signed)(regs_p->rcx)>0x00001fff && (signed)(regs_p->rcx)<0xc0000000)
-		   || (signed)(regs_p->rcx)>0xc0001fff || cpl=0) {
+		   || (signed)(regs_p->rcx)>0xc0001fff || cpl==0) {
 			cprint("cpl non-zero or msr invalid");
 			//reflect back #GP(0)
 			regs_p->rax=0;
@@ -372,11 +372,11 @@ static void hook(regs_t *regs_p) {
 		break;
 
 	case ER_XSETBV:
-		if(cpl>0 || regs_p->ecx!=0 || regs_p->eax&1==0 || (regs_p->eax&0x06)>>1==2) {
+		if(cpl>0 || regs_p->rcx!=0 || (regs_p->rax&1)==0 || (regs_p->rax&0x06)>>1==2) {
 			//reflect back #GP(0)
 			break; }
-		__asm__ __volatile__("xsetbx"::"a"(regs_p->eax), "c"(regs_p->ecx), "d"(regs_p->edx));
-		break; }
+		__asm__ __volatile__("xsetbv"::"a"(regs_p->rax), "c"(regs_p->rcx), "d"(regs_p->rdx));
+		break;
 
 	case ER_GETSEC:
 	case ER_INVD:
