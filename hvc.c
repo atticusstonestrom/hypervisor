@@ -28,6 +28,7 @@
 //	physical address width?
 //	check virtualbox sliding ram
 //save MSRs like ia32_lstar as part of guest_regs (at least writeable ones)
+//lock cpuid?
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -176,13 +177,11 @@ static void hook(regs_t *regs_p) {
 	switch (reason) {
 
 	case ER_CPUID:
+		//lock prefix? #UD
 		cprint("cpuid exit:\tleaf: 0x%lx\t\targ: 0x%lx", regs_p->rax, regs_p->rcx);
 
-		if(regs_p->rax==EXIT_ROOT_RAX && regs_p->rcx==EXIT_ROOT_RCX) {
+		if(regs_p->rax==EXIT_ROOT_RAX && regs_p->rcx==EXIT_ROOT_RCX && !cpl) {
 			cprint("vmx exit requested");
-			//if(cpl>0) {
-				//cprint("cpl non-zero");
-				//break; }
 			break; }
 
 		CPUID(cpuid, regs_p->rax, regs_p->rcx);
@@ -204,6 +203,7 @@ static void hook(regs_t *regs_p) {
 		break;
 
 	case ER_RDMSR:
+		//lock prefix? #UD
 		cprint("rdmsr exit:\tid: 0x%lx", regs_p->rcx);
 
 		if(((signed)(regs_p->rcx)>0x00001fff && (signed)(regs_p->rcx)<0xc0000000)
@@ -353,16 +353,33 @@ static void hook(regs_t *regs_p) {
 	case ER_VMWRITE:
 	case ER_VMXOFF:
 	case ER_VMXON:
-		regs_p->rflags=0;
+		if(cpl>0) {
+			cprint("cpl non-zero");
+			//reflect back #GP(0)
+			break; }
+		regs_p->rflags |= ((rflags_t){ .cf=1 }).val;
+		regs_p->rflags &= ~(((rflags_t){ .pf=1, .af=1, .zf=1, .sf=1, .of=1 }).val);
 		break;
 	
 	case ER_INVEPT:
 	case ER_INVVPID:
-	
+		//#UD
+		if(cpl>0) {
+			cprint("cpl non-zero");
+			//reflect back #GP(0)
+			break; }
+		//vpid, etc
+		break;
+
+	case ER_XSETBV:
+		if(cpl>0 || regs_p->ecx!=0 || regs_p->eax&1==0 || (regs_p->eax&0x06)>>1==2) {
+			//reflect back #GP(0)
+			break; }
+		__asm__ __volatile__("xsetbx"::"a"(regs_p->eax), "c"(regs_p->ecx), "d"(regs_p->edx));
+		break; }
+
 	case ER_GETSEC:
 	case ER_INVD:
-	case ER_XSETBV:
-
 	default:
 		cprint("cannot handle");
 		break; };
