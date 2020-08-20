@@ -444,6 +444,7 @@ static unsigned long hook(regs_t *regs_p) {
 	put_cpu();
 	return 0; }
 
+#define HOST_CR3  0x00006c02
 #define GUEST_CR3 0x00006802
 #define GUEST_RSP 0x0000681c
 #define GUEST_RIP 0x0000681e
@@ -667,9 +668,13 @@ void core_launch(void *info) {
 	__asm__ __volatile__(
 		"lahf;"
 		"and $0xbe, %%ah;"
-		"mov $"str(GUEST_CR3)", %%rbx;"
+		
 		"mov %%cr3, %%rcx;"
+		"mov $"str(GUEST_CR3)", %%rbx;"
 		"vmwrite %%rcx, %%rbx;"
+		"mov $"str(HOST_CR3)", %%rbx;"
+		"vmwrite %%rcx, %%rbx;"
+		
 		"mov $"str(GUEST_RSP)", %%rbx;"
 		"vmwrite %%rsp, %%rbx;"
 		
@@ -679,11 +684,13 @@ void core_launch(void *info) {
 		"add $8, %%rsp;"
 		"pop %%rax;"	//[debug]*/
 		
-		"mov $"str(GUEST_RIP)", %%rbx;"
 		"lea vmx_entry_point(%%rip), %%rcx;"
+		"mov $"str(GUEST_RIP)", %%rbx;"
 		"vmwrite %%rcx, %%rbx;"
+		
 		"vmlaunch;"
 		"lahf;"
+		
 	"vmx_entry_point:;"
 		"shr $8, %%rax;"
 		"movb %%al, %0;"
