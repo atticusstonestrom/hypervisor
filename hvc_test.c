@@ -10,6 +10,7 @@ int main() {
 	if( (fd=open("/dev/hvchar", O_RDWR))<0 ){
 		perror("fatal in open");
 		return errno; }
+	printf("entered vmx guest mode!! press return to continue");
 	getchar();
 	if(close(fd)) {
 		perror("fatal in close");
