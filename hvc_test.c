@@ -10,7 +10,7 @@ int main() {
 	if( (fd=open("/dev/hvchar", O_RDWR))<0 ){
 		perror("fatal in open");
 		return errno; }
-	getch();
+	getchar();
 	if(close(fd)) {
 		perror("fatal in close");
 		return errno; }
