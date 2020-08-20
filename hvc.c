@@ -182,9 +182,9 @@ static unsigned long hook(regs_t *regs_p) {
 	msr_t msr;
 	unsigned long reg, reg2;
 	
-	if(((exit_reason_t)reason).vm_entry_failure) {
+	if(((exit_reason_t)(unsigned int)reason).vm_entry_failure) {
 		cprint("entry failure");
-		switch (((exit_reason_t)reason).basic_exit_reason) {
+		switch (((exit_reason_t)(unsigned int)reason).basic_exit_reason) {
 		case ER_INVL_GUEST_STATE:
 		case ER_MSR_LOADING:
 		case ER_MACHINE_CHECK:
@@ -193,7 +193,7 @@ static unsigned long hook(regs_t *regs_p) {
 		return EXIT_HANDLER_ENTRY_FAILURE; }
 		
 	
-	switch (((exit_reason_t)reason).basic_exit_reason) {
+	switch (((exit_reason_t)(unsigned int)reason).basic_exit_reason) {
 
 	case ER_CPUID:
 		//lock prefix? #UD
@@ -734,7 +734,7 @@ void core_launch(void *info) {
 	__asm__ __volatile__(
 	"return_from_exit:;"
 		"mov $"str(GUEST_RSP)", %%rbx;"
-		"vmread %%rbx, %%rsp;"
+		"vmread %%rbx, %%rsp;");
 	errors[core]=-EINVAL;
 	return; }
 
