@@ -182,6 +182,37 @@ static void hook(regs_t *regs_p) {
 
 		if(regs_p->rax==EXIT_ROOT_RAX && regs_p->rcx==EXIT_ROOT_RCX && !cpl) {
 			cprint("vmx exit requested");
+			/*VMREAD(rip, GUEST_RIP, lhf);
+			VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
+			rip+=length;*/
+			//vmread directly
+			VMREAD(reg, GUEST_RSP, lhf);
+			VMREAD(reg2, GUEST_CR3, lhf);
+			put_cpu();
+			__asm__ __volatile__(
+				"cli;"
+				"sti;"
+				"mov $0x0b, %%eax;"
+				"cpuid;"
+				"movq (ret_rsp), %%rax;"
+				"mov %%rsp, (%%rax, %%rdx, 8);"
+				"movq (ret_rbp), %%rax;"
+				"mov %%rbp, (%%rax, %%rdx, 8);"
+				:::"eax", "ebx", "ecx", "edx", "memory");
+			__asm__ __volatile__(
+			"return_from_exit:;"
+				"mov $0x0b, %%eax;"
+				"cpuid;"
+				"movq (ret_rsp), %%rax;"
+				"movq (%%rax, %%rdx, 8), %%rsp;"
+				"movq (ret_rbp), %%rax;"
+				"movq (%%rax, %%rdx, 8), %%rbp;"
+				:::"eax", "ebx", "ecx", "edx", "memory");
+			__asm__ __volatile__(
+				"mov %rax, %cr3;"
+				"mov %0, %rsp;"
+				"jmp %1;"
+				POPA);
 			break; }
 
 		CPUID(cpuid, regs_p->rax, regs_p->rcx);
@@ -397,6 +428,8 @@ __asm__(
 	".text;"
 	".global host_stub;"
 "host_stub:;"
+	"cli;"
+	"sti;"
 	PUSHA
 	"mov %cr8, %rax;"
 	"push %rax;"
