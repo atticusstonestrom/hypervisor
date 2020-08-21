@@ -493,11 +493,11 @@ __asm__(
 	"mov %rsp, %rdi;"
 	"call hook;"
 
-	"cmp %rax, $"str(EXIT_HANDLER_EXIT)";"
+	"cmp $"str(EXIT_HANDLER_EXIT)", %eax;"
 	"je vmx_exit;"
-	"cmp %rax, $"str(EXIT_HANDLER_RESUME)";"
+	"cmp $"str(EXIT_HANDLER_RESUME)", %eax;"
 	"je vmx_resume;"
-	"cmp %rax, $"str(EXIT_HANDLER_ENTRY_FAILURE)";"
+	"cmp $"str(EXIT_HANDLER_ENTRY_FAILURE)", %eax;"
 	"je vmx_entry_failure;"
 
 "vmx_resume:;"
@@ -720,10 +720,11 @@ void core_launch(void *info) {
 		errors[core]=-EINVAL;
 		return; }
 	state[core].guest_flag=1;
-	return;
+	if(state[core].active_flag) {
+		return; }
 	
 	/*__asm__ __volatile__(
-	"return_from_exit:;"
+	"return_from_entry_failure:;"
 		"mov $0x0b, %%eax;"
 		"cpuid;"
 		"movq (ret_rsp), %%rax;"
@@ -732,9 +733,9 @@ void core_launch(void *info) {
 		"movq (%%rax, %%rdx, 8), %%rbp;"
 		:::"rax", "rbx", "rcx", "rdx", "memory");*/
 	__asm__ __volatile__(
-	"return_from_exit:;"
-		"mov $"str(GUEST_RSP)", %%rbx;"
-		"vmread %%rbx, %%rsp;");
+	"return_from_entry_failure:;"
+		"mov $"str(GUEST_RSP)", %rbx;"
+		"vmread %rbx, %rsp;");
 	errors[core]=-EINVAL;
 	return; }
 
