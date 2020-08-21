@@ -205,7 +205,7 @@ static unsigned long hook(regs_t *regs_p) {
 
 	case ER_CPUID:
 		//lock prefix? #UD
-		cprint("cpuid exit:\tleaf: 0x%lx\t\targ: 0x%lx", regs_p->rax, regs_p->rcx);
+		cprint("cpuid exit:\tleaf: 0x%lx\targ: 0x%lx", regs_p->rax, regs_p->rcx);
 
 		if(regs_p->rax==EXIT_NON_ROOT_RAX && regs_p->rcx==EXIT_NON_ROOT_RCX && !cpl) {
 			cprint("vmx exit requested");
