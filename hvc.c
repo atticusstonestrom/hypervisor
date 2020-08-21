@@ -178,7 +178,7 @@ static unsigned long hook(regs_t *regs_p) {
 	
 	VMREAD(reason.val, EXIT_REASON, lhf);
 	VMREAD(qual.val, EXIT_QUALIFICATION, lhf);
-	cprint("exit reason: 0x%x\t\texit qual: 0x%lx\t\tcpl: %ld", reason.val, qual.val, cpl);
+	cprint("exit reason: 0x%x\texit qual: 0x%lx\tcpl: %ld", reason.val, qual.val, cpl);
 	
 	cpuid_t cpuid;
 	msr_t msr;
