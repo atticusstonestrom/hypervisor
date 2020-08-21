@@ -719,15 +719,13 @@ void core_launch(void *info) {
 		:"=r"(lhf.val)
 		::"rax", "rbx", "rcx", "rdx", "memory");
 
-	cpuid_t cpuid;
-	CPUID(cpuid.leaf_0, 0);
-	cprint("%.12s", cpuid.leaf_0.vendor_id);
-	EXIT_NON_ROOT;
-	/*__asm__ __volatile__("hlt");
-	cprint("post-halt");*/
-	errors[core]=-EINVAL;
-	if(state[core].active_flag) {
-		return; }
+	//cpuid_t cpuid;
+	//CPUID(cpuid.leaf_0, 0);
+	//cprint("%.12s", cpuid.leaf_0.vendor_id);
+	//EXIT_NON_ROOT;
+	//errors[core]=-EINVAL;
+	//if(state[core].active_flag) {
+	//	return; }
 	
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
