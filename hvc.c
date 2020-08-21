@@ -83,7 +83,7 @@ static struct file_operations fops = {
 int ncores;
 
 unsigned long *ret_rsp;
-unsigned long *ret_rbp;
+//unsigned long *ret_rbp;
 
 typedef struct __attribute__((packed)) {
 	unsigned char read_low[1024];	//0x00000000 to 0x00001fff
@@ -162,38 +162,46 @@ typedef union __attribute__((packed)) {
 __attribute__((__used__))
 static unsigned long hook(regs_t *regs_p) {
 	int core=get_cpu();
+	//int core=smp_processor_id();
+	//cprint("in hook!");
+	//put_cpu();
+	//return EXIT_HANDLER_ENTRY_FAILURE;
 	
 	lhf_t lhf;
 	
-	unsigned long reason=0xdeadbeef;
+	exit_reason_t reason={ .val=0xdeadbeef };
 	exit_qualification_t qual;
 	unsigned long cpl;
 	
 	VMREAD(cpl, GUEST_CS_SELECTOR, lhf);
 	cpl &= 0x03;
 	
-	VMREAD(reason, EXIT_REASON, lhf);
+	VMREAD(reason.val, EXIT_REASON, lhf);
 	VMREAD(qual.val, EXIT_QUALIFICATION, lhf);
-	cprint("exit reason: 0x%lx\t\texit qual: 0x%lx\t\tcpl: %ld", reason, qual.val, cpl);
-	
-	cprint("rax: 0x%lx\t\tr8: 0x%lx", regs_p->rax, regs_p->r8);
+	cprint("exit reason: 0x%x\t\texit qual: 0x%lx\t\tcpl: %ld", reason.val, qual.val, cpl);
 	
 	cpuid_t cpuid;
 	msr_t msr;
 	unsigned long reg, reg2;
 	
-	if(((exit_reason_t)(unsigned int)reason).vm_entry_failure) {
+	//if(reason.basic_exit_reason==ER_HLT) {
+	//	cprint("hlt");
+	//	put_cpu();
+	//	return EXIT_HANDLER_EXIT; }
+	
+	if(reason.vm_entry_failure) {
 		cprint("entry failure");
-		switch (((exit_reason_t)(unsigned int)reason).basic_exit_reason) {
+		switch (reason.basic_exit_reason) {
 		case ER_INVL_GUEST_STATE:
 		case ER_MSR_LOADING:
 		case ER_MACHINE_CHECK:
 		default:
 			break; };
+		put_cpu();
 		return EXIT_HANDLER_ENTRY_FAILURE; }
 		
 	
-	switch (((exit_reason_t)(unsigned int)reason).basic_exit_reason) {
+	switch (reason.basic_exit_reason) {
 
 	case ER_CPUID:
 		//lock prefix? #UD
@@ -486,7 +494,7 @@ __asm__(
 	".text;"
 	".global host_stub;"
 "host_stub:;"
-	"cli;"
+	//"cli;"
 	PUSHA
 	"mov %cr8, %rax;"
 	"push %rax;"
@@ -504,7 +512,7 @@ __asm__(
 	"pop %rax;"
 	"mov %rax, %cr8;"
 	POPA
-	"sti;"
+	//"sti;"
 	"vmresume;"
 	"lahf;"
 	"shr $8, %rax;"
@@ -516,7 +524,7 @@ __asm__(
 	"pop %rax;"
 	"mov %rax, %cr8;"
 	POPA
-	"sti;"
+	//"sti;"
 	"jmp return_from_entry_failure;"
 
 "vmx_exit:;"
@@ -541,7 +549,7 @@ __asm__(
 	"movq (%rax), %rcx;"
 	"movq 8(%rax), %rbx;"
 	"movq 16(%rax), %rax;"
-	"sti;"
+	//"sti;"
 	"ret;" );
 extern void host_stub(void);
 //try vmlaunch here
@@ -601,10 +609,10 @@ static void global_exit(void) {
 		gprint("freed 'msr_bitmap':\t0x%lx", msr_bitmap);
 		msr_bitmap=0; }
 	
-	if(ret_rbp!=NULL) {
-		kfree(ret_rbp);
-		gprint("freed 'ret_rbp':\t\t0x%px", ret_rbp);
-		ret_rbp=NULL; }
+	//if(ret_rbp!=NULL) {
+	//	kfree(ret_rbp);
+	//	gprint("freed 'ret_rbp':\t\t0x%px", ret_rbp);
+	//	ret_rbp=NULL; }
 	
 	if(ret_rsp!=NULL) {
 		kfree(ret_rsp);
@@ -693,12 +701,12 @@ void core_launch(void *info) {
 		"mov $"str(GUEST_RIP)", %%rbx;"
 		"vmwrite %%rcx, %%rbx;"
 		
-		/*"mov $0x0b, %%eax;"
+		"mov $0x0b, %%eax;"
 		"cpuid;"
 		"movq (ret_rsp), %%rax;"
 		"mov %%rsp, (%%rax, %%rdx, 8);"
-		"movq (ret_rbp), %%rax;"
-		"mov %%rbp, (%%rax, %%rdx, 8);"*/
+		//"movq (ret_rbp), %%rax;"
+		//"mov %%rbp, (%%rax, %%rdx, 8);"
 		
 		"lahf;"
 		"and $0xbe, %%ah;"
@@ -710,6 +718,16 @@ void core_launch(void *info) {
 		"movb %%al, %0;"
 		:"=r"(lhf.val)
 		::"rax", "rbx", "rcx", "rdx", "memory");
+
+	cpuid_t cpuid;
+	CPUID(cpuid.leaf_0, 0);
+	cprint("%.12s", cpuid.leaf_0.vendor_id);
+	EXIT_NON_ROOT;
+	/*__asm__ __volatile__("hlt");
+	cprint("post-halt");*/
+	errors[core]=-EINVAL;
+	if(state[core].active_flag) {
+		return; }
 	
 	if(!VMsucceed(lhf)) {
 		if(VMfailValid(lhf)) {
@@ -723,19 +741,19 @@ void core_launch(void *info) {
 	if(state[core].active_flag) {
 		return; }
 	
-	/*__asm__ __volatile__(
+	//__asm__ __volatile__(		//cannot rely on guest state to be reliable
+	//"return_from_entry_failure:;"
+	//	"mov $"str(GUEST_RSP)", %rbx;"
+	//	"vmread %rbx, %rsp;");
+	__asm__ __volatile__(
 	"return_from_entry_failure:;"
 		"mov $0x0b, %%eax;"
 		"cpuid;"
 		"movq (ret_rsp), %%rax;"
 		"movq (%%rax, %%rdx, 8), %%rsp;"
-		"movq (ret_rbp), %%rax;"
-		"movq (%%rax, %%rdx, 8), %%rbp;"
-		:::"rax", "rbx", "rcx", "rdx", "memory");*/
-	__asm__ __volatile__(
-	"return_from_entry_failure:;"
-		"mov $"str(GUEST_RSP)", %rbx;"
-		"vmread %rbx, %rsp;");
+		//"movq (ret_rbp), %%rax;"
+		//"movq (%%rax, %%rdx, 8), %%rbp;"
+		:::"rax", "rbx", "rcx", "rdx", "memory");
 	errors[core]=-EINVAL;
 	return; }
 
@@ -950,14 +968,14 @@ static int __init global_init(void) {
 		return -ENOMEM; }
 	gprint("got %ld bytes for 'ret_rsp':\t0x%px", ncores*sizeof(long), ret_rsp);
 
-	ret_rbp=NULL;
-	ret_rbp=kmalloc(ncores*sizeof(long), __GFP_ZERO);
-	if(ret_rbp==NULL) {
-		gprint("failed to allocate 'ret_rbp' memory\n");
-		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
-		global_exit();
-		return -ENOMEM; }
-	gprint("got %ld bytes for 'ret_rbp':\t0x%px", ncores*sizeof(long), ret_rbp);
+	//ret_rbp=NULL;
+	//ret_rbp=kmalloc(ncores*sizeof(long), __GFP_ZERO);
+	//if(ret_rbp==NULL) {
+	//	gprint("failed to allocate 'ret_rbp' memory\n");
+	//	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+	//	global_exit();
+	//	return -ENOMEM; }
+	//gprint("got %ld bytes for 'ret_rbp':\t0x%px", ncores*sizeof(long), ret_rbp);
 	
 	msr_bitmap=0;
 	msr_bitmap=get_zeroed_page(GFP_KERNEL);
