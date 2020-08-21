@@ -401,7 +401,7 @@ static unsigned long hook(regs_t *regs_p) {
 				case(MOV_CR_R14): regs_p->r14=reg; break;
 				case(MOV_CR_R15): regs_p->r15=reg; break; 
 				default: break; };
-			//VMWRITE((0xffffffffffffe7ff&reg), HOST_CR3, lhf);
+			VMWRITE((0xffffffffffffe7ff&reg), HOST_CR3, lhf);
 			VMREAD(reg2, HOST_CR3, lhf);
 			cprint("cr3 => 0x%lx 0x%lx", reg, reg2);
 			break;
