@@ -318,7 +318,7 @@ static unsigned long hook(regs_t *regs_p) {
 				case(MOV_CR_RCX): reg2=regs_p->rcx; break;
 				case(MOV_CR_RDX): reg2=regs_p->rdx; break;
 				case(MOV_CR_RBX): reg2=regs_p->rbx; break;
-				case(MOV_CR_RSP): reg2=regs_p->rsp; break;
+				case(MOV_CR_RSP): VMREAD(reg2, GUEST_RSP, lhf); break;
 				case(MOV_CR_RBP): reg2=regs_p->rbp; break;
 				case(MOV_CR_RSI): reg2=regs_p->rsi; break;
 				case(MOV_CR_RDI): reg2=regs_p->rdi; break;
