@@ -8,22 +8,13 @@
 
 //////////////////////////////////////////////////////
 //urgent todo:
-//everything must run on one processor
-//	https://stackoverflow.com/questions/36288877/isolate-kernel-module-to-a-specific-core-using-cpuset
-//	how to ensure a kernel module only runs on one cpu
-//	https://stackoverflow.com/questions/34633600/how-to-execute-a-piece-of-kernel-code-on-all-cpus
-//	on_each_cpu
 //mutex, as in the intro to char devices
 //	http://derekmolloy.ie/writing-a-linux-kernel-module-part-2-a-character-device/
-//init() should be open()
 //check physical address width?
 //# of cores (and corresponding # of vmcs regions) as argument to open
 //mutexes on all resources?
 //all allocated pages should be writeback cacheable
 //	save/restore caching type
-//check error code in vmfailvalid
-//	check which instruction can vmfailvalid
-//is there a way to force a vm exit from inside non-root operation?
 //how does software check the amount of available ram
 //	physical address width?
 //	check virtualbox sliding ram
