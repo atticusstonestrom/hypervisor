@@ -314,72 +314,26 @@ static unsigned long hook(regs_t *regs_p) {
 		switch(qual.cr_access.access_type) {
 		case(MOV_TO):
 			switch(qual.cr_access.mov_cr_reg) {
-				case(MOV_CR_RAX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rax; }
-					          else { VMWRITE(regs_p->rax, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rax)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_RCX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rcx; }
-					          else { VMWRITE(regs_p->rcx, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rcx)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_RDX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rdx; }
-					          else { VMWRITE(regs_p->rdx, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rdx)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_RBX): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rbx; }
-					          else { VMWRITE(regs_p->rbx, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rbx)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_RSP): VMREAD(reg2, GUEST_RSP, lhf);
-					          if(reg==MOV_CR8) { regs_p->cr8=reg2; }
-					          else { VMWRITE(reg2, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&reg2), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_RBP): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rbp; }
-					          else { VMWRITE(regs_p->rbp, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rbp)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_RSI): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rsi; }
-					          else { VMWRITE(regs_p->rsi, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rsi)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_RDI): if(reg==MOV_CR8) { regs_p->cr8=regs_p->rdi; }
-					          else { VMWRITE(regs_p->rdi, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->rdi)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_R8):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r8; }
-					          else { VMWRITE(regs_p->r8, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r8)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_R9):  if(reg==MOV_CR8) { regs_p->cr8=regs_p->r9; }
-					          else { VMWRITE(regs_p->r9, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r9)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_R10): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r10; }
-					          else { VMWRITE(regs_p->r10, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r10)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_R11): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r11; }
-					          else { VMWRITE(regs_p->r11, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r11)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_R12): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r12; }
-					          else { VMWRITE(regs_p->r12, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r12)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_R13): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r13; }
-					          else { VMWRITE(regs_p->r13, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r13)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_R14): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r14; }
-					          else { VMWRITE(regs_p->r14, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r14)), HOST_CR3, lhf); }
-					          break;
-				case(MOV_CR_R15): if(reg==MOV_CR8) { regs_p->cr8=regs_p->r15; }
-					          else { VMWRITE(regs_p->r15, reg, lhf); }
-						  if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&(regs_p->r15)), HOST_CR3, lhf); }
-					          break;
+				case(MOV_CR_RAX): reg2=regs_p->rax; break;
+				case(MOV_CR_RCX): reg2=regs_p->rcx; break;
+				case(MOV_CR_RDX): reg2=regs_p->rdx; break;
+				case(MOV_CR_RBX): reg2=regs_p->rbx; break;
+				case(MOV_CR_RSP): reg2=regs_p->rsp; break;
+				case(MOV_CR_RBP): reg2=regs_p->rbp; break;
+				case(MOV_CR_RSI): reg2=regs_p->rsi; break;
+				case(MOV_CR_RDI): reg2=regs_p->rdi; break;
+				case(MOV_CR_R8):  reg2=regs_p->r8;  break;
+				case(MOV_CR_R9):  reg2=regs_p->r9;  break;
+				case(MOV_CR_R10): reg2=regs_p->r10; break;
+				case(MOV_CR_R11): reg2=regs_p->r11; break;
+				case(MOV_CR_R12): reg2=regs_p->r12; break;
+				case(MOV_CR_R13): reg2=regs_p->r13; break;
+				case(MOV_CR_R14): reg2=regs_p->r14; break;
+				case(MOV_CR_R15): reg2=regs_p->r15; break;
 				default: break; };
+			if(reg==MOV_CR8) { regs_p->cr8=reg2; }
+			else { VMWRITE(reg2, reg, lhf); }
+			if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&reg2), HOST_CR3, lhf); }
 			break;
 		case(MOV_FROM):
 			if(reg==MOV_CR8) { reg=regs_p->cr8; }
