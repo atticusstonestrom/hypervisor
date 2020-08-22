@@ -33,6 +33,7 @@
 //rflags should be found in guest state not regs_p!
 //big problem if entry failure in vmresume
 //sti could be problem in entry failure!
+//should cr3 be kernel mode in vmx_exit?
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
