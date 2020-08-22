@@ -475,7 +475,6 @@ __asm__(
 	"jmp return_from_entry_failure;"
 
 "vmx_exit:;"
-	"call vmx_enable_preemption;"
 	"pop %rax;"
 	"mov %rax, %cr8;"
 	POPA
@@ -497,6 +496,13 @@ __asm__(
 	"movq (%rax), %rcx;"
 	"movq 8(%rax), %rbx;"
 	"movq 16(%rax), %rax;"
+	PUSHA
+	"mov %cr8, %rax;"
+	"push %rax;"
+	"call vmx_enable_preemption;"
+	"pop %rax;"
+	"mov %rax, %cr8;"
+	POPA
 	//"sti;"
 	"ret;" );
 extern void host_stub(void);
