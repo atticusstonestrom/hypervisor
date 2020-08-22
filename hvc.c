@@ -336,27 +336,27 @@ static unsigned long hook(regs_t *regs_p) {
 			if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&reg2), HOST_CR3, lhf); }
 			break;
 		case(MOV_FROM):
-			if(reg==MOV_CR8) { reg=regs_p->cr8; }
-			else { VMREAD(reg, reg, lhf); }
+			if(reg==MOV_CR8) { reg2=regs_p->cr8; }
+			else { VMREAD(reg2, reg, lhf); }
 			switch(qual.cr_access.mov_cr_reg) {
-				case(MOV_CR_RAX): regs_p->rax=reg; break;
-				case(MOV_CR_RCX): regs_p->rcx=reg; break;
-				case(MOV_CR_RDX): regs_p->rdx=reg; break;
-				case(MOV_CR_RBX): regs_p->rbx=reg; break;
-				case(MOV_CR_RSP): VMWRITE(reg, GUEST_RSP, lhf); break;
-				case(MOV_CR_RBP): regs_p->rbp=reg; break;
-				case(MOV_CR_RSI): regs_p->rsi=reg; break;
-				case(MOV_CR_RDI): regs_p->rdi=reg; break;
-				case(MOV_CR_R8):  regs_p->r8=reg;  break;
-				case(MOV_CR_R9):  regs_p->r9=reg;  break;
-				case(MOV_CR_R10): regs_p->r10=reg; break;
-				case(MOV_CR_R11): regs_p->r11=reg; break;
-				case(MOV_CR_R12): regs_p->r12=reg; break;
-				case(MOV_CR_R13): regs_p->r13=reg; break;
-				case(MOV_CR_R14): regs_p->r14=reg; break;
-				case(MOV_CR_R15): regs_p->r15=reg; break; 
+				case(MOV_CR_RAX): regs_p->rax=reg2; break;
+				case(MOV_CR_RCX): regs_p->rcx=reg2; break;
+				case(MOV_CR_RDX): regs_p->rdx=reg2; break;
+				case(MOV_CR_RBX): regs_p->rbx=reg2; break;
+				case(MOV_CR_RSP): VMWRITE(reg2, GUEST_RSP, lhf); break;
+				case(MOV_CR_RBP): regs_p->rbp=reg2; break;
+				case(MOV_CR_RSI): regs_p->rsi=reg2; break;
+				case(MOV_CR_RDI): regs_p->rdi=reg2; break;
+				case(MOV_CR_R8):  regs_p->r8=reg2;  break;
+				case(MOV_CR_R9):  regs_p->r9=reg2;  break;
+				case(MOV_CR_R10): regs_p->r10=reg2; break;
+				case(MOV_CR_R11): regs_p->r11=reg2; break;
+				case(MOV_CR_R12): regs_p->r12=reg2; break;
+				case(MOV_CR_R13): regs_p->r13=reg2; break;
+				case(MOV_CR_R14): regs_p->r14=reg2; break;
+				case(MOV_CR_R15): regs_p->r15=reg2; break; 
 				default: break; };
-			VMWRITE((0xffffffffffffe7ff&reg), HOST_CR3, lhf);
+			if(reg==GUEST_CR3) {VMWRITE((0xffffffffffffe7ff&reg2), HOST_CR3, lhf); }
 			//VMREAD(reg2, HOST_CR3, lhf);
 			//cprint("cr3 => 0x%lx 0x%lx", reg, reg2);
 			break;
