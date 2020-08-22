@@ -160,6 +160,7 @@ static unsigned long hook(regs_t *regs_p) {
 	//return EXIT_HANDLER_ENTRY_FAILURE;
 	
 	lhf_t lhf;
+	unsigned long rip, length;
 	
 	exit_reason_t reason={ .val=0xdeadbeef };
 	exit_qualification_t qual;
@@ -201,37 +202,10 @@ static unsigned long hook(regs_t *regs_p) {
 
 		if(regs_p->rax==EXIT_NON_ROOT_RAX && regs_p->rcx==EXIT_NON_ROOT_RCX && !cpl) {
 			cprint("vmx exit requested");
-			/*VMREAD(rip, GUEST_RIP, lhf);
+			VMREAD(rip, GUEST_RIP, lhf);
 			VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
-			rip+=length;*/
-			//vmread directly
-			/*VMREAD(reg, GUEST_RSP, lhf);
-			VMREAD(reg2, GUEST_CR3, lhf);
-			put_cpu();
-			__asm__ __volatile__(
-				"cli;"
-				"sti;"
-				"mov $0x0b, %%eax;"
-				"cpuid;"
-				"movq (ret_rsp), %%rax;"
-				"mov %%rsp, (%%rax, %%rdx, 8);"
-				"movq (ret_rbp), %%rax;"
-				"mov %%rbp, (%%rax, %%rdx, 8);"
-				:::"eax", "ebx", "ecx", "edx", "memory");
-			__asm__ __volatile__(
-			"return_from_exit:;"
-				"mov $0x0b, %%eax;"
-				"cpuid;"
-				"movq (ret_rsp), %%rax;"
-				"movq (%%rax, %%rdx, 8), %%rsp;"
-				"movq (ret_rbp), %%rax;"
-				"movq (%%rax, %%rdx, 8), %%rbp;"
-				:::"eax", "ebx", "ecx", "edx", "memory");
-			__asm__ __volatile__(
-				"mov %rax, %cr3;"
-				"mov %0, %rsp;"
-				"jmp %1;"
-				POPA);*/
+			rip+=length;
+			VMWRITE(rip, GUEST_RIP, lhf);
 			put_cpu();
 			return EXIT_HANDLER_EXIT; }
 
@@ -408,7 +382,6 @@ static unsigned long hook(regs_t *regs_p) {
 		cprint("cannot handle");
 		break; };
 	
-	unsigned long rip, length;
 	VMREAD(rip, GUEST_RIP, lhf);
 	VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
 	rip+=length;
@@ -465,22 +438,20 @@ __asm__(
 	POPA
 	"push %rax;"
 	"push %rbx;"
-	"push %rcx;"
 	"mov %rsp, %rax;"
-	"mov $"str(GUEST_CR3)", %rbx;"
-	"vmread %rbx, %rbx;"
-	"mov %rbx, %cr3;"
+	//"mov $"str(GUEST_CR3)", %rbx;"
+	//"vmread %rbx, %rbx;"
+	//"mov %rbx, %cr3;"
 	"mov $"str(GUEST_RSP)", %rbx;"
 	"vmread %rbx, %rsp;"
 	"mov $"str(GUEST_RIP)", %rbx;"
 	"vmread %rbx, %rbx;"
-	"mov $"str(EXIT_INSTRUCTION_LENGTH)", %rcx;"
-	"vmread %rcx, %rcx;"
-	"add %rcx, %rbx;"
+	//"mov $"str(EXIT_INSTRUCTION_LENGTH)", %rcx;"
+	//"vmread %rcx, %rcx;"
+	//"add %rcx, %rbx;"
 	"push %rbx;"
-	"movq (%rax), %rcx;"
-	"movq 8(%rax), %rbx;"
-	"movq 16(%rax), %rax;"
+	"movq (%rax), %rbx;"
+	"movq 8(%rax), %rax;"
 	//"sti;"
 	"ret;" );
 extern void host_stub(void);
