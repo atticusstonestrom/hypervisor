@@ -52,7 +52,20 @@ typedef struct __attribute__((packed)) {
 
 #define EXIT_NON_ROOT_RAX 0xdeadbeef
 #define EXIT_NON_ROOT_RCX 0xdeaffeed
-#define EXIT_NON_ROOT __asm__ __volatile__("cpuid"::"a"(EXIT_NON_ROOT_RAX), "c"(EXIT_NON_ROOT_RCX))
+#define EXIT_NON_ROOT \
+__asm__ __volatile__( \
+	"pushf;" \
+	"push %%r15;push %%r14;push %%r13;push %%r12;" \
+	"push %%r11;push %%r10;push %%r9; push %%r8; " \
+	"push %%rsi;push %%rdi;push %%rbp;push %%rdx;" \
+	"push %%rbx;" \
+	"cpuid;" \
+	"pop %%rbx; pop %%rdx; pop %%rbp; pop %%rdi; " \
+	"pop %%rsi; pop %%r8;  pop %%r9;  pop %%r10; " \
+	"pop %%r11; pop %%r12; pop %%r13; pop %%r14; " \
+	"pop %%r15;" \
+	"popf;" \
+	::"a"(EXIT_NON_ROOT_RAX), "c"(EXIT_NON_ROOT_RCX))
 
 #define str2(x) #x
 #define str(x) str2(x)
