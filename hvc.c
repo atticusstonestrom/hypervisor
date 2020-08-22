@@ -331,9 +331,11 @@ static unsigned long hook(regs_t *regs_p) {
 				case(MOV_CR_R14): reg2=regs_p->r14; break;
 				case(MOV_CR_R15): reg2=regs_p->r15; break;
 				default: break; };
+			if(reg==GUEST_CR3) { reg2&=0x000fffffffffffff; }
 			if(reg==MOV_CR8) { regs_p->cr8=reg2; }
 			else { VMWRITE(reg2, reg, lhf); }
 			if(reg==GUEST_CR3) { VMWRITE((0xffffffffffffe7ff&reg2), HOST_CR3, lhf); }
+				
 			break;
 		case(MOV_FROM):
 			if(reg==MOV_CR8) { reg2=regs_p->cr8; }
@@ -356,9 +358,6 @@ static unsigned long hook(regs_t *regs_p) {
 				case(MOV_CR_R14): regs_p->r14=reg2; break;
 				case(MOV_CR_R15): regs_p->r15=reg2; break; 
 				default: break; };
-			if(reg==GUEST_CR3) {VMWRITE((0xffffffffffffe7ff&reg2), HOST_CR3, lhf); }
-			//VMREAD(reg2, HOST_CR3, lhf);
-			//cprint("cr3 => 0x%lx 0x%lx", reg, reg2);
 			break;
 		case(CLTS):
 			VMREAD(reg, GUEST_CR0, lhf);
