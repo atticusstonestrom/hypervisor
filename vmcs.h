@@ -605,29 +605,15 @@ typedef union __attribute__((packed)) {
 			//external interrupt:	0
 			//nmi:			2
 			//hardware exception:	3
-			//software exception:	6
-		unsigned int error_code_valid:1;
-		unsigned int iret_nmi_unblocking:1;
-		unsigned int rsv_13_30:18;	//set to 0
-		unsigned int valid:1; };
-	unsigned int val;
-} vm_exit_interruption_info_t;
-
-typedef union __attribute__((packed)) {
-	struct __attribute__((packed)) {
-		unsigned int vector:8;
-		unsigned int type:3;
-			//external interrupt:	0
-			//nmi:			2
-			//hardware exception:	3
 			//software interrupt:	4
 			//privilege sw except:	5
 			//software exception:	6
-		unsigned int error_code_valid:1;
-		unsigned int rsv_12_30:19;	//set to 0
+		unsigned int error_code_valid:1;	//deliver_error_code for vm-entry
+		unsigned int iret_nmi_unblocking:1;	//only for vm exit, 0 for others
+		unsigned int rsv_13_30:18;	//set to 0
 		unsigned int valid:1; };
 	unsigned int val;
-} idt_vectoring_info_t;
+} interruption_info_t;
 ////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////
