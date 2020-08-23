@@ -410,10 +410,10 @@ void vmresume_failure_handler(lhf_t lhf) {
 	unsigned long error_code;
 	if(VMfailValid(lhf)) {
 		VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
-		cprint("vmlaunch failed with error code %ld", error_code); }
+		cprint("\033[103;5;34;1m vmlaunch failed with error code %ld \033[0m", error_code); }
 	else if(VMfailInvalid(lhf)) {
 		cprint("vmlaunch failed with invalid region"); }
-	cprint("core unstable, reboot recommended!!");
+	cprint("\033[103;5;94;1m core unstable, reboot recommended!! \033[0m");
 	put_cpu();
 	return; }
 
