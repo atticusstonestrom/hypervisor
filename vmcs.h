@@ -992,9 +992,11 @@ static void core_fill_vmcs(void *info) {
 		eptp_p->accessed_dirty_control=0; }
 	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);*/
 	
-	cprint("vmcs link: 0x%lx\tmsr bitmap: 0x%lx", 0xffffffffffffffff, state[core].msr_paddr);
+	cprint("vmcs link: 0x%lx\tmsr bitmap: 0x%lx\texception bmp: 0x%lx",
+	       0xffffffffffffffff, state[core].msr_paddr, (long)1);
 	ec_vmwrite(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
 	ec_vmwrite(state[core].msr_paddr, MSR_BMP_ADDR_F, lhf, error_code);
+	ec_vmwrite(1, EXCEPTION_BMP, lhf);
 
 
 	READ_MSR(msr, IA32_DEBUGCTL);
