@@ -25,6 +25,9 @@
 //big problem if entry failure in vmresume
 //sti could be problem in entry failure!
 //should cr3 be kernel mode in vmx_exit?
+//for exceptions:
+//	need to account for bit 31 of idt-vectoring (double fault)
+//	and for trap/fault rip modification
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -198,7 +201,6 @@ static unsigned long hook(regs_t *regs_p) {
 	switch (reason.basic_exit_reason) {
 			
 	case ER_EXCEPTION_OR_NMI:
-		//need to account for bit 31 of idt-vectoring (double fault)
 		VMREAD(interruption_info.val, EXIT_INTERRUPTION_INFO, lhf);
 		cprint("interruption info: 0x%x", interruption_info.val);
 		interruption_info.iret_nmi_unblocking=0;
