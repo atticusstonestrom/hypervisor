@@ -16,8 +16,6 @@ typedef struct {
 	int vmm_stack_order;
 	unsigned long vmm_stack_top;
 	
-	unsigned int exception_bitmap;
-	
 	unsigned long vmxon_region;
 	unsigned long vmxon_paddr;
 	
