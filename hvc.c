@@ -405,6 +405,16 @@ static unsigned long hook(regs_t *regs_p) {
 	put_cpu();
 	return EXIT_HANDLER_RESUME; }
 
+void vmresume_failure_handler(lhf_t lhf) {
+	unsigned long error_code;
+	if(VMfailValid(lhf)) {
+		VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
+		cprint("vmlaunch failed with error code %ld", error_code); }
+	else if(VMfailInvalid(lhf)) {
+		cprint("vmlaunch failed with invalid region"); }
+	cprint("core unstable, reboot recommended!!");
+	return; }
+
 #define HOST_CR3  0x00006c02
 #define GUEST_CR3 0x00006802
 #define GUEST_RSP 0x0000681c
@@ -434,11 +444,23 @@ __asm__(
 	POPA
 	//"sti;"
 	"vmresume;"
+	"push %rax;"
+	"push %rbx;"
+	"push %rdi;"
 	"lahf;"
 	"shr $8, %rax;"
 	"movzbl %al, %edi;"
-	//call error_handler: real trouble!
-	//"jmp return_from_exit;"
+	"call vmresume_failure_handler;"
+	"mov %rsp, %rax;"
+	"mov $"str(GUEST_RSP)", %rbx;"
+	"vmread %rbx, %rsp;"
+	"mov $"str(GUEST_RIP)", %rbx;"
+	"vmread %rbx, %rbx;"
+	"push %rbx;"
+	"movq (%rax), %rdi;"
+	"movq 8(%rax), %rbx;"
+	"movq 16(%rax), %rax;"
+	"ret;"
 
 "vmx_entry_failure:;"
 	"pop %rax;"
