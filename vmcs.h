@@ -996,7 +996,7 @@ static void core_fill_vmcs(void *info) {
 	       0xffffffffffffffff, state[core].msr_paddr, (long)1);
 	ec_vmwrite(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
 	ec_vmwrite(state[core].msr_paddr, MSR_BMP_ADDR_F, lhf, error_code);
-	ec_vmwrite(1, EXCEPTION_BMP, lhf);
+	ec_vmwrite(1, EXCEPTION_BMP, lhf, error_code);
 
 
 	READ_MSR(msr, IA32_DEBUGCTL);
