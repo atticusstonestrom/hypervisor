@@ -231,8 +231,8 @@ static unsigned long hook(regs_t *regs_p) {
 		//lock prefix? #UD
 		cprint("rdmsr exit:\tid: 0x%lx", regs_p->rcx);
 
-		if(((signed)(regs_p->rcx)>0x00001fff && (signed)(regs_p->rcx)<0xc0000000)
-		   || (signed)(regs_p->rcx)>0xc0001fff || cpl==0) {
+		if(((regs_p->rcx)>0x00001fff && (regs_p->rcx)<0xc0000000)
+		   || (regs_p->rcx)>0xc0001fff || cpl>0) {
 			cprint("cpl non-zero or msr invalid");
 			//reflect back #GP(0)
 			regs_p->rax=0;
@@ -241,7 +241,7 @@ static unsigned long hook(regs_t *regs_p) {
 
 		READ_MSR(msr, regs_p->rcx);	//first check TRUE ctls
 		if(regs_p->rcx==IA32_VMX_BASIC) {
-			msr=(msr_t) {0}; }
+			msr=(msr_t) {.val=0xdeadbeef}; }
 			
 		regs_p->rax=msr.eax;
 		regs_p->rdx=msr.edx;
@@ -250,8 +250,8 @@ static unsigned long hook(regs_t *regs_p) {
 	case ER_WRMSR:
 		cprint("wrmsr exit:\tid: 0x%lx", regs_p->rcx);
 
-		if(((signed)(regs_p->rcx)>0x00001fff && (signed)(regs_p->rcx)<0xc0000000)
-		   || (signed)(regs_p->rcx)>0xc0001fff || cpl==0) {
+		if(((regs_p->rcx)>0x00001fff && (regs_p->rcx)<0xc0000000)
+		   || (regs_p->rcx)>0xc0001fff || cpl>0) {
 			cprint("cpl non-zero or msr invalid");
 			//reflect back #GP(0)
 			regs_p->rax=0;
