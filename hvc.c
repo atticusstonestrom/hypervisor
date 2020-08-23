@@ -406,6 +406,7 @@ static unsigned long hook(regs_t *regs_p) {
 	return EXIT_HANDLER_RESUME; }
 
 void vmresume_failure_handler(lhf_t lhf) {
+	int core=get_cpu();
 	unsigned long error_code;
 	if(VMfailValid(lhf)) {
 		VMREAD(error_code, VM_INSTRUCTION_ERROR, lhf);
@@ -413,6 +414,7 @@ void vmresume_failure_handler(lhf_t lhf) {
 	else if(VMfailInvalid(lhf)) {
 		cprint("vmlaunch failed with invalid region"); }
 	cprint("core unstable, reboot recommended!!");
+	put_cpu();
 	return; }
 
 #define HOST_CR3  0x00006c02
