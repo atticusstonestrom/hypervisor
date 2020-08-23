@@ -200,14 +200,14 @@ static unsigned long hook(regs_t *regs_p) {
 	case ER_EXCEPTION_OR_NMI:
 		//need to account for bit 31 of idt-vectoring (double fault)
 		VMREAD(interruption_info.val, EXIT_INTERRUPTION_INFO, lhf);
-		cprint("interruption info: 0x%lx", interruption_info.val);
+		cprint("interruption info: 0x%x", interruption_info.val);
 		interruption_info.iret_nmi_unblocking=0;
 		VMWRITE(interruption_info.val, ENTRY_INTERRUPTION_INFO, lhf);
 		VMREAD(rip, GUEST_RIP, lhf);
 		VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
 		rip-=length;
 		VMWRITE(rip, GUEST_RIP, lhf);
-		break; }
+		break;
 
 	case ER_CPUID:
 		//lock prefix? #UD
