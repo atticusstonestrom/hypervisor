@@ -979,7 +979,7 @@ static void core_fill_vmcs(void *info) {
 	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);*/
 	
 	exception_bitmap_t exception_bmp;
-	exception_bmp=(exception_bitmap_t){ .zd=1, .bp=1 };
+	exception_bmp=(exception_bitmap_t){ .zd=1, .bp=1, .gp=1 };
 	cprint("vmcs link: 0x%lx\tmsr bitmap: 0x%lx\texception bmp: 0x%x",
 	       0xffffffffffffffff, state[core].msr_paddr, exception_bmp.val);
 	ec_vmwrite(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
