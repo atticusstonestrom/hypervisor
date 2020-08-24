@@ -29,6 +29,7 @@
 //	need to account for bit 31 of idt-vectoring (double fault)
 //	and for trap/fault rip modification
 //	https://0xax.gitbooks.io/linux-insides/content/KernelStructures/linux-kernelstructure-1.html
+//reg problems other than fs? seg fault...
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -181,7 +182,7 @@ static unsigned long hook(regs_t *regs_p) {
 	VMREAD(guest_fs, GUEST_FS_BASE, lhf);
 	VMREAD(host_fs, HOST_FS_BASE, lhf);
 	if(host_fs!=guest_fs) {
-		cprint("fs change: 0x%lx => 0x%lx", host_fs, guest_fs);
+		//cprint("fs change: 0x%lx => 0x%lx", host_fs, guest_fs);
 		VMWRITE(guest_fs, HOST_FS_BASE, lhf); }
 	
 	cpuid_t cpuid;
