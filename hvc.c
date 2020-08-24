@@ -187,13 +187,13 @@ static unsigned long hook(regs_t *regs_p) {
 		WRITE_MSR(msr, IA32_FS_BASE);
 		//cprint("fs change: 0x%lx => 0x%lx", host_ss, guest_ss);
 		VMWRITE(guest_ss, HOST_FS_BASE, lhf); }
-	VMREAD(guest_ss, GUEST_GS_BASE, lhf);
-	VMREAD(host_ss, HOST_GS_BASE, lhf);
-	if(host_ss!=guest_ss) {
-		msr=(msr_t){ .val=guest_ss };
-		WRITE_MSR(msr, IA32_GS_BASE);
-		//cprint("gs change: 0x%lx => 0x%lx", host_ss, guest_ss);
-		VMWRITE(guest_ss, HOST_GS_BASE, lhf); }
+	//VMREAD(guest_ss, GUEST_GS_BASE, lhf);
+	//VMREAD(host_ss, HOST_GS_BASE, lhf);
+	//if(host_ss!=guest_ss) {
+	//	msr=(msr_t){ .val=guest_ss };
+	//	WRITE_MSR(msr, IA32_GS_BASE);
+	//	//cprint("gs change: 0x%lx => 0x%lx", host_ss, guest_ss);
+	//	VMWRITE(guest_ss, HOST_GS_BASE, lhf); }
 	
 	cpuid_t cpuid;
 	unsigned long reg, reg2;
