@@ -30,6 +30,8 @@
 //	and for trap/fault rip modification
 //	https://0xax.gitbooks.io/linux-insides/content/KernelStructures/linux-kernelstructure-1.html
 //reg problems other than fs? seg fault...
+//wrmsr bitmap
+//	ia32_fs_base and ia32_gs_base
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
