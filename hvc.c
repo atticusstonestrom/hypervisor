@@ -32,6 +32,7 @@
 //reg problems other than fs? seg fault...
 //wrmsr bitmap
 //	ia32_fs_base and ia32_gs_base
+//	gs appears in hook; only alter on vmxoff
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
