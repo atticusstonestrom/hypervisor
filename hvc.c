@@ -165,6 +165,7 @@ static unsigned long hook(regs_t *regs_p) {
 	//return EXIT_HANDLER_ENTRY_FAILURE;
 	
 	lhf_t lhf;
+	msr_t msr;
 	unsigned long rip, length;
 	
 	exit_reason_t reason={ .val=0xdeadbeef };
@@ -182,16 +183,19 @@ static unsigned long hook(regs_t *regs_p) {
 	VMREAD(guest_ss, GUEST_FS_BASE, lhf);
 	VMREAD(host_ss, HOST_FS_BASE, lhf);
 	if(host_ss!=guest_ss) {
+		msr=(msr_t){ .val=guest_ss };
+		WRITE_MSR(msr, IA32_FS_BASE);
 		//cprint("fs change: 0x%lx => 0x%lx", host_ss, guest_ss);
 		VMWRITE(guest_ss, HOST_FS_BASE, lhf); }
-	//VMREAD(guest_ss, GUEST_GS_BASE, lhf);
-	//VMREAD(host_ss, HOST_GS_BASE, lhf);
-	//if(host_ss!=guest_ss) {
-	//	cprint("gs change: 0x%lx => 0x%lx", host_ss, guest_ss);
-	//	VMWRITE(guest_ss, HOST_GS_BASE, lhf); }
+	VMREAD(guest_ss, GUEST_GS_BASE, lhf);
+	VMREAD(host_ss, HOST_GS_BASE, lhf);
+	if(host_ss!=guest_ss) {
+		msr=(msr_t){ .val=guest_ss };
+		WRITE_MSR(msr, IA32_GS_BASE);
+		//cprint("gs change: 0x%lx => 0x%lx", host_ss, guest_ss);
+		VMWRITE(guest_ss, HOST_GS_BASE, lhf); }
 	
 	cpuid_t cpuid;
-	msr_t msr;
 	unsigned long reg, reg2;
 	interruption_info_t interruption_info;
 	
