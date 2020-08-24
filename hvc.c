@@ -207,6 +207,7 @@ static unsigned long hook(regs_t *regs_p) {
 		VMWRITE(interruption_info.val, ENTRY_INTERRUPTION_INFO, lhf);
 		VMREAD(rip, GUEST_RIP, lhf);
 		VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
+		VMWRITE(length, ENTRY_INSTRUCTION_LENGTH, lhf);
 		rip-=length;
 		VMWRITE(rip, GUEST_RIP, lhf);
 		break;
