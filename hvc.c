@@ -28,6 +28,7 @@
 //for exceptions:
 //	need to account for bit 31 of idt-vectoring (double fault)
 //	and for trap/fault rip modification
+//	https://0xax.gitbooks.io/linux-insides/content/KernelStructures/linux-kernelstructure-1.html
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
