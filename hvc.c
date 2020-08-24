@@ -454,7 +454,9 @@ __asm__(
 	"lahf;"
 	"shr $8, %rax;"
 	"movzbl %al, %edi;"
+	PUSHA
 	"call vmresume_failure_handler;"
+	POPA
 	"mov %rsp, %rax;"
 	"mov $"str(GUEST_RSP)", %rbx;"
 	"vmread %rbx, %rsp;"
