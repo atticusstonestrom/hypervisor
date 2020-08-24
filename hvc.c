@@ -177,6 +177,13 @@ static unsigned long hook(regs_t *regs_p) {
 	VMREAD(qual.val, EXIT_QUALIFICATION, lhf);
 	//cprint("exit reason: 0x%x\texit qual: 0x%lx\tcpl: %ld", reason.val, qual.val, cpl);
 	
+	unsigned long guest_fs, host_fs;
+	VMREAD(guest_fs, GUEST_FS_BASE, lhf);
+	VMREAD(host_fs, HOST_FS_BASE, lhf);
+	if(host_fs!=guest_fs) {
+		cprint("fs change: 0x%lx => 0x%lx", host_fs, guest_fs);
+		VMWRITE(guest_fs, HOST_FS_BASE, lhf); }
+	
 	cpuid_t cpuid;
 	msr_t msr;
 	unsigned long reg, reg2;
