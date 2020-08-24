@@ -168,7 +168,6 @@ static unsigned long hook(regs_t *regs_p) {
 	//return EXIT_HANDLER_ENTRY_FAILURE;
 	
 	lhf_t lhf;
-	msr_t msr;
 	unsigned long rip, length;
 	
 	exit_reason_t reason={ .val=0xdeadbeef };
@@ -182,14 +181,14 @@ static unsigned long hook(regs_t *regs_p) {
 	VMREAD(qual.val, EXIT_QUALIFICATION, lhf);
 	//cprint("exit reason: 0x%x\texit qual: 0x%lx\tcpl: %ld", reason.val, qual.val, cpl);
 	
-	unsigned long guest_ss, host_ss;
-	VMREAD(guest_ss, GUEST_FS_BASE, lhf);
-	VMREAD(host_ss, HOST_FS_BASE, lhf);
-	if(host_ss!=guest_ss) {
-		msr=(msr_t){ .val=guest_ss };
-		WRITE_MSR(msr, IA32_FS_BASE);
-		//cprint("fs change: 0x%lx => 0x%lx", host_ss, guest_ss);
-		VMWRITE(guest_ss, HOST_FS_BASE, lhf); }
+	//unsigned long guest_ss, host_ss;
+	//VMREAD(guest_ss, GUEST_FS_BASE, lhf);
+	//VMREAD(host_ss, HOST_FS_BASE, lhf);
+	//if(host_ss!=guest_ss) {
+	//	msr=(msr_t){ .val=guest_ss };
+	//	WRITE_MSR(msr, IA32_FS_BASE);
+	//	//cprint("fs change: 0x%lx => 0x%lx", host_ss, guest_ss);
+	//	VMWRITE(guest_ss, HOST_FS_BASE, lhf); }
 	//VMREAD(guest_ss, GUEST_GS_BASE, lhf);
 	//VMREAD(host_ss, HOST_GS_BASE, lhf);
 	//if(host_ss!=guest_ss) {
@@ -199,6 +198,7 @@ static unsigned long hook(regs_t *regs_p) {
 	//	VMWRITE(guest_ss, HOST_GS_BASE, lhf); }
 	
 	cpuid_t cpuid;
+	msr_t msr;
 	unsigned long reg, reg2;
 	interruption_info_t interruption_info;
 	
@@ -452,6 +452,10 @@ void vmresume_failure_handler(lhf_t lhf) {
 #define GUEST_RSP 0x0000681c
 #define GUEST_RIP 0x0000681e
 #define EXIT_INSTRUCTION_LENGTH 0x0000440c
+#define GUEST_FS_BASE 0x0000680e
+#define HOST_FS_BASE  0x00006c06
+#define GUEST_GS_BASE 0x00006810
+#define HOST_GS_BASE  0x00006c08
 __asm__(
 	".text;"
 	".global host_stub;"
@@ -476,24 +480,49 @@ __asm__(
 	POPA
 	//"sti;"
 	"vmresume;"
+	
+	"push %rbp;"
 	"push %rax;"
 	"push %rbx;"
+	"push %rcx;"
+	"push %rdx;"
 	"push %rdi;"
+	
 	"lahf;"
 	"shr $8, %rax;"
 	"movzbl %al, %edi;"
 	PUSHA
 	"call vmresume_failure_handler;"
 	POPA
-	"mov %rsp, %rax;"
-	"mov $"str(GUEST_RSP)", %rbx;"
+	
+	"mov %rsp, %rbp;"
+	"mov $"str(GUEST_RSP)", %ebx;"
 	"vmread %rbx, %rsp;"
-	"mov $"str(GUEST_RIP)", %rbx;"
+	
+	"mov $"str(GUEST_FS_BASE)", %ebx;"
+	"vmread %rbx, %rdx;"
+	"mov %edx, %eax;"
+	"shr $32, %rdx;"
+	"mov $"str(IA32_FS_BASE)", %ecx;"
+	"wrmsr;"
+	
+	"mov $"str(GUEST_GS_BASE)", %ebx;"
+	"vmread %rbx, %rdx;"
+	"mov %edx, %eax;"
+	"shr $32, %rdx;"
+	"mov $"str(IA32_GS_BASE)", %ecx;"
+	"wrmsr;"
+	
+	"mov $"str(GUEST_RIP)", %ebx;"
 	"vmread %rbx, %rbx;"
+	
 	"push %rbx;"
-	"movq (%rax), %rdi;"
-	"movq 8(%rax), %rbx;"
-	"movq 16(%rax), %rax;"
+	"movq (%rbp), %rdi;"
+	"movq 8(%rbp), %rdx;"
+	"movq 16(%rbp), %rcx;"
+	"movq 24(%rbp), %rbx;"
+	"movq 32(%rbp), %rax;"
+	"movq 40(%rbp), %rbp;"
 	"ret;"
 
 "vmx_entry_failure:;"
@@ -503,26 +532,43 @@ __asm__(
 	//"sti;"
 	"jmp return_from_entry_failure;"
 
-"vmx_exit:;"
+"vmx_exit:;"	//cr3?
 	"pop %rax;"
 	"mov %rax, %cr8;"
 	POPA
+	"push %rbp;"
 	"push %rax;"
 	"push %rbx;"
-	"mov %rsp, %rax;"
-	//"mov $"str(GUEST_CR3)", %rbx;"
-	//"vmread %rbx, %rbx;"
-	//"mov %rbx, %cr3;"
-	"mov $"str(GUEST_RSP)", %rbx;"
+	"push %rcx;"
+	"push %rdx;"
+	"mov %rsp, %rbp;"
+
+	"mov $"str(GUEST_RSP)", %ebx;"
 	"vmread %rbx, %rsp;"
-	"mov $"str(GUEST_RIP)", %rbx;"
+	
+	"mov $"str(GUEST_FS_BASE)", %ebx;"
+	"vmread %rbx, %rdx;"
+	"mov %edx, %eax;"
+	"shr $32, %rdx;"
+	"mov $"str(IA32_FS_BASE)", %ecx;"
+	"wrmsr;"
+	
+	"mov $"str(GUEST_GS_BASE)", %ebx;"
+	"vmread %rbx, %rdx;"
+	"mov %edx, %eax;"
+	"shr $32, %rdx;"
+	"mov $"str(IA32_GS_BASE)", %ecx;"
+	"wrmsr;"
+	
+	"mov $"str(GUEST_RIP)", %ebx;"
 	"vmread %rbx, %rbx;"
-	//"mov $"str(EXIT_INSTRUCTION_LENGTH)", %rcx;"
-	//"vmread %rcx, %rcx;"
-	//"add %rcx, %rbx;"
+	
 	"push %rbx;"
-	"movq (%rax), %rbx;"
-	"movq 8(%rax), %rax;"
+	"movq (%rbp), %rdx;"
+	"movq 8(%rbp), %rcx;"
+	"movq 16(%rbp), %rbx;"
+	"movq 24(%rbp), %rax;"
+	"movq 32(%rbp), %rbp;"
 	//"sti;"
 	"ret;" );
 extern void host_stub(void);
@@ -533,7 +579,7 @@ __asm__(
 	".text;"
 	".global guest_stub;"
 "guest_stub:;"
-	"mov $"str(IA32_VMX_BASIC)", %rcx;"
+	"mov $"str(IA32_VMX_BASIC)", %ecx;"
 	"rdmsr;"
 	"rdtsc;"
 	"mov $0xdeadbeef, %eax;"
@@ -663,16 +709,34 @@ void core_launch(void *info) {
 	unsigned long error_code;
 	__asm__ __volatile__(
 		"mov %%cr3, %%rcx;"
-		"mov $"str(GUEST_CR3)", %%rbx;"
+		"mov $"str(GUEST_CR3)", %%ebx;"
 		"vmwrite %%rcx, %%rbx;"
-		"mov $"str(HOST_CR3)", %%rbx;"
+		"mov $"str(HOST_CR3)", %%ebx;"
 		"vmwrite %%rcx, %%rbx;"
 		
-		"mov $"str(GUEST_RSP)", %%rbx;"
+		"mov $"str(IA32_FS_BASE)", %%ecx;"
+		"rdmsr;"
+		"shl $32, %%rdx;"
+		"or %%eax, %%rdx;"
+		"mov $"str(GUEST_FS_BASE)", %%ebx;"
+		"vmwrite %%rdx, %%rbx;"
+		"mov $"str(HOST_FS_BASE)", %%ebx;"
+		"vmwrite %%rdx, %%rbx;"
+
+		"mov $"str(IA32_GS_BASE)", %%ecx;"
+		"rdmsr;"
+		"shl $32, %%rdx;"
+		"or %%eax, %%rdx;"
+		"mov $"str(GUEST_GS_BASE)", %%ebx;"
+		"vmwrite %%rdx, %%rbx;"
+		"mov $"str(HOST_GS_BASE)", %%ebx;"
+		"vmwrite %%rdx, %%rbx;"
+		
+		"mov $"str(GUEST_RSP)", %%ebx;"
 		"vmwrite %%rsp, %%rbx;"
 		
 		"lea vmx_entry_point(%%rip), %%rcx;"
-		"mov $"str(GUEST_RIP)", %%rbx;"
+		"mov $"str(GUEST_RIP)", %%ebx;"
 		"vmwrite %%rcx, %%rbx;"
 		
 		"mov $0x0b, %%eax;"
