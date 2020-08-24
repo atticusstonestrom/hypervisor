@@ -184,11 +184,11 @@ static unsigned long hook(regs_t *regs_p) {
 	if(host_ss!=guest_ss) {
 		//cprint("fs change: 0x%lx => 0x%lx", host_ss, guest_ss);
 		VMWRITE(guest_ss, HOST_FS_BASE, lhf); }
-	VMREAD(guest_ss, GUEST_GS_BASE, lhf);
-	VMREAD(host_ss, HOST_GS_BASE, lhf);
-	if(host_ss!=guest_ss) {
-		//cprint("gs change: 0x%lx => 0x%lx", host_ss, guest_ss);
-		VMWRITE(guest_ss, HOST_GS_BASE, lhf); }
+	//VMREAD(guest_ss, GUEST_GS_BASE, lhf);
+	//VMREAD(host_ss, HOST_GS_BASE, lhf);
+	//if(host_ss!=guest_ss) {
+	//	cprint("gs change: 0x%lx => 0x%lx", host_ss, guest_ss);
+	//	VMWRITE(guest_ss, HOST_GS_BASE, lhf); }
 	
 	cpuid_t cpuid;
 	msr_t msr;
