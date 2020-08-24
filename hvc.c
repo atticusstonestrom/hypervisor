@@ -219,9 +219,17 @@ static unsigned long hook(regs_t *regs_p) {
 		cprint("interruption info: 0x%x", interruption_info.val);
 		interruption_info.iret_nmi_unblocking=0;
 		VMWRITE(interruption_info.val, ENTRY_INTERRUPTION_INFO, lhf);
+			
+		VMREAD(reg, EXIT_INTERRUPTION_ERROR_CODE, lhf);
+		VMWRITE(reg, ENTRY_EXCEPTION_ERROR_CODE, lhf);
+			
 		VMREAD(rip, GUEST_RIP, lhf);
 		VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
 		VMWRITE(length, ENTRY_INSTRUCTION_LENGTH, lhf);
+		if(interruption_info.vector==0x0d) {
+			cprint("gp fault: 0x%lx 0x%lx (len %ld)",
+			       *(unsigned long *)rip, *(unsigned long *)(rip+8),
+			       length); }
 		rip-=length;
 		VMWRITE(rip, GUEST_RIP, lhf);
 		break;
