@@ -81,6 +81,26 @@ __asm__ __volatile__(		\
 #define VMXOFF   __asm__ __volatile__("vmxoff")
 
 
+
+
+#define VMCALL1(arg1)			\
+__asm__ __volatile__("vmcall"::"a"(arg1))
+
+#define VMCALL2(arg1, arg2)		\
+__asm__ __volatile__("vmcall"::"a"(arg1), "b"(arg2))
+
+#define VMCALL3(arg1, arg2, arg3)	\
+__asm__ __volatile__("vmcall"::"a"(arg1), "b"(arg2), "c"(arg3))
+
+#define VMCALL4(arg1, arg2, arg3, arg4)	\
+__asm__ __volatile__("vmcall"::"a"(arg1), "b"(arg2), "c"(arg3), "d"(arg4))
+
+#define GET_VMCALL_ARGS(_1,_2,_3,_4,NAME,...) NAME
+#define VMCALL(...) GET_VMCALL_ARGS(__VA_ARGS__, VMCALL4, VMCALL3, VMCALL2, VMCALL1)(__VA_ARGS__)
+
+
+
+
 //lower half flags
 //much better performance
 //than pushf/popf
