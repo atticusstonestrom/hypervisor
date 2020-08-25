@@ -1008,8 +1008,8 @@ static void core_fill_vmcs(void *info) {
 	pfec_match.p=1;
 	cprint("pfec mask: 0x%08x\tpfec match: 0x%08x",
 	       pfec_mask.val, pfec_match.val);
-	ec_vmwrite(pfec_mask.val, PF_ERROR_CODE_MASK, lhf);
-	ec_vmwrite(pfec_match.val, PF_ERROR_CODE_MATCH, lhf);
+	ec_vmwrite(pfec_mask.val, PF_ERROR_CODE_MASK, lhf, error_code);
+	ec_vmwrite(pfec_match.val, PF_ERROR_CODE_MATCH, lhf, error_code);
 
 
 	READ_MSR(msr, IA32_DEBUGCTL);
