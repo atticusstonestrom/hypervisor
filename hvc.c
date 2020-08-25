@@ -33,6 +33,7 @@
 //wrmsr bitmap
 //	ia32_fs_base and ia32_gs_base
 //	gs appears in hook; only alter on vmxoff
+//cr2 after vmresume fails(/exit)
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
