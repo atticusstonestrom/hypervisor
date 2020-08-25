@@ -614,6 +614,21 @@ typedef union __attribute__((packed)) {
 		unsigned int valid:1; };
 	unsigned int val;
 } interruption_info_t;
+
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int p:1;
+		unsigned int wr:1;
+		unsigned int us:1;
+		unsigned int rsvd:1;
+		unsigned int id:1;
+		unsigned int pk:1;
+		unsigned int ss:1;
+		unsigned int rsv_7_14:8;
+		unsigned int sgx:1;
+		unsigned int rsv_16_31:16; };
+	unsigned int val;
+} pfec_t;
 ////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////
@@ -979,12 +994,22 @@ static void core_fill_vmcs(void *info) {
 	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);*/
 	
 	exception_bitmap_t exception_bmp;
-	exception_bmp=(exception_bitmap_t){ .zd=1, .bp=1, .gp=1 };
+	exception_bmp=(exception_bitmap_t){ .zd=1, .bp=1, .gp=1, .pf=1 };
 	cprint("vmcs link: 0x%lx\tmsr bitmap: 0x%lx\texception bmp: 0x%x",
 	       0xffffffffffffffff, state[core].msr_paddr, exception_bmp.val);
 	ec_vmwrite(0xffffffffffffffff, VMCS_LINK_PTR_F, lhf, error_code);
 	ec_vmwrite(state[core].msr_paddr, MSR_BMP_ADDR_F, lhf, error_code);
 	ec_vmwrite(exception_bmp.val, EXCEPTION_BMP, lhf, error_code);
+
+	pfec_t pfec_mask, pfec_match;
+	pfec_mask.val=0;
+	pfec_mask.p=1;
+	pfec_match.val=0;
+	pfec_match.p=1;
+	cprint("pfec mask: 0x%08x\tpfec match: 0x%08x",
+	       pfec_mask.val, pfec_match.val);
+	ec_vmwrite(pfec_mask.val, PF_ERROR_CODE_MASK, lhf);
+	ec_vmwrite(pfec_match.val, PF_ERROR_CODE_MATCH, lhf);
 
 
 	READ_MSR(msr, IA32_DEBUGCTL);
