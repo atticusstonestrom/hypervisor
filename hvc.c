@@ -147,6 +147,10 @@ typedef union __attribute__((packed)) {
 		unsigned long rsv_32_63:32; }
 		cr_access;
 	
+	struct __attribute__((packed)) {
+		unsigned long addr; }
+		page_fault;
+	
 	unsigned long val;
 } exit_qualification_t;
 //////////////////////////////////////////////////////////////////////////////////
@@ -237,11 +241,13 @@ static unsigned long hook(regs_t *regs_p) {
 		//	cprint("gp fault: 0x%lx 0x%lx (len %ld)",
 		//	       *(unsigned long *)rip, *(unsigned long *)(rip+8),
 		//	       length); }
+		if(1<<interruption_info.vector==((exception_bitmap_t){.pf=1}).val) {
+			regs_p->cr2=qual.page_fault.addr; }
+		VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
 		if(interruption_info.type==IRQ_TYPE_SW_I || interruption_info.type==IRQ_TYPE_SW_E || interruption_info.type==IRQ_TYPE_P_SW_E) {
-			VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
-			VMWRITE(length, ENTRY_INSTRUCTION_LENGTH, lhf);
-			rip-=length;
-			VMWRITE(rip, GUEST_RIP, lhf); }
+			VMWRITE(length, ENTRY_INSTRUCTION_LENGTH, lhf); }
+		rip-=length;
+		VMWRITE(rip, GUEST_RIP, lhf);
 		break;
 
 	case ER_CPUID:
