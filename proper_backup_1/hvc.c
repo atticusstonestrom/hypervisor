@@ -399,8 +399,7 @@ static unsigned long hook(regs_t *regs_p) {
 		//check for error with lhf
 		//cr4 vmxe, shadow/mask. how to handle?
 		break;
-			
-	case ER_VMCALL:
+
 	case ER_VMCLEAR:
 	case ER_VMLAUNCH:
 	case ER_VMPTRLD:
