@@ -226,6 +226,19 @@ static unsigned long hook(regs_t *regs_p) {
 	
 	switch (reason.basic_exit_reason) {
 			
+	case ER_VMCALL:
+		cprint("vmcall exit:\targs: 0x%lx 0x%lx 0x%lx 0x%lx",
+		       regs_p->rax, regs_p->rbx, regs_p->rcx, regs_p->rdx);
+		if(regs_p->rax==VMCALL_VMXOFF && !cpl) {
+			cprint("vmx exit requested");
+			VMREAD(rip, GUEST_RIP, lhf);
+			VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
+			rip+=length;
+			VMWRITE(rip, GUEST_RIP, lhf);
+			put_cpu();
+			return EXIT_HANDLER_EXIT; }
+		break;
+			
 	case ER_EXCEPTION_OR_NMI:
 		VMREAD(interruption_info.val, EXIT_INTERRUPTION_INFO, lhf);
 		VMREAD(reg, EXIT_INTERRUPTION_ERROR_CODE, lhf);
@@ -254,15 +267,6 @@ static unsigned long hook(regs_t *regs_p) {
 	case ER_CPUID:
 		//lock prefix? #UD
 		cprint("cpuid exit:\tleaf: 0x%lx\targ: 0x%lx", regs_p->rax, regs_p->rcx);
-
-		if(regs_p->rax==EXIT_NON_ROOT_RAX && regs_p->rcx==EXIT_NON_ROOT_RCX && !cpl) {
-			cprint("vmx exit requested");
-			VMREAD(rip, GUEST_RIP, lhf);
-			VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
-			rip+=length;
-			VMWRITE(rip, GUEST_RIP, lhf);
-			put_cpu();
-			return EXIT_HANDLER_EXIT; }
 
 		CPUID(cpuid, regs_p->rax, regs_p->rcx);
 		if(regs_p->rax==0) {
@@ -683,7 +687,7 @@ static void core_close(void *info) {
 	errors[core]=0;
 	
 	if(state[core].guest_flag) {
-		EXIT_NON_ROOT;
+		vmcall(VMCALL_VMXOFF);
 		state[core].guest_flag=0; }
 	
 	int success_flag;
