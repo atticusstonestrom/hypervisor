@@ -602,6 +602,12 @@ typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		unsigned int vector:8;
 		unsigned int type:3;
+#define IRQ_TYPE_E_I 0
+#define IRQ_TYPE_NMI 2
+#define IRQ_TYPE_HW_E 3
+#define IRQ_TYPE_SW_I 4
+#define IRQ_TYPE_P_SW_E 5
+#define IRQ_TYPE_SW_E 6
 			//external interrupt:	0
 			//nmi:			2
 			//hardware exception:	3
@@ -718,7 +724,7 @@ static void core_fill_vmcs(void *info) {
 	sec_cpu_x_ctls.enable_rdtscp=1;
 	sec_cpu_x_ctls.enable_invpcid=1;
 	//sec_cpu_x_ctls.enable_pml=1;		//useful!!!!!
-	sec_cpu_x_ctls.enable_xsaves_srstors=1;
+	//sec_cpu_x_ctls.enable_xsaves_srstors=1;
 	
 	exit_ctls.val=0;
 	//exit_ctls.save_dbg_controls=1;
@@ -1002,10 +1008,10 @@ static void core_fill_vmcs(void *info) {
 	ec_vmwrite(exception_bmp.val, EXCEPTION_BMP, lhf, error_code);
 
 	pfec_t pfec_mask, pfec_match;
-	pfec_mask.val=0;
-	pfec_mask.p=1;
-	pfec_match.val=0;
-	pfec_match.p=1;
+	pfec_mask=(pfec_t){.wr=1, .p=1};
+	pfec_match=(pfec_t){.wr=0, .p=1};
+	//pfec_mask.val=0;
+	//pfec_match.val=0xffffffff;
 	cprint("pfec mask: 0x%08x\tpfec match: 0x%08x",
 	       pfec_mask.val, pfec_match.val);
 	ec_vmwrite(pfec_mask.val, PF_ERROR_CODE_MASK, lhf, error_code);
