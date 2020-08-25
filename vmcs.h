@@ -724,7 +724,7 @@ static void core_fill_vmcs(void *info) {
 	sec_cpu_x_ctls.enable_rdtscp=1;
 	sec_cpu_x_ctls.enable_invpcid=1;
 	//sec_cpu_x_ctls.enable_pml=1;		//useful!!!!!
-	//sec_cpu_x_ctls.enable_xsaves_srstors=1;
+	sec_cpu_x_ctls.enable_xsaves_srstors=1;
 	
 	exit_ctls.val=0;
 	//exit_ctls.save_dbg_controls=1;
