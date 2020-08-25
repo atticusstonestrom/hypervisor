@@ -1,4 +1,5 @@
 #include "x64-utilities.h"
+#include "vtx-utilities.h"
 #include "mm.h"
 
 #ifndef __HVC
@@ -51,9 +52,7 @@ typedef struct __attribute__((packed)) {
 	unsigned long rflags;
 } regs_t;
 
-#define EXIT_NON_ROOT_RAX 0xdeadbeef
-#define EXIT_NON_ROOT_RCX 0xdeaffeed
-#define EXIT_NON_ROOT __asm__ __volatile__("cpuid"::"a"(EXIT_NON_ROOT_RAX), "c"(EXIT_NON_ROOT_RCX))
+#define VMCALL_VMXOFF 0
 
 #define str2(x) #x
 #define str(x) str2(x)
