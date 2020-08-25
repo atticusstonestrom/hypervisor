@@ -31,6 +31,7 @@ typedef struct {
 } state_t;
 
 typedef struct __attribute__((packed)) {
+	unsigned long cr2;
 	unsigned long cr8;
 	unsigned long rax;
 	unsigned long rbx;
