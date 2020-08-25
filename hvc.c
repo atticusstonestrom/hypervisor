@@ -225,22 +225,23 @@ static unsigned long hook(regs_t *regs_p) {
 		VMREAD(interruption_info.val, EXIT_INTERRUPTION_INFO, lhf);
 		VMREAD(reg, EXIT_INTERRUPTION_ERROR_CODE, lhf);
 			
-		cprint("interruption info: 0x%x\terror code: 0x%lx",
-		       interruption_info.val, reg);
+		VMREAD(rip, GUEST_RIP, lhf);
+		cprint("intrrpt info: 0x%x\terror code: 0x%lx\trip: 0x%lx",
+		       interruption_info.val, reg, rip);
 			
 		interruption_info.iret_nmi_unblocking=0;
 		VMWRITE(interruption_info.val, ENTRY_INTERRUPTION_INFO, lhf);
 		VMWRITE(reg, ENTRY_EXCEPTION_ERROR_CODE, lhf);
-			
-		VMREAD(rip, GUEST_RIP, lhf);
-		VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
-		VMWRITE(length, ENTRY_INSTRUCTION_LENGTH, lhf);
+
 		//if(interruption_info.vector==0x0d) {
 		//	cprint("gp fault: 0x%lx 0x%lx (len %ld)",
 		//	       *(unsigned long *)rip, *(unsigned long *)(rip+8),
 		//	       length); }
-		rip-=length;
-		VMWRITE(rip, GUEST_RIP, lhf);
+		if(interruption_info.type==IRQ_TYPE_SW_I || interruption_info.type==IRQ_TYPE_SW_E || interruption_info.type==IRQ_TYPE_P_SW_E) {
+			VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
+			VMWRITE(length, ENTRY_INSTRUCTION_LENGTH, lhf);
+			rip-=length;
+			VMWRITE(rip, GUEST_RIP, lhf); }
 		break;
 
 	case ER_CPUID:
@@ -466,6 +467,8 @@ __asm__(
 	PUSHA
 	"mov %cr8, %rax;"
 	"push %rax;"
+	"mov %cr2, %rax;"
+	"push %rax;"
 	"mov %rsp, %rdi;"
 	"call hook;"
 
@@ -477,6 +480,8 @@ __asm__(
 	"je vmx_entry_failure;"
 
 "vmx_resume:;"
+	"pop %rax;"
+	"mov %rax, %cr2;"
 	"pop %rax;"
 	"mov %rax, %cr8;"
 	POPA
@@ -529,12 +534,16 @@ __asm__(
 
 "vmx_entry_failure:;"
 	"pop %rax;"
+	"mov %rax, %cr2;"
+	"pop %rax;"
 	"mov %rax, %cr8;"
 	POPA
 	//"sti;"
 	"jmp return_from_entry_failure;"
 
 "vmx_exit:;"	//cr3?
+	"pop %rax;"
+	"mov %rax, %cr2;"
 	"pop %rax;"
 	"mov %rax, %cr8;"
 	POPA
