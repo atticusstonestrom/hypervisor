@@ -81,6 +81,7 @@ static struct file_operations fops = {
 /////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////
+unsigned char lock;
 int ncores;
 
 unsigned long *ret_rsp;
@@ -717,6 +718,9 @@ static int global_close(struct inode *inodep, struct file *filep) {
 	gprint("exiting vmx operation");
 	on_each_cpu(core_close, NULL, 1);
 	gprint("exited\n");
+	
+	lock=0;
+	gprint("lock relinquished: %d\n", lock);
 	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	return 0; }
 //////////////////////////////////////////////////////////////////////////////////
@@ -866,6 +870,12 @@ static void core_open(void *info) {
 static int global_open(struct inode *inodep, struct file *filep) {
 	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	int ret=0, i=0;
+	
+	__asm__ __volatile__("lock xchgb (lock), %al;"::"a"(1));
+	if(lock) {
+		gprint("resources in use");
+		return -EACCES; }
+	gprint("lock acquired: %d\n", lock);
 	
 	(void)memset((void *)msr_bitmap, 0, 4096);
 	gprint("zeroed msr bitmap:\t0x%lx\n", msr_bitmap);
