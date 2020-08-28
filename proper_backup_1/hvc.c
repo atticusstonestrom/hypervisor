@@ -871,7 +871,7 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	int ret=0, i=0;
 	
-	__asm__ __volatile__("lock xchgb (lock), %al;"::"a"(1));
+	__asm__ __volatile__("lock xchgb (lock), %%al;"::"a"(1));
 	if(lock) {
 		gprint("resources in use");
 		return -EACCES; }
