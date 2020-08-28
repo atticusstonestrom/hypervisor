@@ -871,8 +871,8 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	int ret=0, i=0;
 	
-	__asm__ __volatile__("lock xchgb (lock), %%al;"::"a"(1));
-	if(lock) {
+	__asm__ __volatile__("lock xchgb (lock), %%al;":"=a"(ret):"a"(1));
+	if(ret) {
 		gprint("resources in use");
 		return -EACCES; }
 	gprint("lock acquired: %d\n", lock);
@@ -1004,6 +1004,8 @@ static void __init core_init(void *info) {
 static int __init global_init(void) {
 	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	int i, ret=0;
+	
+	lock=0;
 
 	ncores=num_online_cpus();
 	gprint("number of online cores: %d", ncores);
