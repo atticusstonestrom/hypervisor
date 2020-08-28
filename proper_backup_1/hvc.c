@@ -875,6 +875,7 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	if(ret) {
 		gprint("resources in use");
 		return -EACCES; }
+	//lock cmpxchg, pause, jne
 	gprint("lock acquired: %d\n", lock);
 	
 	(void)memset((void *)msr_bitmap, 0, 4096);
