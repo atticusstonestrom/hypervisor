@@ -47,6 +47,8 @@ static void check_msrrs(void) {
 		printk("fix4k_f0000: 0x%lx\n", msr.val);
 		READ_MSR(msr, IA32_MTRR_FIX4K_F8000);
 		printk("fix4k_f8000: 0x%lx\n", msr.val); }
+	READ_MSR(msr, IA32_MTRR_DEF_TYPE);
+	printk("[*] mtrr_def_type: 0x%lx\n", msr.val);
 	for(i=0; i<vcnt; i++) {
 		READ_MSR(msr, IA32_MTRR_PHYSBASE(i));
 		printk("[*] physbase%d: 0x%lx\n", i, msr.val);
