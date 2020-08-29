@@ -8,6 +8,52 @@
 #ifndef MEM_MANAGE
 #define MEM_MANAGE
 
+
+static void check_msrrs(void) {
+	int i=0;
+	int vcnt;
+	cpuid_t cpuid;
+	msr_t msr;
+	CPUID(cpuid, 1);
+	if(cpuid.leaf_1.mtrr) {
+		printk("[*] mtrrs enabled\n"); }
+	else {
+		return; }
+	if(cpuid.leaf_1.pat) {
+		printk("[*] pat enabled\n"); }
+	READ_MSR(msr, IA32_MTRRCAP);
+	printk("[*] mtrrcap: 0x%lx\n", msr.val);
+	vcnt=msr.mtrrcap.vcnt;
+	if(msr.mtrrcap.f) {
+		READ_MSR(msr, IA32_MTRR_FIX64K_00000);
+		printk("fix64k_00000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX16K_80000);
+		printk("fix16k_80000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX16K_A0000);
+		printk("fix16k_a0000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX4K_C0000);
+		printk("fix4k_c0000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX4K_C8000);
+		printk("fix4k_c8000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX4K_D0000);
+		printk("fix4k_d0000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX4K_D8000);
+		printk("fix4k_d8000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX4K_E0000);
+		printk("fix4k_e0000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX4K_E8000);
+		printk("fix4k_e8000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX4K_F0000);
+		printk("fix4k_f0000: 0x%lx\n", msr.val);
+		READ_MSR(msr, IA32_MTRR_FIX4K_F8000);
+		printk("fix4k_f8000: 0x%lx\n", msr.val); }
+	for(i=0; i<vcnt; i++) {
+		READ_MSR(msr, IA32_MTRR_PHYSBASE(i));
+		printk("[*] physbase%d: 0x%lx\n", i, msr.val);
+		READ_MSR(msr, IA32_MTRR_PHYSMASK(i));
+		printk("[*] physmask%d: 0x%lx\n", i, msr.val); }
+	return; }
+
 static int alloc_wb_page(unsigned long *vaddr, unsigned long *paddr) {
 	msr_t msr;
 	READ_MSR(msr, IA32_PAT);
