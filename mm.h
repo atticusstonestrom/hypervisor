@@ -24,7 +24,7 @@ static void check_msrrs(void) {
 	READ_MSR(msr, IA32_MTRRCAP);
 	printk("[*] mtrrcap: 0x%lx\n", msr.val);
 	vcnt=msr.mtrrcap.vcnt;
-	if(msr.mtrrcap.f) {
+	if(msr.mtrrcap.fix) {
 		READ_MSR(msr, IA32_MTRR_FIX64K_00000);
 		printk("fix64k_00000: 0x%lx\n", msr.val);
 		READ_MSR(msr, IA32_MTRR_FIX16K_80000);
