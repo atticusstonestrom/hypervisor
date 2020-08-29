@@ -60,6 +60,49 @@ typedef union __attribute__((packed)) {
 		unsigned long rsv_21_63:43; }
 		feature_control;
 	
+	#define IA32_MTRRCAP 0xfe
+	struct __attribute__((packed)) {
+		unsigned long vcnt:8;
+		unsigned long fix:1;
+		unsigned long rsv_9:1;
+		unsigned long wc:1;
+		unsigned long smrr:1;
+		unsigned long rsv_12_63:52; }
+		mtrrcap;
+	
+	#define IA32_MTRR_DEF_TYPE 0x2ff
+	struct __attribute__((packed)) {
+		unsigned long type:8;
+		unsigned long rsv_8_9:2;
+		unsigned long fe:1;
+		unsigned long e:1;
+		unsigned long rsv_12_63:52; }
+		mtrr_def_type;
+	
+	#define IA32_MTRR_FIX64K_00000 0x250
+	#define IA32_MTRR_FIX16K_80000 0x258
+	#define IA32_MTRR_FIX16K_A0000 0x259
+	#define IA32_MTRR_FIX4K_C0000  0x268
+	#define IA32_MTRR_FIX4K_C8000  0x269
+	#define IA32_MTRR_FIX4K_D0000  0x26a
+	#define IA32_MTRR_FIX4K_D8000  0x26b
+	#define IA32_MTRR_FIX4K_E0000  0x26c
+	#define IA32_MTRR_FIX4K_E8000  0x26d
+	#define IA32_MTRR_FIX4K_F0000  0x26e
+	#define IA32_MTRR_FIX4K_F8000  0x26f
+	struct __attribute__((packed)) {
+		unsigned char entries[8]; }
+		mtrr_fixed;
+	
+	#define IA32_MTRR_PHYSBASE(n) (0x200+2*(n))
+	#define IA32_MTRR_PHYSMASK(n) (0x201+2*(n))
+	struct __attribute__((packed)) {
+		unsigned long type:8;
+		unsigned long rsv_8_10:3;
+		unsigned long v:1;		//"addr" field also used for mask
+		unsigned long addr:52; }	//must be shifted left 12 bits
+		mtrr_variable;
+	
 	#define IA32_PAT 0x277
 	struct __attribute__((packed)) {
 		unsigned char entries[8]; }
@@ -292,7 +335,11 @@ typedef union __attribute__((packed)) {
 		unsigned int vmx:1;
 		unsigned int ecx_6_30:25;
 		unsigned int hypervisor_present:1;	//ecx end
-		unsigned int edx; }			//edx start/end
+		unsigned int edx_0_11:12;		//edx start
+		unsigned int mtrr:1;
+		unsigned int edx_13_15:3;
+		unsigned int pat:1;
+		unsigned int edx_17_31:15; }		//edx end
 		leaf_1;
 } cpuid_t;
 	
