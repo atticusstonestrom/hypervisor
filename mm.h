@@ -41,6 +41,10 @@ else if( (paddr)<0xa0000 ) {			\	don't need to and	\
 	( ((paddr)-0x80000) & 0xff000 )>>14; }	\	????	\
 else if( (paddr)<0xc0000 ) {			\
 	( ((paddr)-0xa0000) & 0xf0000 )>>14; }	\
+	
+#define get_caching_type(paddr, msr)		\
+({READ_MSR(msr, MTRR_MSR_ID(paddr));		\
+msr.mtrr_fixed.entries[MTRR_INDEX(paddr)]; })
 
 static void check_msrrs(void) {
 	int i=0;
