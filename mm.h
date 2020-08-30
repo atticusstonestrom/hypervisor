@@ -8,6 +8,39 @@
 #ifndef MEM_MANAGE
 #define MEM_MANAGE
 
+#define MTRR_MSR_ID(paddr)		\
+({if( (paddr)<0x80000 ) {		\
+	IA32_MTRR_FIX64K_00000; }	\
+else if( (paddr)<0xa0000 ) {		\
+	IA32_MTRR_FIX16K_80000; }	\
+else if( (paddr)<0xc0000 ) {		\
+	IA32_MTRR_FIX16K_A0000; }	\
+else if( (paddr)<0xc80000 ) {		\
+	IA32_MTRR_FIX4K_C0000; }	\
+else if( (paddr)<0xd00000 ) {		\
+	IA32_MTRR_FIX4K_C8000; }	\
+else if( (paddr)<0xd80000 ) {		\
+	IA32_MTRR_FIX4K_D0000; }	\
+else if( (paddr)<0xe0000 ) {		\
+	IA32_MTRR_FIX4K_D8000; }	\
+else if( (paddr)<0xe80000 ) {		\
+	IA32_MTRR_FIX4K_E0000; }	\
+else if( (paddr)<0xf0000 ) {		\
+	IA32_MTRR_FIX4K_E8000; }	\
+else if( (paddr)<0xf8000 ) {		\
+	IA32_MTRR_FIX4K_F0000; }	\
+else if( (paddr)<0xa00000 ) {		\
+	IA32_MTRR_FIX4K_F8000; }	\
+else {					\
+	0; }})
+
+#define MTRR_INDEX(paddr) \
+({if( (paddr)<0x80000 ) {		\
+	((paddr)&0xf0000)>>16; }	\
+else if( (paddr)<0xa0000 ) {			\
+	( ((paddr)-0x80000) & 0xff000 )>>14; }	\	????	\
+else if( (paddr)<0xc0000 ) {			\
+	( ((paddr)-0xa0000) & 0xf0000 )>>14; }	\
 
 static void check_msrrs(void) {
 	int i=0;
