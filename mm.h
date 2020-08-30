@@ -37,7 +37,7 @@ else {					\
 #define MTRR_INDEX(paddr) \
 ({if( (paddr)<0x80000 ) {		\
 	((paddr)&0xf0000)>>16; }	\
-else if( (paddr)<0xa0000 ) {			\
+else if( (paddr)<0xa0000 ) {			\	don't need to and	\
 	( ((paddr)-0x80000) & 0xff000 )>>14; }	\	????	\
 else if( (paddr)<0xc0000 ) {			\
 	( ((paddr)-0xa0000) & 0xf0000 )>>14; }	\
