@@ -9,27 +9,27 @@
 #define MEM_MANAGE
 
 #define MTRR_MSR_ID(paddr)		\
-({if( (paddr)<0x80000 ) {		\
+({if( (unsigned)(paddr)<0x80000 ) {	\
 	IA32_MTRR_FIX64K_00000; }	\
-else if( (paddr)<0xa0000 ) {		\
+else if( (unsigned)(paddr)<0xa0000 ) {	\
 	IA32_MTRR_FIX16K_80000; }	\
-else if( (paddr)<0xc0000 ) {		\
+else if( (unsigned)(paddr)<0xc0000 ) {	\
 	IA32_MTRR_FIX16K_A0000; }	\
-else if( (paddr)<0xc80000 ) {		\
+else if( (unsigned)(paddr)<0xc80000 ) {	\
 	IA32_MTRR_FIX4K_C0000; }	\
-else if( (paddr)<0xd00000 ) {		\
+else if( (unsigned)(paddr)<0xd00000 ) {	\
 	IA32_MTRR_FIX4K_C8000; }	\
-else if( (paddr)<0xd80000 ) {		\
+else if( (unsigned)(paddr)<0xd80000 ) {	\
 	IA32_MTRR_FIX4K_D0000; }	\
-else if( (paddr)<0xe0000 ) {		\
+else if( (unsigned)(paddr)<0xe0000 ) {	\
 	IA32_MTRR_FIX4K_D8000; }	\
-else if( (paddr)<0xe80000 ) {		\
+else if( (unsigned)(paddr)<0xe80000 ) {	\
 	IA32_MTRR_FIX4K_E0000; }	\
-else if( (paddr)<0xf0000 ) {		\
+else if( (unsigned)(paddr)<0xf0000 ) {	\
 	IA32_MTRR_FIX4K_E8000; }	\
-else if( (paddr)<0xf8000 ) {		\
+else if( (unsigned)(paddr)<0xf8000 ) {	\
 	IA32_MTRR_FIX4K_F0000; }	\
-else if( (paddr)<0xa00000 ) {		\
+else if( (unsigned)(paddr)<0x100000 ) {	\
 	IA32_MTRR_FIX4K_F8000; }	\
 else {					\
 	0; }})
@@ -42,9 +42,10 @@ else if( (paddr)<0xa0000 ) {			\	don't need to and	\
 else if( (paddr)<0xc0000 ) {			\
 	( ((paddr)-0xa0000) & 0xf0000 )>>14; }	\
 	
-#define get_caching_type(paddr, msr)		\
-({READ_MSR(msr, MTRR_MSR_ID(paddr));		\
-msr.mtrr_fixed.entries[MTRR_INDEX(paddr)]; })
+#define get_caching_type(paddr, msr)			\
+({if( (unsigned)(paddr)>0xfffff ) { 0xff; }		\
+else {	READ_MSR(msr, MTRR_MSR_ID(paddr));		\
+	msr.mtrr_fixed.entries[MTRR_INDEX(paddr)]; }})
 
 static void check_msrrs(void) {
 	int i=0;
