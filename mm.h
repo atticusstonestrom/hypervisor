@@ -317,7 +317,7 @@ static int initialize_ept(ept_data_t *data) {
 	data->eptp.caching_type=PAT_WB;
 	data->eptp.page_walk_length=3;
 	data->eptp.pml4_addr=virt_to_phys((void *)data->pml4)>>12;
-	gprint("eptp: 0x%lx", data->eptp.val);
+	gprint("eptp:\t0x%lx", data->eptp.val);
 	
 	return 0; }
 
