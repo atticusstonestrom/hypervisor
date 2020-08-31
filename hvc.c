@@ -37,6 +37,7 @@
 //save ia32_gs_kernel_base
 //hook modifications to msrrs
 //does ISA ensure consistency of msrrs across all cores?
+//assumes msrr masks are well-formed
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
