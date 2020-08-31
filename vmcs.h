@@ -993,7 +993,7 @@ static void core_fill_vmcs(void *info) {
 	
 
 	cprint("eptp:\t0x%lx\n", ept_data.eptp.val);
-	EC_VMWRITE(ept_data.eptp.val, EPTP_F, lhf, error_code);
+	ec_vmwrite(ept_data.eptp.val, EPTP_F, lhf, error_code);
 	
 	exception_bitmap_t exception_bmp;
 	exception_bmp=(exception_bitmap_t){ .zd=1, .bp=1, .gp=1, .pf=1 };
