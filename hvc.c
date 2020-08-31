@@ -35,6 +35,7 @@
 //	gs appears in hook; only alter on vmxoff
 //cr2 after vmresume fails(/exit)
 //save ia32_gs_kernel_base
+//hook modifications to msrrs
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
