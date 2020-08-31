@@ -992,7 +992,7 @@ static void core_fill_vmcs(void *info) {
 	       reg, access_rights.val, lim, base);
 	
 
-	cprint("eptp:\t0x%lx\n", ept_data.eptp.val);
+	cprint("eptp:\t0x%lx", ept_data.eptp.val);
 	ec_vmwrite(ept_data.eptp.val, EPTP_F, lhf, error_code);
 	
 	exception_bitmap_t exception_bmp;
