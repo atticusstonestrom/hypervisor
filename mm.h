@@ -324,6 +324,25 @@ static int initialize_ept(ept_data_t *data) {
 	#define get_pde(base) (((base)>>21)&0x1ff)
 	#define get_pdpt(base) ((base)>>30)
 	
+	unsigned long base, top;
+	epse_p=(void *)data->pds.base;
+	//ensure var takes priority over fixed
+	if(def_type.fe) {}
+	//not optimal but saves lines
+	for(i=0; def_type.e && i<vcnt; i++) {	//is this the right e?
+		READ_MSR(msr, IA32_MTRR_PHYSBASE(i));
+		//base=msr.mtrr_variable.addr<<12;
+		base=msr.mtrr_variable.addr;
+		READ_MSR(msr, IA32_MTRR_PHYSMASK(i));
+		if(!msr.mtrr_variable.v) { continue; }
+		top=base;
+		//top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr<<12);
+		top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr);
+		gprint("variable mtrr %d:\tbase: 0x%lx\tend: 0x%lx\ttype: 0x%02x",
+		       i, base<<12, top<<12-1, msr.mtrr_variable.type);
+		for(;base<top; base++) {
+			epse_p[base].caching_type=msr.mtrr_variable.type); }}
+	
 	
 	gprint("epses:\tpd: 0x%lx\tpdpt: 0x%lx\tpml4: 0x%lx",
 	       ((epse_t *)(data->pds.base))[0].val, ((epse_t *)(data->pdpt))[0].val,
