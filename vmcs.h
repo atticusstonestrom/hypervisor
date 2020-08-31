@@ -995,7 +995,8 @@ static void core_fill_vmcs(void *info) {
 	cprint("eptp:\t0x%lx\n", state[core].ept_data.eptp.val);
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
 		cprint("accessed/dirty ept bits not supported\n");
-		return -EOPNOTSUPP; }
+		errors[core]=-EOPNOTSUPP;
+		return; }
 		//eptp_p->accessed_dirty_control=0; }
 	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);
 	
