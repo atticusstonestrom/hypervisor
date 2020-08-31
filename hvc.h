@@ -26,7 +26,6 @@ typedef struct {
 	unsigned long msr_bitmap;
 	unsigned long msr_paddr;
 	
-	ept_data_t ept_data;
 	int active_flag;
 	int guest_flag;
 } state_t;
