@@ -313,6 +313,18 @@ static int initialize_ept(ept_data_t *data) {
 		.r=1, .w=1, .x=1, .ux=0,
 		.addr=virt_to_phys((void *)data->pdpt)>>12 };
 	
+	
+	READ_MSR(msr, IA32_MTRRCAP);
+	int vcnt=msr.mtrrcap.vcnt;
+	msr_t def_type;
+	READ_MSR(def_type, IA32_MTRR_DEF_TYPE);
+	if(def_type.type!=PAT_WB) {
+		gprint("default caching type not writeback: 0x%02x\n", def_type.type);
+		return -EOPNOTSUPP; }
+	#define get_pde(base) (((base)>>21)&0x1ff)
+	#define get_pdpt(base) ((base)>>30)
+	
+	
 	gprint("epses:\tpd: 0x%lx\tpdpt: 0x%lx\tpml4: 0x%lx",
 	       ((epse_t *)(data->pds.base))[0].val, ((epse_t *)(data->pdpt))[0].val,
 	       ((epse_t *)(data->pml4))->val);
