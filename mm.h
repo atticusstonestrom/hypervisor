@@ -271,7 +271,7 @@ static int initialize_ept(ept_data_t *data) {
 	
 	(void)memset((void *)data->pml4, 0, 4096);
 	(void)memset((void *)data->pdpt, 0, 4096);
-	(void)memset((void *)data->pds.base, 0, (1<<12)<<(data->pds.order));
+	(void)memset((void *)data->pds.base, 0, ((long)1<<12)<<(data->pds.order));
 	gprint("zeroed:\tpml4: 0x%lx\tpdpt: 0x%lx\tpds: 0x%lx (%d pages)",
 	       data->pml4, data->pdpt, data->pds.base, 1<<(data->pds).order);
 	pt_node *next=NULL;
@@ -289,15 +289,21 @@ static int initialize_ept(ept_data_t *data) {
 	unsigned long i=0;
 	
 	epse_p=(void *)data->pds.base;
-	for(i=0; i<( (1<<maxphyaddr)>>21 ); i++) {
+	for(i=0; i<( ((long)1<<maxphyaddr)>>21 ); i++) {
 		epse_p[i]=(epse_t) {
 			.r=1, .w=1, .x=1, .ux=0,
 			.caching_type=PAT_WB, .ignore_pat=0,
 			.accessed=0, .dirty=0, .suppress_ve=0,
-			.addr_2mb=(i<<21), .page_size=1}; }
+			.addr_2mb=(i<<21), .page_size=1};
+		gprint("debug: 0x%lx", epse_p[i].val); }
+	gprint("debug: 0x%lx", ((epse_t) {
+			.r=1, .w=1, .x=1, .ux=0,
+			.caching_type=PAT_WB, .ignore_pat=0,
+			.accessed=0, .dirty=0, .suppress_ve=0,
+			/*.addr_2mb=(i<<21),*/ .page_size=1}).val);
 	
 	epse_p=(void *)data->pdpt;
-	for(i=0; i<( (1<<maxphyaddr)>>30 ); i++) {
+	for(i=0; i<( ((long)1<<maxphyaddr)>>30 ); i++) {
 		epse_p[i]=(epse_t) {
 			.r=1, .w=1, .x=1, .ux=0,
 			.addr=i+(virt_to_phys((void *)data->pds.base)>>12) }; }
