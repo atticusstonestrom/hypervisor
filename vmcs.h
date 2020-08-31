@@ -991,13 +991,13 @@ static void core_fill_vmcs(void *info) {
 	       reg, access_rights.val, lim, base);
 	
 	
-	/*READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
-	printk("[**] eptp:\t0x%lx\n", state[core].ept_data.eptp.val);
+	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
+	cprint("eptp:\t0x%lx\n", state[core].ept_data.eptp.val);
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
-		printk("[**] accessed/dirty ept bits not supported\n");
-		//return -EOPNOTSUPP; }
-		eptp_p->accessed_dirty_control=0; }
-	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);*/
+		cprint("accessed/dirty ept bits not supported\n");
+		return -EOPNOTSUPP; }
+		//eptp_p->accessed_dirty_control=0; }
+	//EC_VMWRITE(eptp_p->val, EPTP_F, lhf, error_code);
 	
 	exception_bitmap_t exception_bmp;
 	exception_bmp=(exception_bitmap_t){ .zd=1, .bp=1, .gp=1, .pf=1 };
