@@ -285,28 +285,23 @@ static int initialize_ept(ept_data_t *data) {
 		data->pts=next; }
 	gprint("freed pt linked list");
 	
-	epse_t *epse_p;
+	epse_t template, *epse_p;
 	unsigned long i=0;
 	
+	template=(epse_t) {
+		.r=1, .w=1, .x=1, .ux=0,
+		.caching_type=PAT_WB, .ignore_pat=0,
+		.accessed=0, .dirty=0, .page_size=1 };
 	epse_p=(void *)data->pds.base;
 	for(i=0; i<( ((long)1<<maxphyaddr)>>21 ); i++) {
-		epse_p[i]=(epse_t) {
-			.r=1, .w=1, .x=1, .ux=0,
-			.caching_type=PAT_WB, .ignore_pat=0,
-			.accessed=0, .dirty=0, .suppress_ve=0,
-			.addr_2mb=(i<<21), .page_size=1};
-		gprint("debug: 0x%lx", epse_p[i].val); }
-	gprint("debug: 0x%lx", ((epse_t) {
-			.r=1, .w=1, .x=1, .ux=0,
-			.caching_type=PAT_WB, .ignore_pat=0,
-			.accessed=0, .dirty=0, .suppress_ve=0,
-			/*.addr_2mb=(i<<21),*/ .page_size=1}).val);
+		epse_p[i]=template;
+		epse_p[i].addr_2mb=i; }
 	
+	template=(epse_t) { .r=1, .w=1, .x=1, .ux=0 };
 	epse_p=(void *)data->pdpt;
 	for(i=0; i<( ((long)1<<maxphyaddr)>>30 ); i++) {
-		epse_p[i]=(epse_t) {
-			.r=1, .w=1, .x=1, .ux=0,
-			.addr=i+(virt_to_phys((void *)data->pds.base)>>12) }; }
+		epse_p[i]=template;
+		epse_p[i].addr=i+(virt_to_phys((void *)data->pds.base)>>12); }
 	
 	epse_p=(void *)data->pml4;
 	epse_p[0]=(epse_t) {
@@ -317,19 +312,12 @@ static int initialize_ept(ept_data_t *data) {
 	       ((epse_t *)(data->pds.base))[0].val, ((epse_t *)(data->pdpt))[0].val,
 	       ((epse_t *)(data->pml4))->val);
 	
-
-	/*msr_t msr;
-	READMSR(msr, IA32_VMX_PROCBASED_CTLS);
-	if( ((primary_cpu_based_execution_ctls)(msr.)).
-	READMSR(msr, IA32_VMX_EPT_VPID_CAP);*/
 	data->eptp=(eptp_t) {0};
 	data->eptp.accessed_dirty_control=1;
 	data->eptp.caching_type=PAT_WB;
 	data->eptp.page_walk_length=3;
 	data->eptp.pml4_addr=virt_to_phys((void *)data->pml4)>>12;
 	gprint("eptp: 0x%lx", data->eptp.val);
-	
-	//printk("[*]  initialization complete\n\n");
 	
 	return 0; }
 
