@@ -341,6 +341,14 @@ typedef union __attribute__((packed)) {
 		unsigned int pat:1;
 		unsigned int edx_17_31:15; }		//edx end
 		leaf_1;
+	
+	struct __attribute__((packed)) {
+		unsigned int maxphyaddr:8;
+		unsigned int eax_8_31:24;
+		unsigned int ebx;
+		unsigned int ecx;
+		unsigned int edx; }
+		leaf_80000008;
 } cpuid_t;
 	
 #define CPUID2(dst, leaf) 							\
