@@ -90,10 +90,15 @@ static void check_msrrs(void) {
 		printk("fix4k_f8000: 0x%lx\n", msr.val); }
 	READ_MSR(msr, IA32_MTRR_DEF_TYPE);
 	printk("[*] mtrr_def_type: 0x%lx\n", msr.val);
+	unsigned long base;
 	for(i=0; i<vcnt; i++) {
 		READ_MSR(msr, IA32_MTRR_PHYSBASE(i));
+		base=msr.mtrr_variable.addr<<12;
 		printk("[*] physbase%d: 0x%lx\n", i, msr.val);
+		printk("BASE: 0x%lx\n", base);
 		READ_MSR(msr, IA32_MTRR_PHYSMASK(i));
+		if(msr.mtrr_variable.v) {
+			printk("END : 0x%lx\n", base+((long)1<<__builtin_ctzl(msr.mtrr_variable.addr<<12))-1); }
 		printk("[*] physmask%d: 0x%lx\n", i, msr.val); }
 	return; }
 
