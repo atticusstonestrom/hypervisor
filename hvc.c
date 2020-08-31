@@ -36,6 +36,7 @@
 //cr2 after vmresume fails(/exit)
 //save ia32_gs_kernel_base
 //hook modifications to msrrs
+//does ISA ensure consistency of msrrs across all cores?
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
