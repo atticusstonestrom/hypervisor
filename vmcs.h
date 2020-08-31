@@ -686,6 +686,7 @@ extern void host_stub(void);
 extern void guest_stub(void);
 
 //assumes vmcs already current
+extern ept_data_t ept_data;
 static void core_fill_vmcs(void *info) {
 	int core=smp_processor_id();
 	errors[core]=0;
@@ -992,7 +993,7 @@ static void core_fill_vmcs(void *info) {
 	
 	
 	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
-	cprint("eptp:\t0x%lx\n", state[core].ept_data.eptp.val);
+	cprint("eptp:\t0x%lx\n", ept_data.eptp.val);
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
 		cprint("accessed/dirty ept bits not supported\n");
 		errors[core]=-EOPNOTSUPP;
