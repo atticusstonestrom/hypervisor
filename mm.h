@@ -52,6 +52,8 @@ static void check_msrrs(void) {
 	int vcnt;
 	cpuid_t cpuid;
 	msr_t msr;
+	CPUID(cpuid, 0x80000008);
+	printk("[*] maxphyaddr: %d\n", cpuid.leaf_80000008.maxphyaddr);
 	CPUID(cpuid, 1);
 	if(cpuid.leaf_1.mtrr) {
 		printk("[*] mtrrs enabled\n"); }
