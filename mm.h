@@ -232,7 +232,7 @@ void free_ept(ept_data_t *ept) {
 
 //~1gb for each page directory
 static int allocate_ept(ept_data_t *data) {
-	unsigned char maxphyaddr=32;
+	unsigned char maxphyaddr=35;
 	//number of pdptes required:	(1<<maxphyaddr)>>30;
 	//number of pdes required: 	(1<<maxphyaddr)>>21;
 	*data=(ept_data_t) {0};
