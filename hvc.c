@@ -98,6 +98,8 @@ typedef struct __attribute__((packed)) {
 } msr_bitmap_t;
 unsigned long msr_bitmap;
 
+ept_data_t ept_data;
+
 #define set_rdmsr_bmp(val)									\
 if((signed)val<=0x1fff) {									\
 	((msr_bitmap_t *)msr_bitmap)->read_low[(val)>>3]|=1<<((val)&0x07); }			\
@@ -619,7 +621,6 @@ static void core_exit(void *info) {
 	int core=smp_processor_id();
 	errors[core]=0;
 	
-	free_ept(&(state[core].ept_data));	//printk??
 	if(state[core].vmxon_region) {
 		free_page(state[core].vmxon_region);
 		cprint("freed vmxon region:\t0x%lx", state[core].vmxon_region);
@@ -673,6 +674,11 @@ static void global_exit(void) {
 		kfree(state);
 		gprint("freed 'state':\t\t0x%px", state);
 		state=NULL; }
+	
+	printk("\n");
+	gprint("freeing ept");
+	free_ept(&ept_data);
+	gprint("freed");
 	
 	printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	
@@ -896,6 +902,14 @@ static int global_open(struct inode *inodep, struct file *filep) {
 		return ret; }
 	gprint("vmx operation entered\n");
 	
+	gprint("initializing ept");
+	if( (ret=initialize_ept(&ept_data)) ) {
+		gprint("failed\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_close(inodep, filep);
+		return ret; }
+	gprint("initialized\n");
+	
 	gprint("initializing vmcss");
 	on_each_cpu(core_fill_vmcs, NULL, 1);
 	if( (ret=parse_errors(i)) ) {
@@ -990,11 +1004,6 @@ static void __init core_init(void *info) {
 		return; }
 	cprint("vmcs region:\t\t0x%lx", state[core].vmcs_region);
 	
-	if(( ret=initialize_ept(&state[core].ept_data, MAX_ORD_GUEST_PAGES) )) {
-		cprint("failed to initialize ept");
-		errors[core]=ret;
-		return; }
-	
 	state[core].vmm_stack_order=VMM_STACK_ORDER;
 	if( !(state[core].vmm_stack_base=__get_free_pages(__GFP_ZERO, state[core].vmm_stack_order)) ) {
 		cprint("failed to allocate vmm stack");
@@ -1079,6 +1088,14 @@ static int __init global_init(void) {
 		return ret; }
 	gprint("all allocated\n");
 	
+	gprint("allocating ept memory");
+	if( (ret=allocate_ept(&ept_data)) ) {
+		gprint("failed\n");
+		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
+		global_exit();
+		return ret; }
+	gprint("all allocated\n");
+
 	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	
 	
