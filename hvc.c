@@ -250,7 +250,8 @@ static unsigned long hook(regs_t *regs_p) {
 	case ER_EPT_VIOLATION:
 	case ER_EPT_MISCONFIG:	
 		VMREAD(reg, GUEST_LINEAR_ADDR, lhf);
-		vtp(reg, &reg2, NULL);
+		//vtp(reg, &reg2, NULL);
+		VMREAD(reg2, GUEST_PADDR_F, lhf);
 		cprint("reason: 0x%x\tqual: 0x%lx\taddr: 0x%lx\tpaddr: 0x%lx",
 		       reason.val, qual.val, reg, reg2);
 		VMREAD(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
