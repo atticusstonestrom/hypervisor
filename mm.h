@@ -98,7 +98,7 @@ static void check_msrrs(void) {
 		printk("BASE: 0x%lx\n", base);
 		READ_MSR(msr, IA32_MTRR_PHYSMASK(i));
 		if(msr.mtrr_variable.v) {
-			printk("END : 0x%lx\n", base+((long)1<<__builtin_ctzl(msr.mtrr_variable.addr<<12))-1); }
+			printk("END : 0x%llx\n", base+(1ULL<<__builtin_ctzl(msr.mtrr_variable.addr<<12))-1); }
 		printk("[*] physmask%d: 0x%lx\n", i, msr.val); }
 	return; }
 
@@ -211,7 +211,7 @@ void free_ept(ept_data_t *ept) {
 		ept->pdpt=0; }
 	
 	if(ept->pds.base) {
-		gprint("pd memory pool:\t0x%lx (%d pages)", ept->pds.base, 1<<ept->pds.order);
+		gprint("pd memory pool:\t0x%lx (%lld pages)", ept->pds.base, 1ULL<<ept->pds.order);
 		free_pages(ept->pds.base, ept->pds.order);
 		ept->pds.base=0; }
 	
@@ -238,8 +238,8 @@ void free_ept(ept_data_t *ept) {
 //~1gb for each page directory
 static int allocate_ept(ept_data_t *data) {
 	unsigned char maxphyaddr=35;
-	//number of pdptes required:	(1<<maxphyaddr)>>30;
-	//number of pdes required: 	(1<<maxphyaddr)>>21;
+	//number of pdptes required:	(1ULL<<maxphyaddr)>>30;
+	//number of pdes required: 	(1ULL<<maxphyaddr)>>21;
 	*data=(ept_data_t) {0};
 	
 	data->pml4=get_zeroed_page(GFP_KERNEL);
@@ -250,8 +250,8 @@ static int allocate_ept(ept_data_t *data) {
 	
 	data->pds.order=maxphyaddr-30;	//log base 2 of number of gigabytes
 	data->pds.base=__get_free_pages(__GFP_ZERO, data->pds.order);
-	gprint("pd memory pool:\t0x%lx (%d pages)",
-	       (data->pds).base, 1<<((data->pds).order));
+	gprint("pd memory pool:\t0x%lx (%lld pages)",
+	       (data->pds).base, 1ULL<<((data->pds).order));
 	
 	data->pts=NULL;
 	
@@ -264,8 +264,8 @@ static int allocate_ept(ept_data_t *data) {
 static int initialize_ept(ept_data_t *data) {
 	unsigned char maxphyaddr=32;
 	
-	//number of pdptes required:	(1<<maxphyaddr)>>30;
-	//number of pdes required: 	(1<<maxphyaddr)>>21;
+	//number of pdptes required:	(1ULL<<maxphyaddr)>>30;
+	//number of pdes required: 	(1ULL<<maxphyaddr)>>21;
 	
 	msr_t msr;
 	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
@@ -276,9 +276,9 @@ static int initialize_ept(ept_data_t *data) {
 	
 	(void)memset((void *)data->pml4, 0, 4096);
 	(void)memset((void *)data->pdpt, 0, 4096);
-	(void)memset((void *)data->pds.base, 0, ((long)1<<12)<<(data->pds.order));
-	gprint("zeroed:\tpml4: 0x%lx\tpdpt: 0x%lx\tpds: 0x%lx (%d pages)",
-	       data->pml4, data->pdpt, data->pds.base, 1<<(data->pds).order);
+	(void)memset((void *)data->pds.base, 0, (1ULL<<12)<<(data->pds.order));
+	gprint("zeroed:\tpml4: 0x%lx\tpdpt: 0x%lx\tpds: 0x%lx (%lld pages)",
+	       data->pml4, data->pdpt, data->pds.base, 1ULL<<(data->pds).order);
 	pt_node *next=NULL;
 	while(data->pts!=NULL) {
 		//gprint("pt node:\t\t\t0x%px", data->pts);
@@ -298,13 +298,14 @@ static int initialize_ept(ept_data_t *data) {
 		.caching_type=PAT_WB, .ignore_pat=0,
 		.accessed=0, .dirty=0, .page_size=1 };
 	epse_p=(void *)data->pds.base;
-	for(i=0; i<( ((long)1<<maxphyaddr)>>21 ); i++) {
+	for(i=0; i<( (1ULL<<maxphyaddr)>>21 ); i++) {
 		epse_p[i]=template;
 		epse_p[i].addr_2mb=i; }
+	gprint("debug: 0x%lx", i);
 	
 	template=(epse_t) { .r=1, .w=1, .x=1, .ux=0 };
 	epse_p=(void *)data->pdpt;
-	for(i=0; i<( ((long)1<<maxphyaddr)>>30 ); i++) {
+	for(i=0; i<( (1ULL<<maxphyaddr)>>30 ); i++) {
 		epse_p[i]=template;
 		epse_p[i].addr=i+(virt_to_phys((void *)data->pds.base)>>12); }
 	
@@ -360,8 +361,8 @@ static int initialize_ept(ept_data_t *data) {
 		READ_MSR(msr, IA32_MTRR_PHYSMASK(i));
 		if(!msr.mtrr_variable.v) { continue; }
 		top=base;
-		//top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr<<12);
-		top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr>>9);
+		//top+=1ULL<<__builtin_ctzl(msr.mtrr_variable.addr<<12);
+		top+=1ULL<<__builtin_ctzl(msr.mtrr_variable.addr>>9);
 		//gprint("debug: 0x%lx", top<<21);
 		gprint("variable mtrr %ld:\tbase: 0x%lx\tend: 0x%lx\ttype: 0x%02x",
 		       i, base<<21, (top<<21)-1, msr.mtrr_variable.type);
