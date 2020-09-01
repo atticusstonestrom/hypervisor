@@ -318,8 +318,8 @@ static int initialize_ept(ept_data_t *data) {
 	int vcnt=msr.mtrrcap.vcnt;
 	msr_t def_type;
 	READ_MSR(def_type, IA32_MTRR_DEF_TYPE);
-	if(def_type.type!=PAT_WB) {
-		gprint("default caching type not writeback: 0x%02x\n", def_type.type);
+	if(def_type.mtrr_def_type.type!=PAT_WB) {
+		gprint("default caching type not writeback: 0x%02x\n", def_type.mtrr_def_type.type);
 		return -EOPNOTSUPP; }
 	#define get_pde(base) (((base)>>21)&0x1ff)
 	#define get_pdpt(base) ((base)>>30)
@@ -341,7 +341,7 @@ static int initialize_ept(ept_data_t *data) {
 		for(j=0; j<((inc)>>21); j+=) {
 			epse_p[((base)>>21)+i*((inc)>>21)+j].caching_type=msr.mtrr_fixed.entries[i]; 
 	
-	if(def_type.fe) {
+	if(def_type.mtrr.def_type.fe) {
 		PARSE_FIXED_MTRR(IA32_MTRR_FIX64K_00000, fix64k_00000, 0, 0x10000);
 		PARSE_FIXED_MTRR(IA32_MTRR_FIX16K_80000, fix16k_80000, 0x80000, 0x4000);
 		PARSE_FIXED_MTRR(IA32_MTRR_FIX16K_A0000, fix16k_a0000, 0xa0000, 0x4000);
@@ -355,7 +355,7 @@ static int initialize_ept(ept_data_t *data) {
 		PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_F8000, fix4k_f8000, 0xf8000, 0x1000); }*/
 		
 	//not optimal but saves lines
-	for(i=0; def_type.e && i<vcnt; i++) {	//is this the right e?
+	for(i=0; def_type.mtrr_def_type.e && i<vcnt; i++) {	//is this the right e?
 		READ_MSR(msr, IA32_MTRR_PHYSBASE(i));
 		//base=msr.mtrr_variable.addr<<12;
 		base=msr.mtrr_variable.addr>>9;
@@ -364,10 +364,10 @@ static int initialize_ept(ept_data_t *data) {
 		top=base;
 		//top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr<<12);
 		top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr>>9);
-		gprint("variable mtrr %d:\tbase: 0x%lx\tend: 0x%lx\ttype: 0x%02x",
-		       i, base<<21, top<<21-1, msr.mtrr_variable.type);
+		gprint("variable mtrr %ld:\tbase: 0x%lx\tend: 0x%lx\ttype: 0x%02x",
+		       i, base<<21, (base<<21)+(top<<21)-1, msr.mtrr_variable.type);
 		for(;base<top; base++) {
-			epse_p[base].caching_type=msr.mtrr_variable.type); }}
+			epse_p[base].caching_type=msr.mtrr_variable.type; }}
 	
 	
 	gprint("epses:\tpd: 0x%lx\tpdpt: 0x%lx\tpml4: 0x%lx",
