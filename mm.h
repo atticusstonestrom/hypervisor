@@ -321,8 +321,6 @@ static int initialize_ept(ept_data_t *data) {
 	if(def_type.mtrr_def_type.type!=PAT_WB) {
 		gprint("default caching type not writeback: 0x%02x\n", def_type.mtrr_def_type.type);
 		return -EOPNOTSUPP; }
-	#define get_pde(base) (((base)>>21)&0x1ff)
-	#define get_pdpt(base) ((base)>>30)
 	
 	unsigned long base, top;
 	epse_p=(void *)data->pds.base;
@@ -364,8 +362,9 @@ static int initialize_ept(ept_data_t *data) {
 		top=base;
 		//top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr<<12);
 		top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr>>9);
+		//gprint("debug: 0x%lx", top<<21);
 		gprint("variable mtrr %ld:\tbase: 0x%lx\tend: 0x%lx\ttype: 0x%02x",
-		       i, base<<21, (base<<21)+(top<<21)-1, msr.mtrr_variable.type);
+		       i, base<<21, (top<<21)-1, msr.mtrr_variable.type);
 		for(;base<top; base++) {
 			epse_p[base].caching_type=msr.mtrr_variable.type; }}
 	
