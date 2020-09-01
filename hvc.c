@@ -104,16 +104,16 @@ ept_data_t ept_data;
 
 #define set_rdmsr_bmp(val)									\
 if((signed)val<=0x1fff) {									\
-	((msr_bitmap_t *)msr_bitmap)->read_low[(val)>>3]|=1<<((val)&0x07); }			\
+	((msr_bitmap_t *)msr_bitmap)->read_low[(val)>>3]|=1ULL<<((val)&0x07); }			\
 else if((signed)val>=0xc0000000 && (signed)val<=0xc0001fff) {					\
-	((msr_bitmap_t *)msr_bitmap)->read_high[((val)-0xc0000000)>>3]|=1<<((val)&0x07); }
+	((msr_bitmap_t *)msr_bitmap)->read_high[((val)-0xc0000000)>>3]|=1ULL<<((val)&0x07); }
 
 #define set_wrmsr_bmp(val)									\
 if((signed)val<=0x1fff) {									\
-	((msr_bitmap_t *)msr_bitmap)->write_low[(val)>>3]|=1<<((val)&0x07); }			\
+	((msr_bitmap_t *)msr_bitmap)->write_low[(val)>>3]|=1ULL<<((val)&0x07); }			\
 else if((signed)val>=0xc0000000 && (signed)val<=0xc0001fff) {					\
-	((msr_bitmap_t *)msr_bitmap)->write_high[((val)-0xc0000000)>>3]|=1<<((val)&0x07); }
-//((msr_bitmap_t *)msr_bitmap)->read_low[0x277>>3]|=1<<(0x277&0x07);
+	((msr_bitmap_t *)msr_bitmap)->write_high[((val)-0xc0000000)>>3]|=1ULL<<((val)&0x07); }
+//((msr_bitmap_t *)msr_bitmap)->read_low[0x277>>3]|=1ULL<<(0x277&0x07);
 
 int *errors=NULL;	//every entry should be non-positive
 #define parse_errors(i) ({ for(i=0;i<ncores;i++) { if(errors[i]) break; } (i==ncores) ? 0:errors[i]; })
@@ -276,7 +276,7 @@ static unsigned long hook(regs_t *regs_p) {
 		//	cprint("gp fault: 0x%lx 0x%lx (len %ld)",
 		//	       *(unsigned long *)rip, *(unsigned long *)(rip+8),
 		//	       length); }
-		if(1<<interruption_info.vector==((exception_bitmap_t){.pf=1}).val) {
+		if(1ULL<<interruption_info.vector==((exception_bitmap_t){.pf=1}).val) {
 			regs_p->cr2=qual.page_fault.addr; }
 		VMREAD(length, EXIT_INSTRUCTION_LENGTH, lhf);
 		if(interruption_info.type==IRQ_TYPE_SW_I || interruption_info.type==IRQ_TYPE_SW_E || interruption_info.type==IRQ_TYPE_P_SW_E) {
@@ -646,8 +646,8 @@ static void core_exit(void *info) {
 		state[core].vmcs_region=0; }
 	if(state[core].vmm_stack_base) {
 		free_pages(state[core].vmm_stack_base, state[core].vmm_stack_order);
-		cprint("freed vmm stack:\t\t0x%lx (%d pages)",
-		       state[core].vmm_stack_base, 1<<state[core].vmm_stack_order);
+		cprint("freed vmm stack:\t\t0x%lx (%lld pages)",
+		       state[core].vmm_stack_base, 1ULL<<state[core].vmm_stack_order);
 		state[core].vmm_stack_base=0; }
 	if(state[core].msr_bitmap) {
 		free_page(state[core].msr_bitmap);
@@ -905,7 +905,7 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	(void)memset((void *)msr_bitmap, 0, 4096);
 	gprint("zeroed msr bitmap:\t0x%lx\n", msr_bitmap);
 	set_rdmsr_bmp(IA32_VMX_BASIC);
-	//((msr_bitmap_t *)msr_bitmap)->read_low[0x277>>3]|=1<<(0x277&0x07);
+	//((msr_bitmap_t *)msr_bitmap)->read_low[0x277>>3]|=1ULL<<(0x277&0x07);
 	//TODO must handle appropriately here
 	
 	gprint("entering vmx operation");
@@ -1024,8 +1024,8 @@ static void __init core_init(void *info) {
 		cprint("failed to allocate vmm stack");
 		errors[core]=-ENOMEM;
 		return; }
-	cprint("vmm stack:\t\t\t0x%lx (%d pages)", state[core].vmm_stack_base, 1<<(state[core].vmm_stack_order));
-	state[core].vmm_stack_top=state[core].vmm_stack_base+((1<<12)<<(state[core].vmm_stack_order));
+	cprint("vmm stack:\t\t\t0x%lx (%lld pages)", state[core].vmm_stack_base, 1ULL<<(state[core].vmm_stack_order));
+	state[core].vmm_stack_top=state[core].vmm_stack_base+((1ULL<<12)<<(state[core].vmm_stack_order));
 
 	return; }
 
