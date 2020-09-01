@@ -1017,7 +1017,7 @@ static void __init core_init(void *info) {
 	return; }
 
 static int __init global_init(void) {
-	check_msrrs();
+	//check_msrrs();
 	printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 	int i, ret=0;
 	
