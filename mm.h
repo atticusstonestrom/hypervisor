@@ -230,14 +230,11 @@ void free_ept(ept_data_t *ept) {
 
 
 
-//make initialize
-//and allocate
-//different
-
+#define MAXPHYADDR 35;
 
 //~1gb for each page directory
 static int allocate_ept(ept_data_t *data) {
-	unsigned char maxphyaddr=35;
+	unsigned char maxphyaddr=MAXPHYADDR;
 	//number of pdptes required:	(1ULL<<maxphyaddr)>>30;
 	//number of pdes required: 	(1ULL<<maxphyaddr)>>21;
 	*data=(ept_data_t) {0};
@@ -262,7 +259,7 @@ static int allocate_ept(ept_data_t *data) {
 
 //~1gb for each page directory
 static int initialize_ept(ept_data_t *data) {
-	unsigned char maxphyaddr=32;
+	unsigned char maxphyaddr=MAXPHYADDR;
 	
 	//number of pdptes required:	(1ULL<<maxphyaddr)>>30;
 	//number of pdes required: 	(1ULL<<maxphyaddr)>>21;
@@ -301,7 +298,6 @@ static int initialize_ept(ept_data_t *data) {
 	for(i=0; i<( (1ULL<<maxphyaddr)>>21 ); i++) {
 		epse_p[i]=template;
 		epse_p[i].addr_2mb=i; }
-	gprint("debug: 0x%lx", i);
 	
 	template=(epse_t) { .r=1, .w=1, .x=1, .ux=0 };
 	epse_p=(void *)data->pdpt;
