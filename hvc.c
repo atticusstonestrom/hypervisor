@@ -247,6 +247,16 @@ static unsigned long hook(regs_t *regs_p) {
 			return EXIT_HANDLER_EXIT; }
 		break;
 			
+	case ER_EPT_VIOLATION:
+	case ER_EPT_MISCONFIG:	
+		cprint("reason: 0x%x\tqual: 0x%lx", reason.val, qual.val);
+		VMREAD(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
+		reg&=~(((secondary_cpu_based_execution_controls_t){ .enable_ept=1 }).val);
+		VMWRITE(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
+		put_cpu();
+		return EXIT_HANDLER_RESUME;
+		break;
+			
 	case ER_EXCEPTION_OR_NMI:
 		VMREAD(interruption_info.val, EXIT_INTERRUPTION_INFO, lhf);
 		VMREAD(reg, EXIT_INTERRUPTION_ERROR_CODE, lhf);
