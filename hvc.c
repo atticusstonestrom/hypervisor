@@ -693,7 +693,7 @@ static void global_exit(void) {
 	
 	printk("\n");
 	gprint("freeing ept");
-	free_ept(&ept_data);
+	free_ept();
 	gprint("freed");
 	
 	printk("\n–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
@@ -919,7 +919,7 @@ static int global_open(struct inode *inodep, struct file *filep) {
 	gprint("vmx operation entered\n");
 	
 	gprint("initializing ept");
-	if( (ret=initialize_ept(&ept_data)) ) {
+	if( (ret=initialize_ept()) ) {
 		gprint("failed\n");
 		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_close(inodep, filep);
@@ -1105,7 +1105,7 @@ static int __init global_init(void) {
 	gprint("all allocated\n");
 	
 	gprint("allocating ept memory");
-	if( (ret=allocate_ept(&ept_data)) ) {
+	if( (ret=allocate_ept()) ) {
 		gprint("failed\n");
 		printk("–––––––––––––––––––––––––––––––––––––––––––––––––––––\n\n");
 		global_exit();
