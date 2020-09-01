@@ -328,42 +328,44 @@ static int initialize_ept(ept_data_t *data) {
 	epse_p=(void *)data->pds.base;
 	
 	//ensure var takes priority over fixed
+	/*int j=0;
 	#define PARSE_FIXED_MTRR(msr_id, name, base, inc)
-	if(def_type.fe) {
-		READ_MSR(msr, msr_id);
-		gprint("name:\t%02x %02x %02x %02x %02x %02x %02x %02x",
-		       msr.mtrr_fixed.entries[0], msr.mtrr_fixed.entries[1], 
-		       msr.mtrr_fixed.entries[2], msr.mtrr_fixed.entries[3], 
-		       msr.mtrr_fixed.entries[4], msr.mtrr_fixed.entries[5], 
-		       msr.mtrr_fixed.entries[6], msr.mtrr_fixed.entries[7]);
-		for(i=0; i<8; i++) {
-			//gaps D:
-			int j;
+	READ_MSR(msr, msr_id);
+	gprint("name:\t%02x %02x %02x %02x %02x %02x %02x %02x",
+	       msr.mtrr_fixed.entries[0], msr.mtrr_fixed.entries[1], 
+	       msr.mtrr_fixed.entries[2], msr.mtrr_fixed.entries[3], 
+	       msr.mtrr_fixed.entries[4], msr.mtrr_fixed.entries[5], 
+	       msr.mtrr_fixed.entries[6], msr.mtrr_fixed.entries[7]);
+	for(i=0; i<8; i++) {
+		//gaps D:
+		for(j=0; j<((inc)>>21); j+=) {
+			epse_p[((base)>>21)+i*((inc)>>21)+j].caching_type=msr.mtrr_fixed.entries[i]; 
 	
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX64K_00000, fix64k_00000, 0, 0x10000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX16K_80000, fix16k_80000, 0x80000, 0x4000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX16K_A0000, fix16k_a0000, 0xa0000, 0x4000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_C0000, fix4k_c0000, 0xc0000, 0x1000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_C8000, fix4k_c8000, 0xc8000, 0x1000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_D0000, fix4k_d0000, 0xd0000, 0x1000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_D8000, fix4k_d8000, 0xd8000, 0x1000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_E0000, fix4k_e0000, 0xe0000, 0x1000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_E8000, fix4k_e8000, 0xe8000, 0x1000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_F0000, fix4k_f0000, 0xf0000, 0x1000);
-	PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_F8000, fix4k_f8000, 0xf8000, 0x1000);
+	if(def_type.fe) {
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX64K_00000, fix64k_00000, 0, 0x10000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX16K_80000, fix16k_80000, 0x80000, 0x4000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX16K_A0000, fix16k_a0000, 0xa0000, 0x4000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_C0000, fix4k_c0000, 0xc0000, 0x1000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_C8000, fix4k_c8000, 0xc8000, 0x1000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_D0000, fix4k_d0000, 0xd0000, 0x1000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_D8000, fix4k_d8000, 0xd8000, 0x1000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_E0000, fix4k_e0000, 0xe0000, 0x1000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_E8000, fix4k_e8000, 0xe8000, 0x1000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_F0000, fix4k_f0000, 0xf0000, 0x1000);
+		PARSE_FIXED_MTRR(IA32_MTRR_FIX4K_F8000, fix4k_f8000, 0xf8000, 0x1000); }*/
 		
 	//not optimal but saves lines
 	for(i=0; def_type.e && i<vcnt; i++) {	//is this the right e?
 		READ_MSR(msr, IA32_MTRR_PHYSBASE(i));
 		//base=msr.mtrr_variable.addr<<12;
-		base=msr.mtrr_variable.addr;
+		base=msr.mtrr_variable.addr>>9;
 		READ_MSR(msr, IA32_MTRR_PHYSMASK(i));
 		if(!msr.mtrr_variable.v) { continue; }
 		top=base;
 		//top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr<<12);
-		top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr);
+		top+=(long)1<<__builtin_ctzl(msr.mtrr_variable.addr>>9);
 		gprint("variable mtrr %d:\tbase: 0x%lx\tend: 0x%lx\ttype: 0x%02x",
-		       i, base<<12, top<<12-1, msr.mtrr_variable.type);
+		       i, base<<21, top<<21-1, msr.mtrr_variable.type);
 		for(;base<top; base++) {
 			epse_p[base].caching_type=msr.mtrr_variable.type); }}
 	
