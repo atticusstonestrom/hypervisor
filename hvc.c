@@ -38,6 +38,7 @@
 //hook modifications to msrrs
 //does ISA ensure consistency of msrrs across all cores?
 //assumes msrr masks are well-formed
+//fixed range mtrrs need 4kb page granularity
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
