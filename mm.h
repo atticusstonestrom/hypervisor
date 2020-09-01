@@ -2,6 +2,7 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <asm/io.h>
+#include <linux/slab.h>
 
 #ifndef MEM_MANAGE
 #define MEM_MANAGE
@@ -186,7 +187,8 @@ static int alloc_wb_page(unsigned long *vaddr, unsigned long *paddr) {
 
 typedef struct pt_node {
 	struct pt_node *next;
-	unsigned long base;
+	unsigned long base_2mb;		//base of 2mb region mapped by it
+	unsigned long page_addr;	//base of page
 } pt_node;
 typedef struct {
 	eptp_t eptp;
@@ -199,66 +201,102 @@ typedef struct {
 	pt_node *pts;
 } ept_data_t;
 
-void free_ept(ept_data_t *ept) {
-	if(ept->pml4) {
-		gprint("pml4:\t\t0x%lx", ept->pml4);
-		free_page(ept->pml4);
-		ept->pml4=0; }
+extern ept_data_t ept_data;
+
+void free_ept(void) {
+	if(ept_data.pml4) {
+		gprint("pml4:\t\t0x%lx", ept_data.pml4);
+		free_page(ept_data.pml4);
+		ept_data.pml4=0; }
 	
-	if(ept->pdpt) {
-		gprint("pdpt:\t\t0x%lx", ept->pdpt);
-		free_page(ept->pdpt);
-		ept->pdpt=0; }
+	if(ept_data.pdpt) {
+		gprint("pdpt:\t\t0x%lx", ept_data.pdpt);
+		free_page(ept_data.pdpt);
+		ept_data.pdpt=0; }
 	
-	if(ept->pds.base) {
-		gprint("pd memory pool:\t0x%lx (%lld pages)", ept->pds.base, 1ULL<<ept->pds.order);
-		free_pages(ept->pds.base, ept->pds.order);
-		ept->pds.base=0; }
+	if(ept_data.pds.base) {
+		gprint("pd memory pool:\t0x%lx (%lld pages)", ept_data.pds.base, 1ULL<<ept_data.pds.order);
+		free_pages(ept_data.pds.base, ept_data.pds.order);
+		ept_data.pds.base=0; }
 	
 	pt_node *next=NULL;
-	while(ept->pts!=NULL) {
-		gprint("pt node:\t\t\t0x%px", ept->pts);
-		gprint("\tpt page:\t0x%lx", ept->pts->base);
-		free_page(ept->pts->base);
+	while(ept_data.pts!=NULL) {
+		gprint("pt node:\t\t\t0x%px", ept_data.pts);
+		gprint("\tpt page:\t0x%lx", ept_data.pts->base);
+		free_page(ept_data.pts->base);
 		
-		next=(ept->pts)->next;
-		kfree(ept->pts);
-		ept->pts=next; }
+		next=(ept_data.pts)->next;
+		kfree(ept_data.pts);
+		ept_data.pts=next; }
 	
-	ept->eptp.pml4_addr=0;
+	ept_data.eptp.pml4_addr=0;
 	return; }
+
+int set_permissions(epse_t template, unsigned long addr) {
+	pt_node *node=ept_data.pts;
+	epse_t *epse_p;
+	template.addr=;
+	while(node!=NULL) {
+		if(node->base_2mb==(addr&~(0x1fffffULL))) {
+			epse_p=(void *)node->page_addr;
+			epse_p[(addr&0x1fffffULL)>>12]=template;
+			return 0; }
+		node=node->next; }
+	
+	node=kmalloc(sizeof(pt_node), __GFP_ZERO);
+	if(node==NULL) {
+		return -ENOMEM; }
+	node->page_addr=get_zeroed_page(GFP_KERNEL);
+	if(!node->page_addr) {
+		kfree(node);
+		return -ENOMEM; }
+	
+	epse_p=(void *)ept_data.pds.base;
+	epse_t new_template=epse_p[(addr&~(0x1fffffULL))>>21];
+	epse_p[(addr&~(0x1fffffULL))>>21].page_size=0;
+	epse_p[(addr&~(0x1fffffULL))>>21].addr=;
+	new_template.page_size=0;
+	//new_template.accessed=0;	//???
+	//new_template.dirty=0;
+	new_template.addr=;
+	int i=0;
+	for(i=0; );
+	
+	
+	ept_data.pts=node;
+	return 0; }
 
 
 
 #define MAXPHYADDR 35;
 
 //~1gb for each page directory
-static int allocate_ept(ept_data_t *data) {
+int allocate_ept(void) {
 	unsigned char maxphyaddr=MAXPHYADDR;
 	//number of pdptes required:	(1ULL<<maxphyaddr)>>30;
 	//number of pdes required: 	(1ULL<<maxphyaddr)>>21;
-	*data=(ept_data_t) {0};
+	ept_data=(ept_data_t) {0};
 	
-	data->pml4=get_zeroed_page(GFP_KERNEL);
-	gprint("pml4:\t\t0x%lx", data->pml4);
+	ept_data.pml4=get_zeroed_page(GFP_KERNEL);
+	gprint("pml4:\t\t0x%lx", ept_data.pml4);
 	
-	data->pdpt=get_zeroed_page(GFP_KERNEL);
-	gprint("pdpt:\t\t0x%lx", data->pdpt);
+	ept_data.pdpt=get_zeroed_page(GFP_KERNEL);
+	gprint("pdpt:\t\t0x%lx", ept_data.pdpt);
 	
-	data->pds.order=maxphyaddr-30;	//log base 2 of number of gigabytes
-	data->pds.base=__get_free_pages(__GFP_ZERO, data->pds.order);
+	ept_data.pds.order=maxphyaddr-30;	//log base 2 of number of gigabytes
+	ept_data.pds.base=__get_free_pages(__GFP_ZERO, ept_data.pds.order);
 	gprint("pd memory pool:\t0x%lx (%lld pages)",
-	       (data->pds).base, 1ULL<<((data->pds).order));
+	       (ept_data.pds).base, 1ULL<<((ept_data.pds).order));
 	
-	data->pts=NULL;
+	ept_data.pts=NULL;
 	
-	if(!data->pml4 || !data->pdpt || !(data->pds).base) {
+	if(!ept_data.pml4 || !ept_data.pdpt || !(ept_data.pds).base) {
 		gprint("no free pages available");
 		return -ENOMEM; }
 	return 0; }
 
 //~1gb for each page directory
-static int initialize_ept(ept_data_t *data) {
+int initialize_ept(void) {
 	unsigned char maxphyaddr=MAXPHYADDR;
 	
 	//number of pdptes required:	(1ULL<<maxphyaddr)>>30;
@@ -271,20 +309,20 @@ static int initialize_ept(ept_data_t *data) {
 		return -EOPNOTSUPP; }
 		//eptp_p->accessed_dirty_control=0; }
 	
-	(void)memset((void *)data->pml4, 0, 4096);
-	(void)memset((void *)data->pdpt, 0, 4096);
-	(void)memset((void *)data->pds.base, 0, (1ULL<<12)<<(data->pds.order));
+	(void)memset((void *)ept_data.pml4, 0, 4096);
+	(void)memset((void *)ept_data.pdpt, 0, 4096);
+	(void)memset((void *)ept_data.pds.base, 0, (1ULL<<12)<<(ept_data.pds.order));
 	gprint("zeroed:\tpml4: 0x%lx\tpdpt: 0x%lx\tpds: 0x%lx (%lld pages)",
-	       data->pml4, data->pdpt, data->pds.base, 1ULL<<(data->pds).order);
+	       ept_data.pml4, ept_data.pdpt, ept_data.pds.base, 1ULL<<(ept_data.pds).order);
 	pt_node *next=NULL;
-	while(data->pts!=NULL) {
+	while(ept_data.pts!=NULL) {
 		//gprint("pt node:\t\t\t0x%px", data->pts);
 		//gprint("\tpt page:\t0x%lx", data->pts->base);
-		free_page(data->pts->base);
+		free_page(ept_data.pts->base);
 		
-		next=(data->pts)->next;
-		kfree(data->pts);
-		data->pts=next; }
+		next=(ept_data.pts)->next;
+		kfree(ept_data.pts);
+		ept_data.pts=next; }
 	gprint("freed pt linked list");
 	
 	epse_t template, *epse_p;
@@ -294,21 +332,21 @@ static int initialize_ept(ept_data_t *data) {
 		.r=1, .w=1, .x=1, .ux=0,
 		.caching_type=PAT_WB, .ignore_pat=0,
 		.accessed=0, .dirty=0, .page_size=1 };
-	epse_p=(void *)data->pds.base;
+	epse_p=(void *)ept_data.pds.base;
 	for(i=0; i<( (1ULL<<maxphyaddr)>>21 ); i++) {
 		epse_p[i]=template;
 		epse_p[i].addr_2mb=i; }
 	
 	template=(epse_t) { .r=1, .w=1, .x=1, .ux=0 };
-	epse_p=(void *)data->pdpt;
+	epse_p=(void *)ept_data.pdpt;
 	for(i=0; i<( (1ULL<<maxphyaddr)>>30 ); i++) {
 		epse_p[i]=template;
-		epse_p[i].addr=i+(virt_to_phys((void *)data->pds.base)>>12); }
+		epse_p[i].addr=i+(virt_to_phys((void *)ept_data.pds.base)>>12); }
 	
-	epse_p=(void *)data->pml4;
+	epse_p=(void *)ept_data.pml4;
 	epse_p[0]=(epse_t) {
 		.r=1, .w=1, .x=1, .ux=0,
-		.addr=virt_to_phys((void *)data->pdpt)>>12 };
+		.addr=virt_to_phys((void *)ept_data.pdpt)>>12 };
 	
 	
 	READ_MSR(msr, IA32_MTRRCAP);
@@ -320,7 +358,7 @@ static int initialize_ept(ept_data_t *data) {
 		return -EOPNOTSUPP; }
 	
 	unsigned long base, top;
-	epse_p=(void *)data->pds.base;
+	epse_p=(void *)ept_data.pds.base;
 	
 	//ensure var takes priority over fixed
 	/*int j=0;
@@ -367,15 +405,13 @@ static int initialize_ept(ept_data_t *data) {
 	
 	
 	gprint("epses:\tpd: 0x%lx\tpdpt: 0x%lx\tpml4: 0x%lx",
-	       ((epse_t *)(data->pds.base))[0].val, ((epse_t *)(data->pdpt))[0].val,
-	       ((epse_t *)(data->pml4))->val);
+	       ((epse_t *)(ept_data.pds.base))[0].val, ((epse_t *)(ept_data.pdpt))[0].val,
+	       ((epse_t *)(ept_data.pml4))->val);
 	
-	data->eptp=(eptp_t) {0};
-	data->eptp.accessed_dirty_control=1;
-	data->eptp.caching_type=PAT_WB;
-	data->eptp.page_walk_length=3;
-	data->eptp.pml4_addr=virt_to_phys((void *)data->pml4)>>12;
-	gprint("eptp:\t0x%lx", data->eptp.val);
+	ept_data.eptp=(eptp_t) {
+		.accessed_dirty_control=1, .caching_type=PAT_WB, .page_walk_length=3,
+		.pml4_addr=virt_to_phys((void *)ept_data.pml4)>>12 };
+	gprint("eptp:\t0x%lx", ept_data.eptp.val);
 	
 	return 0; }
 
