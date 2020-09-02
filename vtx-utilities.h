@@ -83,7 +83,7 @@ __asm__ __volatile__(		\
 
 
 
-#define vmcall1(arg1)			\
+/*#define vmcall1(arg1)			\
 __asm__ __volatile__("vmcall"::"a"(arg1))
 
 #define vmcall2(arg1, arg2)		\
@@ -96,7 +96,17 @@ __asm__ __volatile__("vmcall"::"a"(arg1), "b"(arg2), "c"(arg3))
 __asm__ __volatile__("vmcall"::"a"(arg1), "b"(arg2), "c"(arg3), "d"(arg4))
 
 #define GET_VMCALL_ARGS(_1,_2,_3,_4,NAME,...) NAME
-#define vmcall(...) GET_VMCALL_ARGS(__VA_ARGS__, vmcall4, vmcall3, vmcall2, vmcall1)(__VA_ARGS__)
+#define vmcall(...) GET_VMCALL_ARGS(__VA_ARGS__, vmcall4, vmcall3, vmcall2, vmcall1)(__VA_ARGS__)*/
+
+unsigned long vmcall(unsigned long func, ...) {
+	va_list ap;
+	va_start (ap, func);
+	unsigned long args[3];
+	for(int i=0; i<3; i++) { args[i]=va_arg (ap, long); }
+	va_end (ap);
+	unsigned long ret;
+	__asm__ __volatile__("vmcall":"=a"(ret):"a"(func), "b"(args[0]), "c"(args[1]), "d"(args[2]));
+	return ret; }
 
 
 
