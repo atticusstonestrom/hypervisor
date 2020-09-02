@@ -238,9 +238,9 @@ char *reg_name(int id, int p) {	//p is plus flag
 static __attribute__((__always_inline__))
 char *scale_name(int scale) {
 	switch(scale) {
-	case 1:  return "2*"; break;
-	case 2:  return "4*"; break;
-	case 3:  return "8*"; break;
+	case 1:  return "+2*"; break;
+	case 2:  return "+4*"; break;
+	case 3:  return "+8*"; break;
 	default: return "";   break; }
 	return ""; }
 
