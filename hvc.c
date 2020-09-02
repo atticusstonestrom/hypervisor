@@ -262,10 +262,12 @@ static unsigned long hook(regs_t *regs_p) {
 		VMREAD(reg2, GUEST_PADDR_F, lhf);
 		cprint("reason: 0x%x\tqual: 0x%lx\taddr: 0x%lx\tpaddr: 0x%lx",
 		       reason.val, qual.val, reg, reg2);
-		//template=(epse_t) { .r=1, .w=1, .x=1 };
-		VMREAD(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
-		reg&=~(((secondary_cpu_based_execution_controls_t){ .enable_ept=1 }).val);
-		VMWRITE(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
+		template=(epse_t) { .r=1, .w=1, .x=1 };
+		cprint("removing ept hook at 0x%lx (paddr 0x%lx)\t[%s]", reg, reg2,
+		       (set_ept_permissions(template, reg2, 1))? "fail":"success");
+		//VMREAD(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
+		//reg&=~(((secondary_cpu_based_execution_controls_t){ .enable_ept=1 }).val);
+		//VMWRITE(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
 		put_cpu();
 		return EXIT_HANDLER_RESUME;
 		break;
