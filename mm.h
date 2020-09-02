@@ -235,7 +235,7 @@ void free_ept(void) {
 #define INVEPT_TYPE_SINGLE_CONTEXT 1
 #define INVEPT_TYPE_GLOBAL 2
 void invept(void *info) {
-	int core=smp_processor_id();
+	//int core=smp_processor_id();
 	//check active_flag...
 	//use vmcall
 	volatile struct __attribute__((packed)) {
