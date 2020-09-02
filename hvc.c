@@ -161,8 +161,81 @@ typedef union __attribute__((packed)) {
 		unsigned long addr; }
 		page_fault;
 	
+	struct __attribute__((packed)) {
+		signed long val; }
+		instruction_displacement;	//rip+displacement in rip-relative address
+	
 	unsigned long val;
 } exit_qualification_t;
+
+#define GET_REG(dst, id) {				\
+switch(id) {						\
+	case 0:  dst=regs_p->rax; break;		\
+	case 1:  dst=regs_p->rcx; break;		\
+	case 2:  dst=regs_p->rdx; break;		\
+	case 3:  dst=regs_p->rbx; break;		\
+	case 4:  VMREAD(dst, GUEST_RSP, lhf); break;	\
+	case 5:  dst=regs_p->rbp; break;		\
+	case 6:  dst=regs_p->rsi; break;		\
+	case 7:  dst=regs_p->rdi; break;		\
+	case 8:  dst=regs_p->r8;  break;		\
+	case 9:  dst=regs_p->r9;  break;		\
+	case 10: dst=regs_p->r10; break;		\
+	case 11: dst=regs_p->r11; break;		\
+	case 12: dst=regs_p->r12; break;		\
+	case 13: dst=regs_p->r13; break;		\
+	case 14: dst=regs_p->r14; break;		\
+	case 15: dst=regs_p->r15; break;		\
+	default: break; }
+
+#define REG_NAME(id)		\
+	({switch(id) {		\
+	case 0:  "rax"; break;	\
+	case 1:  "rcx"; break;	\
+	case 2:  "rdx"; break;	\
+	case 3:  "rbx"; break;	\
+	case 4:  "rsp"; break;	\
+	case 5:  "rbp"; break;	\
+	case 6:  "rsi"; break;	\
+	case 7:  "rdi"; break;	\
+	case 8:  "r8";  break;	\
+	case 9:  "r9";  break;	\
+	case 10: "r10"; break;	\
+	case 11: "r11"; break;	\
+	case 12: "r12"; break;	\
+	case 13: "r13"; break;	\
+	case 14: "r14"; break;	\
+	case 15: "r15"; break;	\
+	default: break; })
+
+#define SCALE_NAME(scale) 	\
+({switch(scale) {		\
+	case 1: "2*"; break;	\
+	case 2: "4*"; break;	\
+	case 3: "8*"; break;	\
+	default: ""; break; })
+
+typedef union __attribute__((packed)) {
+	struct __attribute__((packed)) {
+		unsigned int scaling:2;
+			//log_2 scale
+		unsigned int rsv_2_6:5;
+		unsigned int addr_size:3;
+			//0: 16-bit	1: 32-bit	2: 64-bit
+		unsigned int rsv_10_14:5;
+		unsigned int segment_selector:3;
+			//0: es		1: cs		2:ss
+			//3: ds		4: fs		5:gs
+		unsigned int index_reg:4;
+		unsigned int index_reg_invalid:1;
+		unsigned int base_reg:4;
+		unsigned int base_reg_invalid:1;
+		unsigned int reg_2:4; };
+		//invept, invpcid, invvpid
+	
+	
+	unsigned int val;
+} exit_instruction_info_t;
 //////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -216,6 +289,7 @@ static unsigned long hook(regs_t *regs_p) {
 	epse_t template;
 	unsigned long reg, reg2;
 	interruption_info_t interruption_info;
+	exit_instruction_info_t instr_info;
 	
 	//if(reason.basic_exit_reason==ER_HLT) {
 	//	cprint("hlt");
@@ -451,6 +525,28 @@ static unsigned long hook(regs_t *regs_p) {
 		break;
 	
 	case ER_INVEPT:
+		//#UD
+		if(cpl>0) {
+			cprint("cpl non-zero");
+			//reflect back #GP(0)
+			break; }
+		VMREAD(instr_info, EXIT_INSTRUCTION_INFO, lhf);
+		cprint("invept:\tqual: 0x%lx\tinfo: 0x%x", qual.val, instr_info.val);
+		reg=qual.val;
+		if(!instr_info.base_reg_invalid) {
+			GET_REG(reg2, instr_info.base_reg);
+			reg+=reg2; }
+		if(!instr_info.index_reg_invalid) {
+			GET_REG(reg2, instr_info.index_reg);
+			reg+=(1<<instr_info.scaling)*reg2; }
+		cprint("invept %s, [%s%s%s%d]\t<= 0x%lx", REG_NAME(instr_info.reg_2),
+		       instr_info.base_reg_invalid ? "":REG_NAME(instr_info.base_reg)"+",
+		       instr_info.index_reg_invalid ? SCALE_NAME(instr_info.scaling),
+		       instr_info.index_reg_invalid ? REG_NAME(instr_info.index_reg)"+",
+		       qual.instruction_displacement.val, reg);
+		//vpid, etc
+		break;
+	
 	case ER_INVVPID:
 		//#UD
 		if(cpl>0) {
