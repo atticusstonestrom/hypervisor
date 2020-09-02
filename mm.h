@@ -222,8 +222,8 @@ void free_ept(void) {
 	pt_node *next=NULL;
 	while(ept_data.pts!=NULL) {
 		gprint("pt node:\t\t\t0x%px", ept_data.pts);
-		gprint("\tpt page:\t0x%lx", ept_data.pts->base);
-		free_page(ept_data.pts->base);
+		gprint("\tpt page:\t0x%lx", ept_data.pts->page_addr);
+		free_page(ept_data.pts->page_addr);
 		
 		next=(ept_data.pts)->next;
 		kfree(ept_data.pts);
@@ -327,7 +327,7 @@ int initialize_ept(void) {
 	while(ept_data.pts!=NULL) {
 		//gprint("pt node:\t\t\t0x%px", data->pts);
 		//gprint("\tpt page:\t0x%lx", data->pts->base);
-		free_page(ept_data.pts->base);
+		free_page(ept_data.pts->page_addr);
 		
 		next=(ept_data.pts)->next;
 		kfree(ept_data.pts);
