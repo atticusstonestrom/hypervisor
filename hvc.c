@@ -39,6 +39,7 @@
 //does ISA ensure consistency of msrrs across all cores?
 //assumes msrr masks are well-formed
 //fixed range mtrrs need 4kb page granularity
+//set hooks on ept paging structures
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
@@ -212,6 +213,7 @@ static unsigned long hook(regs_t *regs_p) {
 	
 	cpuid_t cpuid;
 	msr_t msr;
+	epse_t template;
 	unsigned long reg, reg2;
 	interruption_info_t interruption_info;
 	
@@ -245,6 +247,12 @@ static unsigned long hook(regs_t *regs_p) {
 			VMWRITE(rip, GUEST_RIP, lhf);
 			put_cpu();
 			return EXIT_HANDLER_EXIT; }
+		if(regs_p->rax==VMCALL_SET_EPT_HOOK) {
+			template=(epse_t) { .r=1, .w=1, .x=0 };
+			vtp(regs_p->rbx, &reg, NULL);
+			regs_p->rax=set_ept_permissions(template, reg, 1);
+			cprint("setting ept hook at 0x%lx (paddr 0x%lx)\t[%s]",
+			       regs_p->rbx, reg, (regs_p->rax)? "fail":"success"); }
 		break;
 			
 	case ER_EPT_VIOLATION:
@@ -254,6 +262,7 @@ static unsigned long hook(regs_t *regs_p) {
 		VMREAD(reg2, GUEST_PADDR_F, lhf);
 		cprint("reason: 0x%x\tqual: 0x%lx\taddr: 0x%lx\tpaddr: 0x%lx",
 		       reason.val, qual.val, reg, reg2);
+		//template=(epse_t) { .r=1, .w=1, .x=1 };
 		VMREAD(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
 		reg&=~(((secondary_cpu_based_execution_controls_t){ .enable_ept=1 }).val);
 		VMWRITE(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
