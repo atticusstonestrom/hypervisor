@@ -277,7 +277,7 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 	epse_p[(paddr&~(0x1fffffULL))>>21].page_size=0;
 	epse_p[(paddr&~(0x1fffffULL))>>21].ignore_pat=0;
 	epse_p[(paddr&~(0x1fffffULL))>>21].caching_type=0;
-	epse_p[(paddr&~(0x1fffffULL))>>21].addr=(node->page_addr)>>12;
+	epse_p[(paddr&~(0x1fffffULL))>>21].addr=virt_to_phys((void *)node->page_addr)>>12;
 	//old_template.page_size=0;
 	//old_template.accessed=0;	//???
 	//old_template.dirty=0;
