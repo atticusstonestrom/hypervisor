@@ -232,6 +232,19 @@ void free_ept(void) {
 	ept_data.eptp.pml4_addr=0;
 	return; }
 
+#define INVEPT_TYPE_SINGLE_CONTEXT 1
+#define INVEPT_TYPE_GLOBAL 2
+void invept(void *info) {
+	volatile struct __attribute__((packed)) {
+		unsigned long eptp;
+		unsigned long zeros; }
+		invept_descriptor;
+	invept_descriptor.eptp=ept_data.eptp.val;
+	invept_descriptor.zeros=0;
+	//lhf_t lhf;	//can fail due to invalid eptp
+	__asm__ __volatile__("invept %1, %0"::"r"((long)INVEPT_TYPE_SINGLE_CONTEXT), "m"(invept_descriptor));
+	return; }
+
 //perm_flag determines whether function is
 //intended to change only r/w/x permissions
 int set_permissions(epse_t template, unsigned long paddr, int perm_flag) {
@@ -246,6 +259,7 @@ int set_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 				epse_p[(paddr&0x1fffffULL)>>12].r=template.r;
 				epse_p[(paddr&0x1fffffULL)>>12].w=template.w;
 				epse_p[(paddr&0x1fffffULL)>>12].x=template.x; }
+			on_each_cpu(invept, NULL, 1);
 			return 0; }
 		node=node->next; }
 	
@@ -281,6 +295,7 @@ int set_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 	node->base_2mb=paddr&~(0x1fffffULL);
 	node->next=ept_data.pts;
 	ept_data.pts=node;
+	on_each_cpu(invept, NULL, 1);
 	return 0; }
 
 
@@ -322,9 +337,16 @@ int initialize_ept(void) {
 	msr_t msr;
 	READ_MSR(msr, IA32_VMX_EPT_VPID_CAP);
 	if(!(msr.vmx_ept_vpid_cap.accessed_dirty_flags_allowed)) {
-		gprint("accessed/dirty ept bits not supported\n");
+		gprint("accessed/dirty ept bits not supported");
+		//eptp_p->accessed_dirty_control=0;
 		return -EOPNOTSUPP; }
-		//eptp_p->accessed_dirty_control=0; }
+	if(!(msr.vmx_ept_vpid_cap.two_mb_pages_allowed)) {
+		gprint("2mb pages not allowed");
+		return -EOPNOTSUPP; }
+	if(!(msr.vmx_ept_vpid_cap.invept_supported) ||
+	   !(msr.vmx_ept_vpid_cap.single_context_invept_supported)) {
+		gprint("single context invept not supported");
+		return -EOPNOTSUPP; }
 	
 	(void)memset((void *)ept_data.pml4, 0, 4096);
 	(void)memset((void *)ept_data.pdpt, 0, 4096);
