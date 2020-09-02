@@ -247,7 +247,7 @@ void invept(void *info) {
 
 //perm_flag determines whether function is
 //intended to change only r/w/x permissions
-int set_permissions(epse_t template, unsigned long paddr, int perm_flag) {
+int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 	pt_node *node=ept_data.pts;
 	epse_t *epse_p;
 	template.addr_4kb=paddr>>12;
