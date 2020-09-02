@@ -52,6 +52,7 @@ typedef struct __attribute__((packed)) {
 } regs_t;
 
 #define VMCALL_VMXOFF 0
+#define VMCALL_SET_EPT_HOOK 1
 
 #define str2(x) #x
 #define str(x) str2(x)
