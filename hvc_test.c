@@ -25,8 +25,8 @@ int main() {
 		perror("fatal in open");
 		return errno; }
 	printf("entered vmx guest mode!! press return to continue\n");
-	printf("(hook set at %px)\n", &&hook);
-	vmcall(VMCALL_SET_EPT_HOOK, (unsigned long)&&hook);
+	int ret=vmcall(VMCALL_SET_EPT_HOOK, (unsigned long)&&hook);
+	printf("(hook set at %px: %d)\n", &&hook, ret);
 	getchar();
 hook:
 	if(close(fd)) {
