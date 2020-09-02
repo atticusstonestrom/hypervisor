@@ -235,6 +235,9 @@ void free_ept(void) {
 #define INVEPT_TYPE_SINGLE_CONTEXT 1
 #define INVEPT_TYPE_GLOBAL 2
 void invept(void *info) {
+	int core=smp_processor_id();
+	//check active_flag...
+	//use vmcall
 	volatile struct __attribute__((packed)) {
 		unsigned long eptp;
 		unsigned long zeros; }
@@ -259,8 +262,8 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 				epse_p[(paddr&0x1fffffULL)>>12].r=template.r;
 				epse_p[(paddr&0x1fffffULL)>>12].w=template.w;
 				epse_p[(paddr&0x1fffffULL)>>12].x=template.x; }
-			//on_each_cpu(invept, NULL, 1);
-			invept(NULL);
+			on_each_cpu(invept, NULL, 0);
+			//invept(NULL);
 			return 0; }
 		node=node->next; }
 	
@@ -298,8 +301,8 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 	node->base_2mb=paddr&~(0x1fffffULL);
 	node->next=ept_data.pts;
 	ept_data.pts=node;
-	//on_each_cpu(invept, NULL, 1);
-	invept(NULL);
+	on_each_cpu(invept, NULL, 0);
+	//invept(NULL);
 	return 0; }
 
 
