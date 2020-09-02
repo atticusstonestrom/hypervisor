@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #define VMCALL_VMXOFF 0
 #define VMCALL_SET_EPT_HOOK 1
