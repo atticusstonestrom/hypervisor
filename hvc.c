@@ -168,7 +168,7 @@ typedef union __attribute__((packed)) {
 	unsigned long val;
 } exit_qualification_t;
 
-#define GET_REG(dst, id) {				\
+#define GET_REG(dst, id)				\
 switch(id) {						\
 	case 0:  dst=regs_p->rax; break;		\
 	case 1:  dst=regs_p->rcx; break;		\
@@ -188,7 +188,7 @@ switch(id) {						\
 	case 15: dst=regs_p->r15; break;		\
 	default: break; }
 
-#define REG_NAME(id)		\
+/*#define REG_NAME(id)		\
 	({switch(id) {		\
 	case 0:  "rax"; break;	\
 	case 1:  "rcx"; break;	\
@@ -206,14 +206,43 @@ switch(id) {						\
 	case 13: "r13"; break;	\
 	case 14: "r14"; break;	\
 	case 15: "r15"; break;	\
-	default: break; })
+	default: break; })*/
+static __attribute__((__always_inline__))
+char *reg_name(int id, int p) {	//p is plus flag
+	switch(id) {		
+	case 0:  return (p ? "+rax":"rax"); break;
+	case 1:  return (p ? "+rcx":"rcx"); break;
+	case 2:  return (p ? "+rdx":"rdx"); break;
+	case 3:  return (p ? "+rbx":"rbx"); break;
+	case 4:  return (p ? "+rsp":"rsp"); break;
+	case 5:  return (p ? "+rbp":"rbp"); break;
+	case 6:  return (p ? "+rsi":"rsi"); break;
+	case 7:  return (p ? "+rdi":"rdi"); break;
+	case 8:  return (p ? "+r8":"r8");   break;
+	case 9:  return (p ? "+r9":"r9");   break;
+	case 10: return (p ? "+r10":"r10"); break;
+	case 11: return (p ? "+r11":"r11"); break;
+	case 12: return (p ? "+r12":"r12"); break;
+	case 13: return (p ? "+r13":"r13"); break;
+	case 14: return (p ? "+r14":"r14"); break;
+	case 15: return (p ? "+r15":"r15"); break;
+	default: return ""; break; }
+	return ""; }
 
-#define SCALE_NAME(scale) 	\
+/*#define SCALE_NAME(scale) 	\
 ({switch(scale) {		\
 	case 1: "2*"; break;	\
 	case 2: "4*"; break;	\
 	case 3: "8*"; break;	\
-	default: ""; break; })
+	default: ""; break; })*/
+static __attribute__((__always_inline__))
+char *scale_name(int scale) {
+	switch(scale) {
+	case 1:  return "2*"; break;
+	case 2:  return "4*"; break;
+	case 3:  return "8*"; break;
+	default: return "";   break; }
+	return ""; }
 
 typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
@@ -539,11 +568,12 @@ static unsigned long hook(regs_t *regs_p) {
 		if(!instr_info.index_reg_invalid) {
 			GET_REG(reg2, instr_info.index_reg);
 			reg+=(1<<instr_info.scaling)*reg2; }
-		cprint("invept %s, [%s%s%s%d]\t<= 0x%lx", REG_NAME(instr_info.reg_2),
-		       instr_info.base_reg_invalid ? "":REG_NAME(instr_info.base_reg)"+",
-		       instr_info.index_reg_invalid ? SCALE_NAME(instr_info.scaling),
-		       instr_info.index_reg_invalid ? REG_NAME(instr_info.index_reg)"+",
-		       qual.instruction_displacement.val, reg);
+		cprint("invept %s, oword [%ld%s%s%s]\t<= 0x%lx",
+		       reg_name(instr_info.reg_2, 0), qual.instruction_displacement.val,
+		       instr_info.base_reg_invalid ? "":reg_name(instr_info.base_reg, 1),
+		       instr_info.index_reg_invalid ? "":scale_name(instr_info.scaling),
+		       instr_info.index_reg_invalid ? "":reg_name(instr_info.index_reg, 0),
+		       reg);
 		//vpid, etc
 		break;
 	
