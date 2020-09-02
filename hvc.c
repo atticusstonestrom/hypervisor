@@ -574,6 +574,8 @@ static unsigned long hook(regs_t *regs_p) {
 		       instr_info.index_reg_invalid ? "":scale_name(instr_info.scaling),
 		       instr_info.index_reg_invalid ? "":reg_name(instr_info.index_reg, 0),
 		       reg);
+		GET_REG(reg2, instr_info.reg_2);
+		__asm__ __volatile__("invept (%%rax), %0"::"a"(reg), "r"(reg2));
 		//vpid, etc
 		break;
 	
