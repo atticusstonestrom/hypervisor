@@ -232,14 +232,20 @@ void free_ept(void) {
 	ept_data.eptp.pml4_addr=0;
 	return; }
 
-int set_permissions(epse_t template, unsigned long paddr) {
+//perm_flag determines whether function is
+//intended to change only r/w/x permissions
+int set_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 	pt_node *node=ept_data.pts;
 	epse_t *epse_p;
 	template.addr_4kb=paddr>>12;
 	while(node!=NULL) {
 		if(node->base_2mb==(paddr&~(0x1fffffULL))) {
 			epse_p=(void *)node->page_addr;
-			epse_p[(paddr&0x1fffffULL)>>12]=template;
+			if(!perm_flag) { epse_p[(paddr&0x1fffffULL)>>12]=template; }
+			else {
+				epse_p[(paddr&0x1fffffULL)>>12].r=template.r;
+				epse_p[(paddr&0x1fffffULL)>>12].w=template.w;
+				epse_p[(paddr&0x1fffffULL)>>12].x=template.x; }
 			return 0; }
 		node=node->next; }
 	
@@ -255,19 +261,21 @@ int set_permissions(epse_t template, unsigned long paddr) {
 	epse_t old_template=epse_p[(paddr&~(0x1fffffULL))>>21];
 	epse_p[(paddr&~(0x1fffffULL))>>21].page_size=0;
 	epse_p[(paddr&~(0x1fffffULL))>>21].addr=(node->page_addr)>>12;
-	//new_template.page_size=0;
-	//new_template.accessed=0;	//???
-	//new_template.dirty=0;
+	//old_template.page_size=0;
+	//old_template.accessed=0;	//???
+	//old_template.dirty=0;
 	
 	old_template.addr_4kb=(paddr&~(0x1fffffULL))>>12;
-	unsigned long base_4kb=(paddr&~(0x1fffffULL));
 	epse_p=(void *)node->page_addr;
 	int i=0;
 	//for(i=0; i<512; ++i && old_template.addr+=1);
 	for(i=0; i<512; i++) {
 		epse_p[i]=old_template;
 		if(old_template.addr_4kb==paddr>>12) {
-			epse_p[i]=template; }
+			if(!perm_flag) { epse_p[i]=template; }
+			epse_p[i].r=template.r;
+			epse_p[i].w=template.w;
+			epse_p[i].x=template.x; }
 		old_template.addr_4kb++; }
 	
 	node->base_2mb=paddr&~(0x1fffffULL);
