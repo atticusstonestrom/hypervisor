@@ -49,7 +49,7 @@ else if( (paddr)<0xc0000 ) {			\
 else {	READ_MSR(msr, MTRR_MSR_ID(paddr));		\
 	msr.mtrr_fixed.entries[MTRR_INDEX(paddr)]; }})
 
-static void check_msrrs(void) {
+/*static void check_msrrs(void) {
 	int i=0;
 	int vcnt;
 	cpuid_t cpuid;
@@ -101,7 +101,7 @@ static void check_msrrs(void) {
 		if(msr.mtrr_variable.v) {
 			printk("END : 0x%llx\n", base+(1ULL<<__builtin_ctzl(msr.mtrr_variable.addr<<12))-1); }
 		printk("[*] physmask%d: 0x%lx\n", i, msr.val); }
-	return; }
+	return; }*/
 
 static int alloc_wb_page(unsigned long *vaddr, unsigned long *paddr) {
 	msr_t msr;
@@ -246,6 +246,8 @@ void invept(void *info) {
 	invept_descriptor.zeros=0;
 	//lhf_t lhf;	//can fail due to invalid eptp
 	__asm__ __volatile__("invept %1, %0"::"r"((long)INVEPT_TYPE_SINGLE_CONTEXT), "m"(invept_descriptor));
+	//__asm__ __volatile__("invept 15(%%rbx, %%rdx, 8), %%rax"::"a"(0),"b"(3),"d"(5));
+	//__asm__ __volatile__("invept 3(%%rip), %%rax"::"a"(0));
 	return; }
 
 //perm_flag determines whether function is
