@@ -221,7 +221,7 @@ void free_ept(void) {
 	
 	pt_node *next=NULL;
 	while(ept_data.pts!=NULL) {
-		gprint("pt node:\t\t\t0x%px", ept_data.pts);
+		gprint("pt node:\t\t0x%px", ept_data.pts);
 		gprint("\tpt page:\t0x%lx", ept_data.pts->page_addr);
 		free_page(ept_data.pts->page_addr);
 		
@@ -259,7 +259,8 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 				epse_p[(paddr&0x1fffffULL)>>12].r=template.r;
 				epse_p[(paddr&0x1fffffULL)>>12].w=template.w;
 				epse_p[(paddr&0x1fffffULL)>>12].x=template.x; }
-			on_each_cpu(invept, NULL, 1);
+			//on_each_cpu(invept, NULL, 1);
+			invept(NULL);
 			return 0; }
 		node=node->next; }
 	
@@ -274,6 +275,8 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 	epse_p=(void *)ept_data.pds.base;
 	epse_t old_template=epse_p[(paddr&~(0x1fffffULL))>>21];
 	epse_p[(paddr&~(0x1fffffULL))>>21].page_size=0;
+	epse_p[(paddr&~(0x1fffffULL))>>21].ignore_pat=0;
+	epse_p[(paddr&~(0x1fffffULL))>>21].caching_type=0;
 	epse_p[(paddr&~(0x1fffffULL))>>21].addr=(node->page_addr)>>12;
 	//old_template.page_size=0;
 	//old_template.accessed=0;	//???
@@ -295,7 +298,8 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 	node->base_2mb=paddr&~(0x1fffffULL);
 	node->next=ept_data.pts;
 	ept_data.pts=node;
-	on_each_cpu(invept, NULL, 1);
+	//on_each_cpu(invept, NULL, 1);
+	invept(NULL);
 	return 0; }
 
 
@@ -355,7 +359,7 @@ int initialize_ept(void) {
 	       ept_data.pml4, ept_data.pdpt, ept_data.pds.base, 1ULL<<(ept_data.pds).order);
 	pt_node *next=NULL;
 	while(ept_data.pts!=NULL) {
-		//gprint("pt node:\t\t\t0x%px", data->pts);
+		//gprint("pt node:\t\t0x%px", data->pts);
 		//gprint("\tpt page:\t0x%lx", data->pts->base);
 		free_page(ept_data.pts->page_addr);
 		
