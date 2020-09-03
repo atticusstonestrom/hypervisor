@@ -560,7 +560,7 @@ static unsigned long hook(regs_t *regs_p) {
 			//reflect back #GP(0)
 			break; }
 		VMREAD(instr_info, EXIT_INSTRUCTION_INFO, lhf);
-		cprint("invept:\tqual: 0x%lx\tinfo: 0x%x", qual.val, instr_info.val);
+		//cprint("invept:\tqual: 0x%lx\tinfo: 0x%x", qual.val, instr_info.val);
 		reg=qual.val;
 		if(!instr_info.base_reg_invalid) {
 			GET_REG(reg2, instr_info.base_reg);
