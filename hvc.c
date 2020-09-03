@@ -40,6 +40,7 @@
 //assumes msrr masks are well-formed
 //fixed range mtrrs need 4kb page granularity
 //set hooks on ept paging structures
+//error check invept. (also check args? to ensure there is no page fault)
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
