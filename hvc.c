@@ -22,6 +22,7 @@
 //save MSRs like ia32_lstar as part of guest_regs (at least writeable ones)
 //lock cpuid?
 //rflags should be found in guest state not regs_p!
+//	also put rip, rsp, rflags, etc on stack
 //big problem if entry failure in vmresume
 //sti could be problem in entry failure!
 //should cr3 be kernel mode in vmx_exit?
