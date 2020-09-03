@@ -202,6 +202,7 @@ typedef struct {
 } ept_data_t;
 
 extern ept_data_t ept_data;
+unsigned char ept_lock;
 
 void free_ept(void) {
 	if(ept_data.pml4) {
@@ -253,6 +254,22 @@ void invept(void *info) {
 //perm_flag determines whether function is
 //intended to change only r/w/x permissions
 int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
+	int ret=0;
+	__asm__ __volatile__(
+	"ept_spinlock_start:;"
+		"cmp $0, (ept_lock);"
+		"je get_ept_lock;"
+		"pause;"
+		"jmp ept_spinlock_start;"
+	"get_ept_lock:;"
+		"movb $1, %al;"
+		//"lock cmpxchg;"
+		"xchgb (ept_lock), %al;"
+		"cmp $0, %al;"
+		"jne ept_spinlock_start;"
+	"ept_critical_section:;");
+	gprint("ept lock acquired: %d", ept_lock);
+	
 	pt_node *node=ept_data.pts;
 	epse_t *epse_p;
 	template.addr_4kb=paddr>>12;
@@ -266,6 +283,8 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 				epse_p[(paddr&0x1fffffULL)>>12].x=template.x; }
 			on_each_cpu(invept, NULL, 0);
 			//invept(NULL);
+			ept_lock=0;
+			gprint("ept lock relinquished: %d", ept_lock);
 			return 0; }
 		node=node->next; }
 	
@@ -305,6 +324,8 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 	ept_data.pts=node;
 	on_each_cpu(invept, NULL, 0);
 	//invept(NULL);
+	ept_lock=0;
+	gprint("ept lock relinquished: %d", ept_lock);
 	return 0; }
 
 
@@ -356,6 +377,8 @@ int initialize_ept(void) {
 	   !(msr.vmx_ept_vpid_cap.single_context_invept_supported)) {
 		gprint("single context invept not supported");
 		return -EOPNOTSUPP; }
+	
+	ept_lock=0;
 	
 	(void)memset((void *)ept_data.pml4, 0, 4096);
 	(void)memset((void *)ept_data.pdpt, 0, 4096);
