@@ -41,6 +41,8 @@
 //fixed range mtrrs need 4kb page granularity
 //set hooks on ept paging structures
 //error check invept. (also check args? to ensure there is no page fault)
+//mutex/spinlock (with `pause`) on ept paging structures
+//	change 2mb page template after initializing new pt
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
