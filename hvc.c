@@ -358,7 +358,7 @@ static unsigned long hook(regs_t *regs_p) {
 			template=(epse_t) { .r=1, .w=1, .x=0 };
 			vtp(regs_p->rbx, &reg, NULL);
 			regs_p->rax=set_ept_permissions(template, reg, 1);
-			cprint("setting ept hook at 0x%lx (paddr 0x%lx)\t[%s]",
+			cprint("set ept hook at 0x%lx (paddr 0x%lx)\t[%s]",
 			       regs_p->rbx, reg, (regs_p->rax)? "fail":"success"); }
 		break;
 			
@@ -370,7 +370,7 @@ static unsigned long hook(regs_t *regs_p) {
 		cprint("reason: 0x%x\tqual: 0x%lx\taddr: 0x%lx\tpaddr: 0x%lx",
 		       reason.val, qual.val, reg, reg2);
 		template=(epse_t) { .r=1, .w=1, .x=1 };
-		cprint("removing ept hook at 0x%lx (paddr 0x%lx)\t[%s]", reg, reg2,
+		cprint("removed ept hook at 0x%lx (paddr 0x%lx)\t[%s]", reg, reg2,
 		       (set_ept_permissions(template, reg2, 1))? "fail":"success");
 		//VMREAD(reg, SECONDARY_CPU_BASED_X_CTLS, lhf);
 		//reg&=~(((secondary_cpu_based_execution_controls_t){ .enable_ept=1 }).val);
