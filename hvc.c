@@ -44,6 +44,7 @@
 //error check invept. (also check args? to ensure there is no page fault)
 //mutex/spinlock (with `pause`) on ept paging structures
 //	change 2mb page template after initializing new pt
+//allow ept hook vmcall to pass template!
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
