@@ -254,7 +254,7 @@ void invept(void *info) {
 //perm_flag determines whether function is
 //intended to change only r/w/x permissions
 int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
-	int ret=0;
+	int core=smp_processor_id();
 	__asm__ __volatile__(
 	"ept_spinlock_start:;"
 		"cmp $0, (ept_lock);"
@@ -268,7 +268,7 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 		"cmp $0, %al;"
 		"jne ept_spinlock_start;"
 	"ept_critical_section:;");
-	gprint("ept lock acquired: %d", ept_lock);
+	cprint("ept lock acquired: %d", ept_lock);
 	
 	pt_node *node=ept_data.pts;
 	epse_t *epse_p;
@@ -281,10 +281,7 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 				epse_p[(paddr&0x1fffffULL)>>12].r=template.r;
 				epse_p[(paddr&0x1fffffULL)>>12].w=template.w;
 				epse_p[(paddr&0x1fffffULL)>>12].x=template.x; }
-			on_each_cpu(invept, NULL, 0);
-			//invept(NULL);
-			ept_lock=0;
-			gprint("ept lock relinquished: %d", ept_lock);
+			goto ept_end;
 			return 0; }
 		node=node->next; }
 	
@@ -298,15 +295,11 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 	
 	epse_p=(void *)ept_data.pds.base;
 	epse_t old_template=epse_p[(paddr&~(0x1fffffULL))>>21];
-	epse_p[(paddr&~(0x1fffffULL))>>21].page_size=0;
-	epse_p[(paddr&~(0x1fffffULL))>>21].ignore_pat=0;
-	epse_p[(paddr&~(0x1fffffULL))>>21].caching_type=0;
-	epse_p[(paddr&~(0x1fffffULL))>>21].addr=virt_to_phys((void *)node->page_addr)>>12;
 	//old_template.page_size=0;
 	//old_template.accessed=0;	//???
 	//old_template.dirty=0;
-	
 	old_template.addr_4kb=(paddr&~(0x1fffffULL))>>12;
+	
 	epse_p=(void *)node->page_addr;
 	int i=0;
 	//for(i=0; i<512; ++i && old_template.addr+=1);
@@ -319,13 +312,20 @@ int set_ept_permissions(epse_t template, unsigned long paddr, int perm_flag) {
 			epse_p[i].x=template.x; }
 		old_template.addr_4kb++; }
 	
+	epse_p=(void *)ept_data.pds.base;
+	epse_p[(paddr&~(0x1fffffULL))>>21].page_size=0;
+	epse_p[(paddr&~(0x1fffffULL))>>21].ignore_pat=0;
+	epse_p[(paddr&~(0x1fffffULL))>>21].caching_type=0;
+	epse_p[(paddr&~(0x1fffffULL))>>21].addr=virt_to_phys((void *)node->page_addr)>>12;
+	
 	node->base_2mb=paddr&~(0x1fffffULL);
 	node->next=ept_data.pts;
 	ept_data.pts=node;
+ept_end:
 	on_each_cpu(invept, NULL, 0);
 	//invept(NULL);
 	ept_lock=0;
-	gprint("ept lock relinquished: %d", ept_lock);
+	cprint("ept lock relinquished: %d", ept_lock);
 	return 0; }
 
 
