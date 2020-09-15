@@ -45,6 +45,7 @@
 //mutex/spinlock (with `pause`) on ept paging structures
 //	change 2mb page template after initializing new pt
 //allow ept hook vmcall to pass template!
+//page modification logging
 //////////////////////////////////////////////////////
 
 #include <linux/init.h>
